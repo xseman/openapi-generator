@@ -1,0 +1,18 @@
+# Generated client code
+generated/
+
+# Compiled binaries
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Go test files
+*.test
+*.out
+coverage.txt
+
+# Go workspace files
+go.work
+go.work.sum

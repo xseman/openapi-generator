@@ -1,0 +1,255 @@
+{{#hasImports}}
+{{#oneOfArrays}}
+import type { {{{.}}} } from './{{.}}{{importFileExtension}}';
+import {
+    instanceOf{{{.}}},
+    {{{.}}}FromJSON,
+    {{{.}}}FromJSONTyped,
+    {{{.}}}ToJSON,
+} from './{{.}}{{importFileExtension}}';
+{{/oneOfArrays}}
+{{#oneOfImports}}
+import type { {{{classname}}} } from './{{filename}}{{importFileExtension}}';
+import {
+    instanceOf{{{classname}}},
+    {{{classname}}}FromJSON,
+    {{{classname}}}FromJSONTyped,
+    {{{classname}}}ToJSON,
+} from './{{filename}}{{importFileExtension}}';
+{{/oneOfImports}}
+
+{{/hasImports}}
+{{>modelOneOfInterfaces}}
+
+
+export function {{classname}}FromJSON(json: any): {{classname}} {
+    return {{classname}}FromJSONTyped(json, false);
+}
+
+export function {{classname}}FromJSONTyped(json: any, ignoreDiscriminator: boolean): {{classname}} {
+    if (json == null) {
+            return json;
+    }
+{{#discriminator}}
+    switch (json["{{discriminator.propertyBaseName}}"]) {
+{{#discriminator.mappedModels}}
+            case "{{mappingName}}":
+                    return Object.assign({}, {{modelName}}FromJSONTyped(json, true), { {{discriminator.propertyName}}: "{{mappingName}}" } as const);
+{{/discriminator.mappedModels}}
+            default:
+                    return json;
+    }
+{{/discriminator}}
+{{^discriminator}}
+    {{#oneOfModels}}
+    {{#-first}}
+    if (typeof json !== 'object') {
+            return json;
+    }
+    {{/-first}}
+    if (instanceOf{{{.}}}(json)) {
+            return {{{.}}}FromJSONTyped(json, true);
+    }
+    {{/oneOfModels}}
+    {{#oneOfArrays}}
+    {{#-first}}
+    if (Array.isArray(json)) {
+            if (json.every((item) => typeof item === 'object')) {
+    {{/-first}}
+                    if (json.every((item) => instanceOf{{{.}}}(item))) {
+                            return json.map((value) => {{{.}}}FromJSONTyped(value, true));
+                    }
+    {{#-last}}
+            }
+            return json;
+    }
+    {{/-last}}
+    {{/oneOfArrays}}
+    {{#oneOfPrimitives}}
+    {{#isArray}}
+    {{#items}}
+    {{#isDateType}}
+    if (Array.isArray(json)) {
+            if (json.every((item) => !(isNaN(new Date(json).getTime()))) {
+                    return json.map((value) => new Date(json);
+            }
+    }
+    {{/isDateType}}
+    {{#isDateTimeType}}
+    if (Array.isArray(json)) {
+            if (json.every((item) => !(isNaN(new Date(json).getTime()))) {
+                    return json.map((value) => new Date(json);
+            }
+    }
+    {{/isDateTimeType}}
+    {{#isNumeric}}
+    if (Array.isArray(json)) {
+            if (json.every((item) => typeof item === 'number'{{#isEnum}} && ({{#allowableValues}}{{#values}}item === {{.}}{{^-last}} || {{/-last}}{{/values}}{{/allowableValues}}){{/isEnum}})) {
+                    return json;
+            }
+    }
+    {{/isNumeric}}
+    {{#isBoolean}}
+    if (Array.isArray(json)) {
+            if (json.every((item) => typeof item === 'boolean'{{#isEnum}} && ({{#allowableValues}}{{#values}}item === {{.}}{{^-last}} || {{/-last}}{{/values}}{{/allowableValues}}){{/isEnum}})) {
+                    return json;
+            }
+    }
+    {{/isBoolean}}
+    {{#isString}}
+    if (Array.isArray(json)) {
+            if (json.every((item) => typeof item === 'string'{{#isEnum}} && ({{#allowableValues}}{{#values}}item === '{{.}}'{{^-last}} || {{/-last}}{{/values}}{{/allowableValues}}){{/isEnum}})) {
+                    return json;
+            }
+    }
+    {{/isString}}
+    {{/items}}
+    {{/isArray}}
+    {{^isArray}}
+    {{#isDateType}}
+    if (!(isNaN(new Date(json).getTime()))) {
+            return {{^required}}json == null ? undefined : {{/required}}({{#required}}{{#isNullable}}json == null ? null : {{/isNullable}}{{/required}}new Date(json));
+    }
+    {{/isDateType}}
+    {{^isDateType}}
+    {{#isDateTimeType}}
+    if (!(isNaN(new Date(json).getTime()))) {
+            return {{^required}}json == null ? undefined : {{/required}}({{#required}}{{#isNullable}}json == null ? null : {{/isNullable}}{{/required}}new Date(json));
+    }
+    {{/isDateTimeType}}
+    {{/isDateType}}
+    {{#isNumeric}}
+    if (typeof json === 'number'{{#isEnum}} && ({{#allowableValues}}{{#values}}json === {{.}}{{^-last}} || {{/-last}}{{/values}}{{/allowableValues}}){{/isEnum}}) {
+            return json;
+    }
+    {{/isNumeric}}
+    {{#isBoolean}}
+    if (typeof json === 'boolean'{{#isEnum}} && ({{#allowableValues}}{{#values}}json === {{.}}{{^-last}} || {{/-last}}{{/values}}{{/allowableValues}}){{/isEnum}}) {
+            return json;
+    }
+    {{/isBoolean}}
+    {{#isString}}
+    if (typeof json === 'string'{{#isEnum}} && ({{#allowableValues}}{{#values}}json === '{{.}}'{{^-last}} || {{/-last}}{{/values}}{{/allowableValues}}){{/isEnum}}) {
+            return json;
+    }
+    {{/isString}}
+    {{/isArray}}
+    {{/oneOfPrimitives}}
+    return {} as any;
+{{/discriminator}}
+}
+
+export function {{classname}}ToJSON(json: any): any {
+    return {{classname}}ToJSONTyped(json, false);
+}
+
+export function {{classname}}ToJSONTyped(value?: {{classname}} | null, ignoreDiscriminator: boolean = false): any {
+    if (value == null) {
+            return value;
+    }
+{{#discriminator}}
+    switch (value["{{discriminator.propertyName}}"]) {
+{{#discriminator.mappedModels}}
+            case "{{mappingName}}":
+                    return Object.assign({}, {{modelName}}ToJSON(value), { {{discriminator.propertyName}}: "{{mappingName}}" } as const);
+{{/discriminator.mappedModels}}
+            default:
+                    return value;
+    }
+{{/discriminator}}
+{{^discriminator}}
+    {{#oneOfModels}}
+    {{#-first}}
+    if (typeof value !== 'object') {
+            return value;
+    }
+    {{/-first}}
+    if (instanceOf{{{.}}}(value)) {
+            return {{{.}}}ToJSON(value as {{{.}}});
+    }
+    {{/oneOfModels}}
+    {{#oneOfArrays}}
+    {{#-first}}
+    if (Array.isArray(value)) {
+            if (value.every((item) => typeof item === 'object')) {
+    {{/-first}}
+                    if (value.every((item) => instanceOf{{{.}}}(item))) {
+                            return value.map((value) => {{{.}}}ToJSON(value as {{{.}}}));
+                    }
+    {{#-last}}
+            }
+            return value;
+    }
+    {{/-last}}
+    {{/oneOfArrays}}
+    {{#oneOfPrimitives}}
+    {{#isArray}}
+    {{#items}}
+    {{#isDateType}}
+    if (Array.isArray(value)) {
+            if (value.every((item) => item instanceof Date) {
+                    return value.map((value) => value.toISOString().substring(0,10)));
+            }
+    }
+    {{/isDateType}}
+    {{#isDateTimeType}}
+    if (Array.isArray(value)) {
+            if (value.every((item) => item instanceof Date) {
+                    return value.map((value) => value.toISOString();
+            }
+    }
+    {{/isDateTimeType}}
+    {{#isNumeric}}
+    if (Array.isArray(value)) {
+            if (value.every((item) => typeof item === 'number'{{#isEnum}} && ({{#allowableValues}}{{#values}}item === {{.}}{{^-last}} || {{/-last}}{{/values}}{{/allowableValues}}){{/isEnum}})) {
+                    return value;
+            }
+    }
+    {{/isNumeric}}
+    {{#isBoolean}}
+    if (Array.isArray(value)) {
+            if (value.every((item) => typeof item === 'boolean'{{#isEnum}} && ({{#allowableValues}}{{#values}}item === {{.}}{{^-last}} || {{/-last}}{{/values}}{{/allowableValues}}){{/isEnum}})) {
+                    return value;
+            }
+    }
+    {{/isBoolean}}
+    {{#isString}}
+    if (Array.isArray(value)) {
+            if (value.every((item) => typeof item === 'string'{{#isEnum}} && ({{#allowableValues}}{{#values}}item === '{{.}}'{{^-last}} || {{/-last}}{{/values}}{{/allowableValues}}){{/isEnum}})) {
+                    return value;
+            }
+    }
+    {{/isString}}
+    {{/items}}
+    {{/isArray}}
+    {{^isArray}}
+    {{#isDateType}}
+    if (value instanceof Date) {
+            return ((value{{#isNullable}} as any{{/isNullable}}){{^required}}{{#isNullable}}?{{/isNullable}}{{/required}}.toISOString().substring(0,10));
+    }
+    {{/isDateType}}
+    {{#isDateTimeType}}
+    if (value instanceof Date) {
+            return {{^required}}{{#isNullable}}value === null ? null : {{/isNullable}}{{^isNullable}}value == null ? undefined : {{/isNullable}}{{/required}}((value{{#isNullable}} as any{{/isNullable}}){{^required}}{{#isNullable}}?{{/isNullable}}{{/required}}.toISOString());
+    }
+    {{/isDateTimeType}}
+    {{#isNumeric}}
+    if (typeof value === 'number'{{#isEnum}} && ({{#allowableValues}}{{#values}}value === {{.}}{{^-last}} || {{/-last}}{{/values}}{{/allowableValues}}){{/isEnum}}) {
+            return value;
+    }
+    {{/isNumeric}}
+    {{#isBoolean}}
+    if (typeof value === 'boolean'{{#isEnum}} && ({{#allowableValues}}{{#values}}value === {{.}}{{^-last}} || {{/-last}}{{/values}}{{/allowableValues}}){{/isEnum}}) {
+            return value;
+    }
+    {{/isBoolean}}
+    {{#isString}}
+    if (typeof value === 'string'{{#isEnum}} && ({{#allowableValues}}{{#values}}value === '{{.}}'{{^-last}} || {{/-last}}{{/values}}{{/allowableValues}}){{/isEnum}}) {
+            return value;
+    }
+    {{/isString}}
+    {{/isArray}}
+    {{/oneOfPrimitives}}
+    return {};
+{{/discriminator}}
+}
