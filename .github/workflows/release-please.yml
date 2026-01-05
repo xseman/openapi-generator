@@ -1,0 +1,47 @@
+name: release-please
+
+on:
+    push:
+        branches:
+            - master
+
+permissions:
+    contents: write
+    pull-requests: write
+
+jobs:
+    release-please:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: googleapis/release-please-action@v4
+              id: release
+              with:
+                  # Use the default GITHUB_TOKEN for basic workflow
+                  # For triggering other workflows on release, configure a PAT
+                  token: ${{ secrets.GITHUB_TOKEN }}
+                  config-file: .github/release-please-config.json
+                  manifest-file: .github/.release-please-manifest.json
+
+            # Optional: Build and upload artifacts on release
+            # - name: Checkout code
+            #   if: ${{ steps.release.outputs.release_created }}
+            #   uses: actions/checkout@v6
+            #
+            # - name: Setup Go
+            #   if: ${{ steps.release.outputs.release_created }}
+            #   uses: actions/setup-go@v6
+            #   with:
+            #     go-version-file: 'go.mod'
+            #
+            # - name: Build binary
+            #   if: ${{ steps.release.outputs.release_created }}
+            #   run: |
+            #     go build -o openapi-generator ./cmd/openapi-generator
+            #
+            # - name: Upload release artifacts
+            #   if: ${{ steps.release.outputs.release_created }}
+            #   env:
+            #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+            #   run: |
+            #   gh release upload ${{ steps.release.outputs.tag_name }}
+            #   openapi-generator

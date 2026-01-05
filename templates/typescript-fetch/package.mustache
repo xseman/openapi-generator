@@ -1,0 +1,30 @@
+{
+    "name": "{{appName}}",
+    "description": "OpenAPI client for {{appName}}",
+    "type": "module",
+    "version": "{{version}}",
+{{#licenseName}}
+    "license": "{{licenseName}}",
+{{/licenseName}}
+    "author": "OpenAPI-Generator",
+    "scripts": {
+        "build": "tsc --build",
+        "typecheck": "tsc --noEmit"
+    },
+    "devDependencies": {
+        "typescript": "~5.9.3"
+    },
+    "exports": {
+        "./package.json": "./package.json",
+        ".": {
+            "types": "./index.d.ts",
+            "import": "./index.js",
+            "require": "./index.js"
+        }
+    },
+    "files": [
+        "*.js",
+        "*.d.ts",
+        "**/*.ts"
+    ]
+}

@@ -1,0 +1,11 @@
+{
+    "generatorName": "typescript-fetch",
+    "inputSpec": "samples/typescript-fetch/petstore.yaml",
+    "outputDir": "samples/typescript-fetch/generated",
+    "skipValidateSpec": false,
+    "verbose": true,
+    "additionalProperties": {
+        "supportsES6": "true",
+        "withInterfaces": "true"
+    }
+}
