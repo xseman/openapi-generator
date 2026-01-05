@@ -1,0 +1,21 @@
+/* eslint-disable */
+{{>licenseInfo}}
+
+{{#models}}
+{{#model}}
+{{#isEnum}}
+{{>modelEnum}}
+
+{{/isEnum}}
+{{^isEnum}}
+{{#hasOneOf}}
+{{>modelOneOf}}
+
+{{/hasOneOf}}
+{{^hasOneOf}}
+{{>modelGeneric}}
+
+{{/hasOneOf}}
+{{/isEnum}}
+{{/model}}
+{{/models}}
