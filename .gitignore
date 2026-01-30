@@ -1,6 +1,10 @@
 # Generated client code
 generated/
 
+# Build artifacts
+bin/
+artifacts/
+
 # Compiled binaries
 *.exe
 *.exe~
@@ -12,6 +16,9 @@ generated/
 *.test
 *.out
 coverage.txt
+coverage.out
+cover_func.txt
+coverage.md
 
 # Go workspace files
 go.work

@@ -13,5 +13,24 @@
             "pull-request-header": "🚢 Package release",
             "pull-request-title-pattern": "v${version}"
         }
-    }
+    },
+    "changelog-sections": [
+        { "type": "feat", "section": "Features" },
+        { "type": "fix", "section": "Bug Fixes" },
+        { "type": "perf", "section": "Performance Improvements" },
+        { "type": "type", "section": "Types" },
+        { "type": "deps", "section": "Dependency Updates" },
+        { "type": "docs", "section": "Documentation" },
+        { "type": "build", "section": "Build System" },
+        { "type": "ci", "section": "Automation" },
+        { "type": "qol", "section": "Quality of life" },
+        { "type": "chore", "section": "Maintenance" },
+        { "type": "config", "section": "Maintenance" },
+        { "type": "refactor", "section": "Maintenance" },
+        { "type": "revert", "section": "Reverts" },
+        { "type": "security", "section": "Security" },
+        { "type": "test", "section": "Testing" },
+        { "type": "style", "section": "Code Style", "hidden": true },
+        { "type": "examples", "section": "Examples", "hidden": true }
+    ]
 }
