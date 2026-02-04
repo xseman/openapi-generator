@@ -6,6 +6,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
+	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -86,7 +88,27 @@ func (p *Parser) LoadFromURL(urlStr string) error {
 		return fmt.Errorf("failed to parse URL: %w", err)
 	}
 
-	// Note: For URLs, we attempt OpenAPI 3 first, then fall back to Swagger 2 on error
+	// Fetch the URL content first to detect the version
+	client := &http.Client{}
+	resp, err := client.Get(urlStr)
+	if err != nil {
+		return fmt.Errorf("failed to fetch URL: %w", err)
+	}
+	defer func() {
+		_ = resp.Body.Close()
+	}()
+
+	data, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("failed to read response body: %w", err)
+	}
+
+	// Check if it's Swagger 2.0 and use proper conversion
+	if isSwagger2(data) {
+		return p.loadSwagger2FromData(data)
+	}
+
+	// Load as OpenAPI 3.x
 	loader := openapi3.NewLoader()
 	loader.IsExternalRefsAllowed = true
 
@@ -1251,7 +1273,7 @@ func (p *Parser) parameterToCodegen(param *openapi3.Parameter) *codegen.CodegenP
 		Description:          param.Description,
 		UnescapedDescription: param.Description,
 		IsDeprecated:         param.Deprecated,
-		Style:                string(param.Style),
+		Style:                param.Style,
 		IsExplode:            param.Explode != nil && *param.Explode,
 		VendorExtensions:     convertExtensions(param.Extensions),
 	}
@@ -1307,6 +1329,19 @@ func (p *Parser) parameterToCodegen(param *openapi3.Parameter) *codegen.CodegenP
 			cp.CollectionFormat = "multi"
 			cp.IsCollectionFormatMulti = true
 		}
+	}
+
+	// Ensure DataType is never empty - default to "any" if not set
+	if cp.DataType == "" {
+		cp.DataType = "any"
+		cp.BaseType = "any"
+		cp.IsPrimitiveType = true
+		cp.IsAnyType = true
+	}
+
+	// Ensure DatatypeWithEnum is set
+	if cp.DatatypeWithEnum == "" {
+		cp.DatatypeWithEnum = cp.DataType
 	}
 
 	// Example
@@ -1398,6 +1433,11 @@ func (p *Parser) responseToCodegen(code string, resp *openapi3.Response) *codege
 		if header.Schema != nil && header.Schema.Value != nil {
 			prop.DataType = p.getTypeDeclaration(header.Schema.Value)
 		}
+		// Ensure DataType is never empty
+		if prop.DataType == "" {
+			prop.DataType = "any"
+		}
+		prop.Datatype = prop.DataType
 		cr.Headers = append(cr.Headers, prop)
 	}
 	cr.HasHeaders = len(cr.Headers) > 0

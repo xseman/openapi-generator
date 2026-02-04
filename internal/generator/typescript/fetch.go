@@ -209,16 +209,28 @@ func (g *FetchGenerator) processCodegenProperty(prop *codegen.CodegenProperty, p
 	}
 }
 
-// escapeOperationId escapes operation IDs that conflict with imports
+// escapeOperationId escapes operation IDs that conflict with imports or naming patterns
 func (g *FetchGenerator) escapeOperationId(op *codegen.CodegenOperation) {
+	// Check for conflict with "Request" suffix import
 	param := op.OperationIdCamelCase + "Request"
 	for _, imp := range op.Imports {
 		if imp == param {
 			op.OperationIdCamelCase += "Operation"
 			op.OperationIdLowerCase += "operation"
 			op.OperationIdSnakeCase += "_operation"
+			op.Nickname = op.OperationIdCamelCase
 			break
 		}
+	}
+
+	// Check if operationId ends with "Raw" which would conflict with the internal method naming pattern
+	// The template generates methodNameRaw() for internal methods, so an operationId like "fooRaw"
+	// would conflict with the internal method of operation "foo"
+	if strings.HasSuffix(op.OperationIdCamelCase, "Raw") {
+		op.OperationIdCamelCase += "Method"
+		op.OperationIdLowerCase += "method"
+		op.OperationIdSnakeCase += "_method"
+		op.Nickname = op.OperationIdCamelCase
 	}
 }
 
