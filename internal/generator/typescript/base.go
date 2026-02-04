@@ -444,7 +444,7 @@ func Camelize(s string, lowercaseFirst bool) string {
 	var current strings.Builder
 
 	for i, r := range s {
-		if !((r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9')) {
+		if (r < 'a' || r > 'z') && (r < 'A' || r > 'Z') && (r < '0' || r > '9') {
 			// Non-alphanumeric character - end current word
 			if current.Len() > 0 {
 				words = append(words, current.String())

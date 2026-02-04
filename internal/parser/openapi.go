@@ -964,9 +964,10 @@ func (p *Parser) schemaToProperty(name string, schema *openapi3.Schema, required
 		prop.IsNumber = true
 		prop.IsNumeric = true
 		prop.IsPrimitiveType = true
-		if schema.Format == "float" {
+		switch schema.Format {
+		case "float":
 			prop.IsFloat = true
-		} else if schema.Format == "double" {
+		case "double":
 			prop.IsDouble = true
 		}
 		prop.DataType = "number"
