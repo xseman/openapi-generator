@@ -12,6 +12,9 @@ import (
 	"github.com/cbroglie/mustache"
 )
 
+// RenderFunc is the function signature for mustache rendering.
+type RenderFunc = mustache.RenderFunc
+
 // Engine handles Mustache template rendering.
 type Engine struct {
 	// TemplateDir is the directory containing templates
@@ -25,6 +28,9 @@ type Engine struct {
 
 	// Verbose enables debug logging of template execution
 	Verbose bool
+
+	// fsys is the embedded filesystem (optional, for embedded templates)
+	fsys fs.FS
 }
 
 // NewEngine creates a new template engine.
@@ -155,15 +161,29 @@ func (e *Engine) RegisterDefaultLambdas() {
 }
 
 // Render renders a template with the given data.
+// If the engine was created with NewEngineFromFS, it reads from the embedded filesystem.
 func (e *Engine) Render(templateName string, data any) (string, error) {
 	if e.Verbose {
 		fmt.Printf("[TEMPLATE] Rendering template: %s\n", templateName)
 	}
-	templatePath := filepath.Join(e.TemplateDir, templateName)
 
-	content, err := os.ReadFile(templatePath)
-	if err != nil {
-		return "", fmt.Errorf("failed to read template %s: %w", templateName, err)
+	var content []byte
+	var err error
+
+	if e.fsys != nil {
+		// Read from embedded filesystem
+		templatePath := e.TemplateDir + "/" + templateName
+		content, err = fs.ReadFile(e.fsys, templatePath)
+		if err != nil {
+			return "", fmt.Errorf("failed to read embedded template %s: %w", templateName, err)
+		}
+	} else {
+		// Read from filesystem
+		templatePath := filepath.Join(e.TemplateDir, templateName)
+		content, err = os.ReadFile(templatePath)
+		if err != nil {
+			return "", fmt.Errorf("failed to read template %s: %w", templateName, err)
+		}
 	}
 
 	return e.RenderString(string(content), data)
@@ -208,7 +228,7 @@ func (e *Engine) RenderToFile(templateName string, data any, outputPath string) 
 	}
 
 	// Write file
-	if err := os.WriteFile(outputPath, []byte(result), 0644); err != nil {
+	if err := os.WriteFile(outputPath, []byte(result), 0600); err != nil {
 		return fmt.Errorf("failed to write file %s: %w", outputPath, err)
 	}
 

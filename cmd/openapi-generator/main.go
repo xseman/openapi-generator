@@ -16,6 +16,7 @@ import (
 	"github.com/xseman/openapi-generator/internal/generator/typescript"
 	"github.com/xseman/openapi-generator/internal/parser"
 	"github.com/xseman/openapi-generator/internal/template"
+	"github.com/xseman/openapi-generator/templates"
 	"gopkg.in/yaml.v3"
 )
 
@@ -341,19 +342,30 @@ func runGenerate(cmd *cobra.Command, args []string) error {
 		tmplDir = findTemplateDir(generatorName)
 	}
 
-	if tmplDir == "" {
-		return fmt.Errorf("template directory not found, use --template-dir")
+	var engine *template.Engine
+
+	if tmplDir != "" {
+		// Use filesystem templates
+		if verbose {
+			fmt.Printf("Using templates from: %s\n", tmplDir)
+		}
+		engine = template.NewEngine(tmplDir)
+		engine.Verbose = verbose
+		if err := engine.LoadPartials(); err != nil {
+			return fmt.Errorf("failed to load template partials: %w", err)
+		}
+	} else {
+		// Fall back to embedded templates
+		if verbose {
+			fmt.Println("Using embedded templates")
+		}
+		engine = template.NewEngineFromFS(templates.FS, generatorName)
+		engine.Verbose = verbose
+		if err := engine.LoadPartialsFromFS(); err != nil {
+			return fmt.Errorf("failed to load embedded template partials: %w", err)
+		}
 	}
 
-	if verbose {
-		fmt.Printf("Using templates from: %s\n", tmplDir)
-	}
-
-	engine := template.NewEngine(tmplDir)
-	engine.Verbose = verbose // Enable template execution logging
-	if err := engine.LoadPartials(); err != nil {
-		return fmt.Errorf("failed to load template partials: %w", err)
-	}
 	engine.RegisterDefaultLambdas()
 
 	// Prepare template data
@@ -553,7 +565,7 @@ func runGenerate(cmd *cobra.Command, args []string) error {
 		if err := os.MkdirAll(filepath.Dir(modelIndexPath), 0755); err != nil {
 			return fmt.Errorf("failed to create model index directory: %w", err)
 		}
-		if err := os.WriteFile(modelIndexPath, []byte(modelIndex), 0644); err != nil {
+		if err := os.WriteFile(modelIndexPath, []byte(modelIndex), 0600); err != nil {
 			return fmt.Errorf("failed to write model index: %w", err)
 		}
 		generatedFiles = append(generatedFiles, filepath.Join(gen.ModelPackage, "index.ts"))
@@ -566,7 +578,7 @@ func runGenerate(cmd *cobra.Command, args []string) error {
 		if err := os.MkdirAll(filepath.Dir(apiIndexPath), 0755); err != nil {
 			return fmt.Errorf("failed to create API index directory: %w", err)
 		}
-		if err := os.WriteFile(apiIndexPath, []byte(apiIndex), 0644); err != nil {
+		if err := os.WriteFile(apiIndexPath, []byte(apiIndex), 0600); err != nil {
 			return fmt.Errorf("failed to write API index: %w", err)
 		}
 		generatedFiles = append(generatedFiles, filepath.Join(gen.ApiPackage, "index.ts"))
@@ -847,14 +859,14 @@ func generateMetadata(outputDir string, generatedFiles []string, version string)
 
 	// Write FILES
 	filesPath := filepath.Join(metaDir, "FILES")
-	if err := os.WriteFile(filesPath, []byte(filesContent.String()), 0644); err != nil {
+	if err := os.WriteFile(filesPath, []byte(filesContent.String()), 0600); err != nil {
 		return fmt.Errorf("failed to write FILES: %w", err)
 	}
 
 	// Write VERSION
 	versionPath := filepath.Join(metaDir, "VERSION")
 	versionContent := fmt.Sprintf("%s\n", version)
-	if err := os.WriteFile(versionPath, []byte(versionContent), 0644); err != nil {
+	if err := os.WriteFile(versionPath, []byte(versionContent), 0600); err != nil {
 		return fmt.Errorf("failed to write VERSION: %w", err)
 	}
 
