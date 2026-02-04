@@ -17,7 +17,7 @@ on:
                 type: boolean
                 default: false
             tag:
-                description: "Tag name (e.g., v0.2.0)"
+                description: "Tag name (required when release=true, e.g., v0.2.0)"
                 type: string
                 required: false
 
@@ -68,10 +68,16 @@ jobs:
 
             - uses: actions/setup-go@v6
               with:
-                  go-version-file: go.mod
+                  go-version: "stable"
                   cache-dependency-path: go.sum
 
-            - name: Build binary
+            - name: Install cross-compilation tools
+              if: matrix.goos == 'linux' && matrix.goarch == 'arm64'
+              run: |
+                  sudo apt-get update
+                  sudo apt-get install -y gcc-aarch64-linux-gnu
+
+            - name: Build CLI
               shell: bash
               run: |
                   mkdir -p artifacts
@@ -85,16 +91,21 @@ jobs:
               shell: bash
               run: go install github.com/goreleaser/nfpm/v2/cmd/nfpm@latest
 
-            - name: Create Linux packages
+            - name: Create packages
               if: matrix.goos == 'linux'
               shell: bash
               env:
                   VERSION: ${{ needs.release-please.outputs.tag_name || inputs.tag }}
                   GOARCH: ${{ matrix.goarch }}
               run: |
+                  if [ -z "$VERSION" ]; then
+                    echo "Error: VERSION is not set"
+                    echo "When manually triggering workflow, provide tag input (e.g., v0.1.0)"
+                    exit 1
+                  fi
                   VERSION_NUM=${VERSION#v}
 
-                  cat > nfpm.yaml << 'EOF'
+                  cat > nfpm.yaml << EOF
                   name: openapi-generator
                   arch: ${GOARCH}
                   platform: linux
