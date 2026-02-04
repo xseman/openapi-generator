@@ -171,7 +171,9 @@ func (e *Engine) Render(templateName string, data any) (string, error) {
 	var err error
 
 	if e.fsys != nil {
-		// Read from embedded filesystem
+		// Read from embedded filesystem. Paths in embed.FS must always use forward slashes
+		// per the Go specification, so we intentionally construct the path with "/" rather
+		// than using filepath.Join (which is OS-dependent).
 		templatePath := e.TemplateDir + "/" + templateName
 		content, err = fs.ReadFile(e.fsys, templatePath)
 		if err != nil {
