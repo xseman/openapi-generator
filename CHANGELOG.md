@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.1](https://github.com/xseman/openapi-generator/compare/v0.1.0...v0.1.1) (2026-02-05)
+
+
+### Automation
+
+* add windows arm64 & release VERSION injection ([cd633d1](https://github.com/xseman/openapi-generator/commit/cd633d15cd8cdaabe78f85d0208b3e5fecf9b856))
+* **release:** update workflow ([19de66b](https://github.com/xseman/openapi-generator/commit/19de66b22c612ff7b7befef5f1a151d80d17a875))
+
 ## [0.1.0](https://github.com/xseman/openapi-generator/compare/v0.1.0...v0.1.0) (2026-02-04)
 
 
