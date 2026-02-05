@@ -63,6 +63,9 @@ jobs:
                     - os: windows-latest
                       goos: windows
                       goarch: amd64
+                    - os: windows-latest
+                      goos: windows
+                      goarch: arm64
         steps:
             - uses: actions/checkout@v6
 
@@ -79,10 +82,12 @@ jobs:
 
             - name: Build CLI
               shell: bash
+              env:
+                  VERSION: ${{ needs.release-please.outputs.tag_name || inputs.tag }}
               run: |
                   mkdir -p artifacts
                   CGO_ENABLED=0 GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build \
-                      -ldflags="-s -w" \
+                      -ldflags="-s -w -X main.version=${VERSION}" \
                       -o artifacts/openapi-generator-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.goos == 'windows' && '.exe' || '' }} \
                       ./cmd/openapi-generator
 

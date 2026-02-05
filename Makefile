@@ -1,5 +1,8 @@
 .PHONY: help test cover lint build clean
 
+OUTPUT_DIR ?= bin
+VERSION ?= $(shell jq -r '."."' .github/.release-manifest.json 2>/dev/null || echo "dev")
+
 # Default target
 .DEFAULT_GOAL := help
 
@@ -37,7 +40,8 @@ vet:
 
 ## build: Build the binary
 build:
-	go build -o openapi-generator ./cmd/openapi-generator
+	@mkdir -p $(OUTPUT_DIR)
+	@CGO_ENABLED=0 go build -ldflags="-s -w -X main.version=$(VERSION)" -o $(OUTPUT_DIR)/openapi-generator ./cmd/openapi-generator
 
 ## install: Install the binary
 install:
@@ -45,7 +49,7 @@ install:
 
 ## clean: Clean build artifacts
 clean:
-	rm -f openapi-generator
+	rm -rf $(OUTPUT_DIR)
 	rm -f coverage.out coverage.html
 	rm -rf artifacts/
 	rm -rf generated/
