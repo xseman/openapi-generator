@@ -836,6 +836,7 @@ func (p *Parser) schemaToProperty(name string, schema *openapi3.Schema, required
 	prop.NameInCamelCase = p.toVarName(name)
 	prop.NameInPascalCase = p.toModelName(name)
 	prop.NameInSnakeCase = toSnakeCase(name)
+	prop.HasSanitizedName = prop.Name != name
 
 	// Getters/setters
 	prop.Getter = "get" + p.toModelName(name)

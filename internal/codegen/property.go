@@ -34,11 +34,12 @@ type CodegenProperty struct {
 	JsonSchema           string `json:"jsonSchema"`
 
 	// Flags
-	Required    bool `json:"required"`
-	Deprecated  bool `json:"deprecated"`
-	IsReadOnly  bool `json:"isReadOnly"`
-	IsWriteOnly bool `json:"isWriteOnly"`
-	IsNullable  bool `json:"isNullable"`
+	Required         bool `json:"required"`
+	Deprecated       bool `json:"deprecated"`
+	IsReadOnly       bool `json:"isReadOnly"`
+	IsWriteOnly      bool `json:"isWriteOnly"`
+	IsNullable       bool `json:"isNullable"`
+	HasSanitizedName bool `json:"hasSanitizedName"` // true when name was sanitized and differs from baseName
 
 	// Type flags
 	IsPrimitiveType  bool `json:"isPrimitiveType"`
