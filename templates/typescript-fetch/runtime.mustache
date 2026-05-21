@@ -278,6 +278,12 @@ export class ResponseError extends Error {
         msg?: string
     ) {
         super(msg || `HTTP ${response.status}: ${response.statusText}`);
+
+        // restore prototype chain
+        const actualProto = new.target.prototype;
+        if (Object.setPrototypeOf) {
+            Object.setPrototypeOf(this, actualProto);
+        }
     }
 }
 
@@ -288,6 +294,12 @@ export class FetchError extends Error {
         msg?: string
     ) {
         super(msg || `Network request failed: ${cause.message}`);
+
+        // restore prototype chain
+        const actualProto = new.target.prototype;
+        if (Object.setPrototypeOf) {
+            Object.setPrototypeOf(this, actualProto);
+        }
     }
 }
 
@@ -298,6 +310,12 @@ export class RequiredError extends Error {
         msg?: string
     ) {
         super(msg || `Required parameter '${field}' was null or undefined`);
+
+        // restore prototype chain
+        const actualProto = new.target.prototype;
+        if (Object.setPrototypeOf) {
+            Object.setPrototypeOf(this, actualProto);
+        }
     }
 }
 
