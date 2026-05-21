@@ -9,13 +9,13 @@ export interface {{classname}} {{#parent}}extends {{{.}}} {{/parent}}{
 {{/additionalPropertiesType}}
 {{#vars}}
     /**
-     * @type {{=<% %>=}}{<%&datatype%>}<%={{ }}=%>
+     * @type {{=<% %>=}}{<%&datatypeWithEnum%>}<%={{ }}=%>
      * @memberof {{classname}}
 {{#deprecated}}
      * @deprecated
 {{/deprecated}}
      */
-    {{#isReadOnly}}readonly {{/isReadOnly}}{{name}}{{^required}}?{{/required}}: {{#isEnum}}{{{datatypeWithEnum}}}{{#isNullable}} | null{{/isNullable}}{{/isEnum}}{{^isEnum}}{{{datatype}}}{{#isNullable}} | null{{/isNullable}}{{/isEnum}};
+    {{#isReadOnly}}readonly {{/isReadOnly}}{{name}}{{^required}}?{{/required}}: {{{datatypeWithEnum}}}{{#isNullable}} | null{{/isNullable}};
 {{/vars}}
 }{{#hasEnums}}
 
