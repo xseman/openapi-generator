@@ -17,35 +17,87 @@ minimal dependencies.
 - Fast generation times without JVM overhead
 - Load specs from local files or remote URLs
 - Command-line interface compatible with the original OpenAPI Generator
-- Supports OpenAPI 3.x and Swagger 2.0 specifications (auto-converts 2.0 → 3.x)
-
-## Generators
-
-Currently implemented:
-
-- [typescript-fetch](./templates/typescript-fetch/README.md)
+- Supports OpenAPI 3.x and Swagger 2.0 specifications (auto-converts 2.0 -> 3.x)
 
 ## Installation
+
+### Standalone Binaries
+
+Download pre-built binaries from the [releases page](https://github.com/xseman/openapi-generator/releases/latest):
+
+**Linux (amd64/arm64)**
+```bash
+# Download the binary (replace with your architecture)
+curl -LO https://github.com/xseman/openapi-generator/releases/latest/download/openapi-generator-linux-amd64
+
+# Make it executable
+chmod +x openapi-generator-linux-amd64
+
+# Move to your PATH
+sudo mv openapi-generator-linux-amd64 /usr/local/bin/openapi-generator
+```
+
+**macOS (amd64/arm64)**
+```bash
+# Download the binary (amd64 for Intel, arm64 for Apple Silicon)
+curl -LO https://github.com/xseman/openapi-generator/releases/latest/download/openapi-generator-darwin-arm64
+
+# Make it executable
+chmod +x openapi-generator-darwin-arm64
+
+# Move to your PATH
+sudo mv openapi-generator-darwin-arm64 /usr/local/bin/openapi-generator
+```
+
+**Windows (amd64)**
+```powershell
+# Download from: https://github.com/xseman/openapi-generator/releases/latest/download/openapi-generator-windows-amd64.exe
+# Add the .exe to your PATH
+```
+
+### Package Managers
+
+**Debian/Ubuntu**
+```bash
+# Download and install (replace version and architecture as needed)
+curl -LO https://github.com/xseman/openapi-generator/releases/latest/download/openapi-generator_0.1.0_amd64.deb
+sudo dpkg -i openapi-generator_0.1.0_amd64.deb
+```
+
+**RHEL/Fedora/CentOS**
+```bash
+# Download and install (replace version and architecture as needed)
+curl -LO https://github.com/xseman/openapi-generator/releases/latest/download/openapi-generator-0.1.0-1.x86_64.rpm
+sudo rpm -i openapi-generator-0.1.0-1.x86_64.rpm
+```
+
+### From Source
 
 ```bash
 go install github.com/xseman/openapi-generator/cmd/openapi-generator@latest
 ```
 
+## Templates
+
+### Client
+
+- [typescript-fetch](./templates/typescript-fetch/README.md)
+
+### Server
+
+- (Coming soon)
+
 ## Usage
 
 ```bash
 openapi-generator generate \
-  -i openapi.yaml \
-  -g <template> \
-  -o ./generated \
-  -p key=value \
-  -c config.yaml \
-  --verbose
+    -i openapi.yaml \
+    -g <template> \
+    -o ./generated \
+    -p key=value \
+    -c config.yaml \
+    --verbose
 ```
-
-**Template-Specific Usage:**
-
-- [typescript-fetch](./templates/typescript-fetch/README.md#usage)
 
 ## CLI Options
 
@@ -62,7 +114,76 @@ openapi-generator generate \
 
 **Note:** For generator-specific options, see the template documentation (e.g., [typescript-fetch options](./templates/typescript-fetch/README.md#usage)).
 
+## Development
+
+### Building and Testing
+
+```bash
+# Build the binary
+make build
+
+# Run tests
+make test
+
+# Run tests with coverage
+make cover
+
+# Format code
+make fmt
+
+# Run linter
+make lint
+
+# Run all quality checks
+make quality
+
+# Clean build artifacts
+make clean
+
+# Show all available targets
+make help
+```
+
+### Manual Testing
+
+```bash
+# Generate from a spec
+./bin/openapi-generator generate \
+    -i petstore.yaml \
+    -g typescript-fetch \
+    -o ./out
+
+# List available generators
+./bin/openapi-generator list
+
+# Show config options for a generator
+./bin/openapi-generator config-help typescript-fetch
+```
+
+### CI/CD
+
+This project includes a comprehensive CI/CD pipeline:
+
+- **Quality Checks**: Automated testing, linting (golangci-lint), and builds on every push/PR
+- **Coverage Reports**: Test coverage reports posted as comments on pull requests
+- **Automated Releases**: Release-please based releases with multi-platform binary builds
+- **Platform Support**: Linux (amd64, arm64), macOS (amd64, arm64), Windows (amd64)
+- **Package Formats**: .deb and .rpm packages for Linux distributions
+
+See [CI_CD_IMPLEMENTATION.md](./CI_CD_IMPLEMENTATION.md) for detailed documentation.
+
+
 ## Architecture
+
+### Core Components
+
+| Component     | Package              | Description                                    |
+| ------------- | -------------------- | ---------------------------------------------- |
+| **Parser**    | `internal/parser`    | Parses OpenAPI 2.0/3.x specs using kin-openapi |
+| **Codegen**   | `internal/codegen`   | Data structures mirroring Java's CodegenModel  |
+| **Generator** | `internal/generator` | Generator interface and implementations        |
+| **Template**  | `internal/template`  | Mustache template engine with lambdas          |
+| **Config**    | `internal/config`    | Configuration structs for generators           |
 
 ### Generation Pipeline
 
@@ -95,44 +216,4 @@ sequenceDiagram
 
     CLI->>Templates: Render Supporting Files
     Templates-->>CLI: Runtime & Configuration Files
-```
-
-### Core Components
-
-| Component     | Package              | Description                                    |
-| ------------- | -------------------- | ---------------------------------------------- |
-| **Parser**    | `internal/parser`    | Parses OpenAPI 2.0/3.x specs using kin-openapi |
-| **Codegen**   | `internal/codegen`   | Data structures mirroring Java's CodegenModel  |
-| **Generator** | `internal/generator` | Generator interface and implementations        |
-| **Template**  | `internal/template`  | Mustache template engine with lambdas          |
-| **Config**    | `internal/config`    | Configuration structs for generators           |
-
-### Dependencies
-
-| Library                         | Purpose                       |
-| ------------------------------- | ----------------------------- |
-| `github.com/getkin/kin-openapi` | OpenAPI 3.x and 2.0 parsing   |
-| `github.com/cbroglie/mustache`  | Mustache template rendering   |
-| `github.com/spf13/cobra`        | CLI framework                 |
-
-## Development
-
-```bash
-# Build
-go build -o openapi-generator ./cmd/openapi-generator
-
-# Run tests
-go test ./...
-
-# Generate from a spec
-./openapi-generator generate \
-    -i petstore.yaml \
-    -g typescript-fetch \
-    -o ./out
-
-# List available generators
-./openapi-generator list
-
-# Show config options for a generator
-./openapi-generator config-help typescript-fetch
 ```
