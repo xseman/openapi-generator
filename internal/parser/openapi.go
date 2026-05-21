@@ -309,12 +309,12 @@ func (p *Parser) validateSpec() error {
 		sb.WriteString("There were issues with the specification. The option can be disabled via --skip-validate-spec (CLI).\n")
 		sb.WriteString("Errors:\n")
 		for _, msg := range p.ValidationErrors {
-			sb.WriteString(fmt.Sprintf("  - %s\n", msg))
+			fmt.Fprintf(&sb, "  - %s\n", msg)
 		}
 		if len(p.ValidationWarnings) > 0 {
 			sb.WriteString("Warnings:\n")
 			for _, msg := range p.ValidationWarnings {
-				sb.WriteString(fmt.Sprintf("  - %s\n", msg))
+				fmt.Fprintf(&sb, "  - %s\n", msg)
 			}
 		}
 		return errors.New(sb.String())

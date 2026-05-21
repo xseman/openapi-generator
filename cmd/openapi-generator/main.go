@@ -782,7 +782,7 @@ func generateModelIndex(models []*generator.CodegenModel, gen *typescript.FetchG
 	for _, model := range models {
 		filename := gen.ToModelFilename(model.Classname)
 		ext := gen.ImportFileExtension
-		sb.WriteString(fmt.Sprintf("export * from './%s%s';\n", filename, ext))
+		fmt.Fprintf(&sb, "export * from './%s%s';\n", filename, ext)
 	}
 
 	return sb.String()
@@ -797,7 +797,7 @@ func generateApiIndex(ops map[string][]*generator.CodegenOperation, gen *typescr
 		apiClassname := gen.ToApiName(tag)
 		filename := gen.ToApiFilename(apiClassname)
 		ext := gen.ImportFileExtension
-		sb.WriteString(fmt.Sprintf("export * from './%s%s';\n", filename, ext))
+		fmt.Fprintf(&sb, "export * from './%s%s';\n", filename, ext)
 	}
 
 	return sb.String()
