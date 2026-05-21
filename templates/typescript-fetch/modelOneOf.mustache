@@ -61,7 +61,6 @@ export function {{classname}}FromJSONTyped(json: any, ignoreDiscriminator: boole
                     }
     {{#-last}}
             }
-            return json;
     }
     {{/-last}}
     {{/oneOfArrays}}
@@ -70,15 +69,15 @@ export function {{classname}}FromJSONTyped(json: any, ignoreDiscriminator: boole
     {{#items}}
     {{#isDateType}}
     if (Array.isArray(json)) {
-            if (json.every((item) => !(isNaN(new Date(json).getTime()))) {
-                    return json.map((value) => new Date(json);
+            if (json.every((item) => !(isNaN(new Date(item).getTime())))) {
+                    return json.map((value) => new Date(value));
             }
     }
     {{/isDateType}}
     {{#isDateTimeType}}
     if (Array.isArray(json)) {
-            if (json.every((item) => !(isNaN(new Date(json).getTime()))) {
-                    return json.map((value) => new Date(json);
+            if (json.every((item) => !(isNaN(new Date(item).getTime())))) {
+                    return json.map((value) => new Date(value));
             }
     }
     {{/isDateTimeType}}
@@ -135,6 +134,13 @@ export function {{classname}}FromJSONTyped(json: any, ignoreDiscriminator: boole
     {{/isString}}
     {{/isArray}}
     {{/oneOfPrimitives}}
+    {{#oneOfArrays}}
+    {{#-last}}
+    if (Array.isArray(json)) {
+            return json;
+    }
+    {{/-last}}
+    {{/oneOfArrays}}
     return {} as any;
 {{/discriminator}}
 }
@@ -178,7 +184,6 @@ export function {{classname}}ToJSONTyped(value?: {{classname}} | null, ignoreDis
                     }
     {{#-last}}
             }
-            return value;
     }
     {{/-last}}
     {{/oneOfArrays}}
@@ -187,15 +192,15 @@ export function {{classname}}ToJSONTyped(value?: {{classname}} | null, ignoreDis
     {{#items}}
     {{#isDateType}}
     if (Array.isArray(value)) {
-            if (value.every((item) => item instanceof Date) {
-                    return value.map((value) => value.toISOString().substring(0,10)));
+            if (value.every((item) => item instanceof Date)) {
+                    return value.map((value) => value.toISOString().substring(0,10));
             }
     }
     {{/isDateType}}
     {{#isDateTimeType}}
     if (Array.isArray(value)) {
-            if (value.every((item) => item instanceof Date) {
-                    return value.map((value) => value.toISOString();
+            if (value.every((item) => item instanceof Date)) {
+                    return value.map((item) => item.toISOString());
             }
     }
     {{/isDateTimeType}}
@@ -250,6 +255,13 @@ export function {{classname}}ToJSONTyped(value?: {{classname}} | null, ignoreDis
     {{/isString}}
     {{/isArray}}
     {{/oneOfPrimitives}}
+    {{#oneOfArrays}}
+    {{#-last}}
+    if (Array.isArray(value)) {
+            return value;
+    }
+    {{/-last}}
+    {{/oneOfArrays}}
     return {};
 {{/discriminator}}
 }
