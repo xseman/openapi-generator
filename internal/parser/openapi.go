@@ -856,18 +856,24 @@ func (p *Parser) schemaToProperty(name string, schema *openapi3.Schema, required
 		prop.AllowableValues = map[string]any{
 			"values": schema.Enum,
 		}
+		// isString records whether each enum value must be quoted as a string literal.
+		// It is stored on the enumVar itself rather than relying on Mustache context
+		// fallback to the enclosing property: an array-of-enum parameter is not itself a
+		// string, so the values of its inherited enumVars would otherwise render unquoted.
+		isStringEnum := schemaType == "string"
 		enumVars := make([]map[string]any, 0, len(schema.Enum))
 		for _, v := range schema.Enum {
 			// Escape single quotes for TypeScript string literals
 			valueStr := fmt.Sprintf("%v", v)
 			escapedValue := strings.ReplaceAll(valueStr, "'", "\\'")
 			enumVars = append(enumVars, map[string]any{
-				"name":  toEnumVarName(valueStr),
-				"value": escapedValue,
+				"name":     toEnumVarName(valueStr),
+				"value":    escapedValue,
+				"isString": isStringEnum,
 			})
 		}
 		prop.AllowableValues["enumVars"] = enumVars
-		prop.EnumName = p.toModelName(name) + "Enum"
+		prop.EnumName = p.toEnumName(name)
 		prop.DatatypeWithEnum = prop.EnumName
 	}
 
@@ -910,6 +916,17 @@ func (p *Parser) schemaToProperty(name string, schema *openapi3.Schema, required
 			prop.BaseType = "any"
 		}
 		prop.UniqueItems = schema.UniqueItems
+
+		// When the array items are an enum, surface the enum on the array itself so a named
+		// enum is generated and the element type references it. DataType stays the underlying
+		// "Array<...>" while DatatypeWithEnum carries the enum element type, mirroring the
+		// scalar-enum convention.
+		if prop.Items != nil && prop.Items.IsEnum {
+			prop.IsEnum = true
+			prop.EnumName = p.toEnumName(name)
+			prop.AllowableValues = prop.Items.AllowableValues
+			prop.DatatypeWithEnum = "Array<" + prop.EnumName + ">"
+		}
 
 	case "object":
 		if schema.Properties != nil {
@@ -1075,11 +1092,14 @@ func (p *Parser) operationToCodegen(path, method string, op *openapi3.Operation,
 		co.OperationId = strings.ToLower(method) + sanitizeTag(path)
 	}
 
-	// Set operation ID variants
-	co.OperationIdCamelCase = toCamelCase(co.OperationId)
+	// Set operation ID variants.
+	// OperationIdCamelCase is UpperCamelCase (PascalCase) and is used for type-level
+	// identifiers such as the request interface and inline parameter enums. Nickname is
+	// lowerCamelCase and is used for the generated method names.
+	co.OperationIdCamelCase = toPascalCase(co.OperationId)
 	co.OperationIdLowerCase = strings.ToLower(co.OperationId)
 	co.OperationIdSnakeCase = toSnakeCase(co.OperationId)
-	co.Nickname = co.OperationIdCamelCase
+	co.Nickname = toCamelCase(co.OperationId)
 
 	// Set tag/baseName
 	if len(op.Tags) > 0 {
@@ -1151,8 +1171,32 @@ func (p *Parser) operationToCodegen(path, method string, op *openapi3.Operation,
 					bodyParam.BaseType = modelName
 					bodyParam.IsModel = true
 				} else {
-					bodyParam.DataType = p.getTypeDeclaration(schema)
-					bodyParam.BaseType = bodyParam.DataType
+					// Derive the full property shape so inline bodies (arrays, primitives,
+					// maps) carry their container/item information instead of collapsing to a
+					// bare type. Without this an array body renders as `Array` and an
+					// undefined `ArrayToJSON` helper.
+					prop := p.schemaToProperty("body", schema, body.Required)
+					bodyParam.DataType = prop.DataType
+					bodyParam.BaseType = prop.BaseType
+					bodyParam.IsArray = prop.IsArray
+					bodyParam.IsMap = prop.IsMap
+					bodyParam.IsContainer = prop.IsContainer
+					bodyParam.IsPrimitiveType = prop.IsPrimitiveType
+					bodyParam.IsModel = prop.IsModel
+					bodyParam.IsString = prop.IsString
+					bodyParam.IsNumber = prop.IsNumber
+					bodyParam.IsInteger = prop.IsInteger
+					bodyParam.IsBoolean = prop.IsBoolean
+					bodyParam.Items = prop.Items
+
+					// Fall back to the legacy declaration for composed schemas (allOf/oneOf)
+					// that schemaToProperty cannot resolve to a concrete model.
+					if (bodyParam.DataType == "" || bodyParam.DataType == "any") && len(schema.AllOf) > 0 {
+						bodyParam.DataType = p.getTypeDeclaration(schema)
+						bodyParam.BaseType = bodyParam.DataType
+						bodyParam.IsModel = !isPrimitiveType(bodyParam.DataType)
+						bodyParam.IsPrimitiveType = isPrimitiveType(bodyParam.DataType)
+					}
 				}
 
 				// Use "any" if type declaration is empty
@@ -1413,8 +1457,17 @@ func (p *Parser) responseToCodegen(code string, resp *openapi3.Response) *codege
 			cr.Items = prop.Items
 			cr.ContainerType = prop.ContainerType
 
-			cr.SimpleType = prop.IsPrimitiveType
-			cr.PrimitiveType = prop.IsPrimitiveType
+			// PrimitiveType drives whether the operation deserializes with a per-element
+			// FromJSON mapper. For array/map responses the relevant question is whether the
+			// element type is primitive: a primitive element (e.g. Array<number>) needs no
+			// mapper and must not reference an undefined numberFromJSON helper. SimpleType
+			// is reserved for scalar primitives only.
+			basePrimitive := prop.IsPrimitiveType
+			if (prop.IsArray || prop.IsMap) && prop.Items != nil {
+				basePrimitive = prop.Items.IsPrimitiveType
+			}
+			cr.SimpleType = prop.IsPrimitiveType && !prop.IsArray && !prop.IsMap
+			cr.PrimitiveType = basePrimitive
 		}
 
 		break // Use first content type
@@ -1589,6 +1642,17 @@ func (p *Parser) toVarName(name string) string {
 		return p.ToVarNameFunc(name)
 	}
 	return toCamelCase(name)
+}
+
+// toEnumName builds a PascalCase enum type name from a property or parameter name,
+// suffixed with "Enum". toPascalCase splits on both dots and camelCase boundaries, so
+// dot-namespaced names (e.g. "status.equals", "type.in") yield properly cased segments
+// rather than gluing the suffix in lowercase. The resulting name is always further
+// prefixed with the operation or model name by the generator, so it never stands alone
+// as a reserved word — keeping this free of the reserved-word guarding that toModelName
+// applies.
+func (p *Parser) toEnumName(name string) string {
+	return toPascalCase(name) + "Enum"
 }
 
 func (p *Parser) collectImports(model *codegen.CodegenModel) []string {

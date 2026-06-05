@@ -356,14 +356,14 @@ export class {{classname}} extends runtime.BaseAPI {
 {{^isResponseFile}}
 {{#returnTypeIsPrimitive}}
 {{#isMap}}
-        return new runtime.JSONApiResponse<{{returnType}}>(response);
+        return new runtime.JSONApiResponse<{{{returnType}}}>(response);
 {{/isMap}}
 {{#isArray}}
-        return new runtime.JSONApiResponse<{{returnType}}>(response);
+        return new runtime.JSONApiResponse<{{{returnType}}}>(response);
 {{/isArray}}
 {{#returnSimpleType}}
         if (this.isJsonMime(response.headers.get('content-type'))) {
-            return new runtime.JSONApiResponse<{{returnType}}>(response);
+            return new runtime.JSONApiResponse<{{{returnType}}}>(response);
         } else {
             return new runtime.TextApiResponse(response) as any;
         }

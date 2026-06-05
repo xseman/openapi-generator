@@ -218,7 +218,7 @@ func (g *FetchGenerator) escapeOperationId(op *codegen.CodegenOperation) {
 			op.OperationIdCamelCase += "Operation"
 			op.OperationIdLowerCase += "operation"
 			op.OperationIdSnakeCase += "_operation"
-			op.Nickname = op.OperationIdCamelCase
+			op.Nickname += "Operation"
 			break
 		}
 	}
@@ -230,7 +230,7 @@ func (g *FetchGenerator) escapeOperationId(op *codegen.CodegenOperation) {
 		op.OperationIdCamelCase += "Method"
 		op.OperationIdLowerCase += "method"
 		op.OperationIdSnakeCase += "_method"
-		op.Nickname = op.OperationIdCamelCase
+		op.Nickname += "Method"
 	}
 }
 
