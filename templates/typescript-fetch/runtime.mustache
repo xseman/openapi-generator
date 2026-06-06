@@ -231,7 +231,9 @@ export class BaseAPI {
                 }
             }
             if (response === undefined) {
-                if (e instanceof Error) {
+                if (e instanceof Error && e.name === "AbortError") {
+                    throw new AbortError(e);
+                } else if (e instanceof Error) {
                     throw new FetchError(e, "The request failed and the interceptors did not return an alternative response");
                 } else {
                     throw e;
@@ -287,13 +289,29 @@ export class ResponseError extends Error {
     }
 }
 
+export class AbortError extends Error {
+    override name: "AbortError" = "AbortError";
+    constructor(
+        public cause: Error,
+        msg?: string
+    ) {
+        super(msg || "The request was aborted", { cause });
+
+        // restore prototype chain
+        const actualProto = new.target.prototype;
+        if (Object.setPrototypeOf) {
+            Object.setPrototypeOf(this, actualProto);
+        }
+    }
+}
+
 export class FetchError extends Error {
     override name: "FetchError" = "FetchError";
     constructor(
         public cause: Error,
         msg?: string
     ) {
-        super(msg || `Network request failed: ${cause.message}`);
+        super(msg || `Network request failed: ${cause.message}`, { cause });
 
         // restore prototype chain
         const actualProto = new.target.prototype;

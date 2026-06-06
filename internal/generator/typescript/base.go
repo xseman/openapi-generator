@@ -74,6 +74,32 @@ var ReservedWords = map[string]bool{
 	"map": true, "set": true, "array": true, "object": true,
 }
 
+// tsReservedKeywords is the set of TypeScript/ECMAScript reserved keywords that are not
+// valid as bare identifiers and must be escaped in property/parameter names. It mirrors
+// upstream openapi-generator's AbstractTypeScriptClientCodegen reservedWords. Unlike the
+// broader ReservedWords map — which also guards model-name collisions with built-in types
+// (File, Blob, ...) and API-method local variables — these are the only words ToVarName
+// escapes, so a property or form field named "file" stays "file" while "export" becomes
+// "_export".
+var tsReservedKeywords = map[string]bool{
+	"abstract": true, "await": true, "boolean": true, "break": true,
+	"byte": true, "case": true, "catch": true, "char": true,
+	"class": true, "const": true, "continue": true, "debugger": true,
+	"default": true, "delete": true, "do": true, "double": true,
+	"else": true, "enum": true, "export": true, "extends": true,
+	"false": true, "final": true, "finally": true, "float": true,
+	"for": true, "function": true, "goto": true, "if": true,
+	"implements": true, "import": true, "in": true, "instanceof": true,
+	"int": true, "interface": true, "let": true, "long": true,
+	"native": true, "new": true, "null": true, "package": true,
+	"private": true, "protected": true, "public": true, "return": true,
+	"short": true, "static": true, "super": true, "switch": true,
+	"synchronized": true, "this": true, "throw": true, "transient": true,
+	"true": true, "try": true, "typeof": true, "var": true,
+	"void": true, "volatile": true, "while": true, "with": true,
+	"yield": true,
+}
+
 // Primitives is the set of TypeScript primitive types
 var Primitives = map[string]bool{
 	"string": true, "String": true, "boolean": true, "Boolean": true,
@@ -252,18 +278,29 @@ func (g *BaseGenerator) ToVarName(name string) string {
 	}
 
 	// Apply model property naming convention
+	var result string
 	switch g.ModelPropertyNaming {
 	case config.PropertyNamingOriginal:
-		return name
+		result = name
 	case config.PropertyNamingCamelCase:
-		return Camelize(name, true)
+		result = Camelize(name, true)
 	case config.PropertyNamingPascalCase:
-		return Camelize(name, false)
+		result = Camelize(name, false)
 	case config.PropertyNamingSnakeCase:
-		return Underscore(name)
+		result = Underscore(name)
 	default:
-		return Camelize(name, true)
+		result = Camelize(name, true)
 	}
+
+	// Escape TypeScript reserved keywords on the identifier only (e.g. "export" -> "_export"),
+	// matching upstream openapi-generator. The original name is kept as the property's
+	// baseName / JSON wire key by the caller, so serialization is unaffected. Only true
+	// keywords are escaped — built-in type names like "file" remain valid identifiers.
+	if tsReservedKeywords[strings.ToLower(result)] {
+		result = "_" + result
+	}
+
+	return result
 }
 
 // ToParamName converts a parameter name

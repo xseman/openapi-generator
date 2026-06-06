@@ -1148,82 +1148,127 @@ func (p *Parser) operationToCodegen(path, method string, op *openapi3.Operation,
 	// Process request body
 	if op.RequestBody != nil && op.RequestBody.Value != nil {
 		body := op.RequestBody.Value
-		for contentType, mediaType := range body.Content {
-			if mediaType.Schema != nil && mediaType.Schema.Value != nil {
-				bodyParam := &codegen.CodegenParameter{
-					ParamName:   "body",
-					BaseName:    "body",
-					IsBodyParam: true,
-					Required:    body.Required,
-					Description: body.Description,
-					ContentType: contentType,
-				}
 
-				schema := mediaType.Schema.Value
-				if mediaType.Schema.Ref != "" {
-					refName := extractRefName(mediaType.Schema.Ref)
-					modelName := p.toModelName(refName)
-					// Use "any" if model name is empty
-					if modelName == "" {
-						modelName = "any"
-					}
-					bodyParam.DataType = modelName
-					bodyParam.BaseType = modelName
-					bodyParam.IsModel = true
-				} else {
-					// Derive the full property shape so inline bodies (arrays, primitives,
-					// maps) carry their container/item information instead of collapsing to a
-					// bare type. Without this an array body renders as `Array` and an
-					// undefined `ArrayToJSON` helper.
-					prop := p.schemaToProperty("body", schema, body.Required)
-					bodyParam.DataType = prop.DataType
-					bodyParam.BaseType = prop.BaseType
-					bodyParam.IsArray = prop.IsArray
-					bodyParam.IsMap = prop.IsMap
-					bodyParam.IsContainer = prop.IsContainer
-					bodyParam.IsPrimitiveType = prop.IsPrimitiveType
-					bodyParam.IsModel = prop.IsModel
-					bodyParam.IsString = prop.IsString
-					bodyParam.IsNumber = prop.IsNumber
-					bodyParam.IsInteger = prop.IsInteger
-					bodyParam.IsBoolean = prop.IsBoolean
-					bodyParam.Items = prop.Items
+		// Iterate content types in a deterministic order. Go map iteration is randomised,
+		// which would otherwise make the chosen schema/content-type (and therefore the
+		// generated output) unstable across runs.
+		contentTypes := make([]string, 0, len(body.Content))
+		for ct := range body.Content {
+			contentTypes = append(contentTypes, ct)
+		}
+		sort.Strings(contentTypes)
 
-					// Fall back to the legacy declaration for composed schemas (allOf/oneOf)
-					// that schemaToProperty cannot resolve to a concrete model.
-					if (bodyParam.DataType == "" || bodyParam.DataType == "any") && len(schema.AllOf) > 0 {
-						bodyParam.DataType = p.getTypeDeclaration(schema)
-						bodyParam.BaseType = bodyParam.DataType
-						bodyParam.IsModel = !isPrimitiveType(bodyParam.DataType)
-						bodyParam.IsPrimitiveType = isPrimitiveType(bodyParam.DataType)
-					}
-				}
+		for _, contentType := range contentTypes {
+			mediaType := body.Content[contentType]
+			if mediaType.Schema == nil || mediaType.Schema.Value == nil {
+				continue
+			}
+			schema := mediaType.Schema.Value
 
-				// Use "any" if type declaration is empty
-				if bodyParam.DataType == "" {
-					bodyParam.DataType = "any"
-					bodyParam.BaseType = "any"
-				}
-
-				co.BodyParam = bodyParam
-				co.BodyParams = append(co.BodyParams, bodyParam)
-				co.AllParams = append(co.AllParams, bodyParam)
-
-				// Add to required/optional params
-				if bodyParam.Required {
-					co.RequiredParams = append(co.RequiredParams, bodyParam)
-				} else {
-					co.OptionalParams = append(co.OptionalParams, bodyParam)
-					co.HasOptionalParams = true
-				}
-
-				// Check for multipart
+			// multipart/form-data and form-urlencoded bodies expand into one form
+			// parameter per schema property (e.g. `file`), matching upstream
+			// openapi-generator, rather than a single opaque `body` parameter.
+			isForm := strings.HasPrefix(contentType, "multipart/") ||
+				contentType == "application/x-www-form-urlencoded"
+			if isForm && isObjectSchema(schema) && len(schema.Properties) > 0 {
+				p.addFormParams(co, schema, contentType)
 				if strings.HasPrefix(contentType, "multipart/") {
 					co.IsMultipart = true
 				}
-
-				break // Use first content type
+				break
 			}
+
+			bodyParam := &codegen.CodegenParameter{
+				IsBodyParam: true,
+				Required:    body.Required,
+				Description: body.Description,
+				ContentType: contentType,
+			}
+
+			if mediaType.Schema.Ref != "" {
+				refName := extractRefName(mediaType.Schema.Ref)
+				modelName := p.toModelName(refName)
+				// Use "any" if model name is empty
+				if modelName == "" {
+					modelName = "any"
+				}
+				bodyParam.DataType = modelName
+				bodyParam.BaseType = modelName
+				bodyParam.IsModel = true
+				// Name a $ref body after the referenced schema (camelCased), e.g.
+				// Dodavatel -> dodavatel.
+				bodyParam.BaseName = refName
+				bodyParam.ParamName = p.toVarName(refName)
+			} else {
+				// Derive the full property shape so inline bodies (arrays, primitives,
+				// maps) carry their container/item information instead of collapsing to a
+				// bare type. Without this an array body renders as `Array` and an
+				// undefined `ArrayToJSON` helper.
+				prop := p.schemaToProperty("body", schema, body.Required)
+				bodyParam.DataType = prop.DataType
+				bodyParam.BaseType = prop.BaseType
+				bodyParam.IsArray = prop.IsArray
+				bodyParam.IsMap = prop.IsMap
+				bodyParam.IsContainer = prop.IsContainer
+				bodyParam.IsPrimitiveType = prop.IsPrimitiveType
+				bodyParam.IsModel = prop.IsModel
+				bodyParam.IsString = prop.IsString
+				bodyParam.IsNumber = prop.IsNumber
+				bodyParam.IsInteger = prop.IsInteger
+				bodyParam.IsBoolean = prop.IsBoolean
+				bodyParam.Items = prop.Items
+
+				// Fall back to the legacy declaration for composed schemas (allOf/oneOf)
+				// that schemaToProperty cannot resolve to a concrete model.
+				if (bodyParam.DataType == "" || bodyParam.DataType == "any") && len(schema.AllOf) > 0 {
+					bodyParam.DataType = p.getTypeDeclaration(schema)
+					bodyParam.BaseType = bodyParam.DataType
+					bodyParam.IsModel = !isPrimitiveType(bodyParam.DataType)
+					bodyParam.IsPrimitiveType = isPrimitiveType(bodyParam.DataType)
+				}
+
+				// Name an inline body following upstream: an array of a model takes the
+				// (innermost) item model name (e.g. Array<PohybZamestnanca> ->
+				// pohybZamestnanca); an array of primitives or a map uses "requestBody";
+				// everything else (primitives, free-form objects) uses "body".
+				baseName := "body"
+				switch {
+				case prop.IsArray:
+					inner := prop.Items
+					for inner != nil && inner.Items != nil {
+						inner = inner.Items
+					}
+					if inner != nil && inner.IsModel && !isPrimitiveType(inner.DataType) {
+						baseName = inner.DataType
+					} else {
+						baseName = "request_body"
+					}
+				case prop.IsMap:
+					baseName = "request_body"
+				}
+				bodyParam.BaseName = baseName
+				bodyParam.ParamName = p.toVarName(baseName)
+			}
+
+			// Use "any" if type declaration is empty
+			if bodyParam.DataType == "" {
+				bodyParam.DataType = "any"
+				bodyParam.BaseType = "any"
+			}
+
+			co.BodyParam = bodyParam
+			co.BodyParams = append(co.BodyParams, bodyParam)
+			co.AllParams = append(co.AllParams, bodyParam)
+
+			// Add to required/optional params
+			if bodyParam.Required {
+				co.RequiredParams = append(co.RequiredParams, bodyParam)
+			} else {
+				co.OptionalParams = append(co.OptionalParams, bodyParam)
+				co.HasOptionalParams = true
+			}
+
+			break // Use first (sorted) content type
 		}
 	}
 
@@ -1307,6 +1352,81 @@ func (p *Parser) operationToCodegen(path, method string, op *openapi3.Operation,
 	co.Imports = p.collectOperationImports(co)
 
 	return co
+}
+
+// addFormParams expands a multipart/form-urlencoded request-body schema into one
+// CodegenParameter per property, appending them to the operation's FormParams and
+// AllParams. This mirrors upstream openapi-generator, which surfaces form fields (e.g. an
+// uploaded `file`) as individual parameters rather than a single opaque body.
+func (p *Parser) addFormParams(co *codegen.CodegenOperation, schema *openapi3.Schema, contentType string) {
+	requiredSet := make(map[string]bool)
+	for _, r := range schema.Required {
+		requiredSet[r] = true
+	}
+
+	propNames := make([]string, 0, len(schema.Properties))
+	for name := range schema.Properties {
+		propNames = append(propNames, name)
+	}
+	sort.Strings(propNames)
+
+	for _, name := range propNames {
+		propRef := schema.Properties[name]
+		if propRef == nil || propRef.Value == nil {
+			continue
+		}
+		required := requiredSet[name]
+		prop := p.schemaToProperty(name, propRef.Value, required)
+
+		fp := &codegen.CodegenParameter{
+			BaseName:         name,
+			ParamName:        prop.Name,
+			IsFormParam:      true,
+			Required:         required,
+			Description:      prop.Description,
+			ContentType:      contentType,
+			DataType:         prop.DataType,
+			DatatypeWithEnum: prop.DatatypeWithEnum,
+			BaseType:         prop.BaseType,
+			IsArray:          prop.IsArray,
+			IsMap:            prop.IsMap,
+			IsContainer:      prop.IsContainer,
+			IsPrimitiveType:  prop.IsPrimitiveType,
+			IsModel:          prop.IsModel,
+			IsString:         prop.IsString,
+			IsNumber:         prop.IsNumber,
+			IsInteger:        prop.IsInteger,
+			IsBoolean:        prop.IsBoolean,
+			IsBinary:         prop.IsBinary,
+			IsFile:           prop.IsFile,
+			IsDate:           prop.IsDate,
+			IsDateType:       prop.IsDate,
+			IsDateTime:       prop.IsDateTime,
+			IsDateTimeType:   prop.IsDateTime,
+			IsEnum:           prop.IsEnum,
+			Items:            prop.Items,
+			AllowableValues:  prop.AllowableValues,
+			EnumName:         prop.EnumName,
+			UniqueItems:      prop.UniqueItems,
+		}
+		if fp.IsArray {
+			fp.CollectionFormat = "csv"
+		}
+
+		co.FormParams = append(co.FormParams, fp)
+		co.AllParams = append(co.AllParams, fp)
+		if required {
+			co.RequiredParams = append(co.RequiredParams, fp)
+		} else {
+			co.OptionalParams = append(co.OptionalParams, fp)
+			co.HasOptionalParams = true
+		}
+	}
+}
+
+// isObjectSchema reports whether the schema's primary type is "object".
+func isObjectSchema(schema *openapi3.Schema) bool {
+	return schema.Type != nil && len(schema.Type.Slice()) > 0 && schema.Type.Slice()[0] == "object"
 }
 
 // parameterToCodegen converts an OpenAPI parameter to a CodegenParameter.
@@ -1898,30 +2018,38 @@ func sanitizeTag(path string) string {
 	return toPascalCase(path)
 }
 
+// toEnumVarName builds the member name (key) for a generated enum entry. TypeScript-fetch
+// uses PascalCase member names (matching upstream openapi-generator's default
+// ENUM_PROPERTY_NAMING of PascalCase), while the caller preserves the underlying string
+// value verbatim — so CALL_CENTRUM yields the key CallCentrum mapped to 'CALL_CENTRUM'.
+//
+// It replicates camelize(underscore(value)): a separator is inserted at camelCase
+// boundaries, the whole string is lower-cased so SCREAMING_SNAKE_CASE runs collapse into
+// single words (the camelCase splitter would otherwise fragment them into individual
+// letters, e.g. ODPOCTAR -> O,D,P,... -> ODPOCTAR), then each word is Title-cased.
 func toEnumVarName(value string) string {
-	// Convert enum value to a valid enum member name
-	name := strings.ToUpper(value)
-	name = strings.ReplaceAll(name, " ", "_")
-	name = strings.ReplaceAll(name, "-", "_")
-	name = strings.ReplaceAll(name, ".", "_")
-	name = strings.ReplaceAll(name, "+", "PLUS")
+	// Spell out "+" so values such as "C+" survive the alphanumeric-only word split.
+	value = strings.ReplaceAll(value, "+", "_plus")
 
-	// Handle names starting with a digit - prefix with underscore
-	if len(name) > 0 && name[0] >= '0' && name[0] <= '9' {
+	var b strings.Builder
+	var prev rune
+	for i, r := range value {
+		if i > 0 && isUpperCase(r) && ((prev >= 'a' && prev <= 'z') || (prev >= '0' && prev <= '9')) {
+			b.WriteByte('_')
+		}
+		b.WriteRune(r)
+		prev = r
+	}
+
+	name := toPascalCase(strings.ToLower(b.String()))
+	if name == "" {
+		return "Empty"
+	}
+	// Ensure the result is a valid identifier start.
+	if name[0] >= '0' && name[0] <= '9' {
 		name = "_" + name
 	}
-
-	// Remove any remaining invalid characters
-	validName := ""
-	for i, r := range name {
-		if (r >= 'A' && r <= 'Z') || (r >= 'a' && r <= 'z') || r == '_' || (i > 0 && r >= '0' && r <= '9') {
-			validName += string(r)
-		}
-	}
-	if validName == "" {
-		validName = "VALUE"
-	}
-	return validName
+	return name
 }
 
 func isPrimitiveType(t string) bool {
