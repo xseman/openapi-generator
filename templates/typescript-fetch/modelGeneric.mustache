@@ -30,12 +30,12 @@ import { type {{modelName}}, {{modelName}}FromJSONTyped, {{modelName}}ToJSON, {{
 
 {{#vars}}
 {{#isEnum}}
-export const {{datatypeWithEnum}} = {
+export const {{classname}}{{enumName}} = {
 {{#allowableValues.enumVars}}
     {{name}}: {{#isString}}'{{{value}}}'{{/isString}}{{^isString}}{{{value}}}{{/isString}},
 {{/allowableValues.enumVars}}
 } as const;
-export type {{datatypeWithEnum}} = typeof {{datatypeWithEnum}}[keyof typeof {{datatypeWithEnum}}];
+export type {{classname}}{{enumName}} = typeof {{classname}}{{enumName}}[keyof typeof {{classname}}{{enumName}}];
 {{/isEnum}}
 {{/vars}}
 
