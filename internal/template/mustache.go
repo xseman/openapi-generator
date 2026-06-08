@@ -123,22 +123,25 @@ func (e *Engine) RegisterDefaultLambdas() {
 		return toSnakeCase(rendered), nil
 	})
 
-	// indented_star_1 - adds " * " prefix with 1 space indentation
+	// indented_star_1 renders a JSDoc comment body indented by one space with a
+	// "* " prefix. The first line is left as-is because callers emit the leading
+	// " * " literally in the template; only continuation lines are prefixed here.
 	e.RegisterLambda("indented_star_1", func(text string, render mustache.RenderFunc) (string, error) {
 		rendered, err := render(text)
 		if err != nil {
 			return "", err
 		}
-		return indentWithPrefix(rendered, 1, " ", "* "), nil
+		return indentWithPrefix(rendered, 1, " ", "* ", false), nil
 	})
 
-	// indented_star_4 - adds " * " prefix with 4 space indentation
+	// indented_star_4 renders a JSDoc comment body indented by five spaces with a
+	// "* " prefix on every line (the caller emits no leading prefix of its own).
 	e.RegisterLambda("indented_star_4", func(text string, render mustache.RenderFunc) (string, error) {
 		rendered, err := render(text)
 		if err != nil {
 			return "", err
 		}
-		return indentWithPrefix(rendered, 5, " ", "* "), nil
+		return indentWithPrefix(rendered, 5, " ", "* ", true), nil
 	})
 
 	// indented_1 - indents by 1 level (4 spaces)
@@ -221,6 +224,13 @@ func (e *Engine) RenderToFile(templateName string, data any, outputPath string) 
 	result, err := e.Render(templateName, data)
 	if err != nil {
 		return err
+	}
+
+	// Tidy whitespace artifacts left by Mustache section rendering so the
+	// generated TypeScript sources are formatted consistently. Other outputs
+	// (Dart, package.json, README, ...) are written verbatim.
+	if strings.HasSuffix(outputPath, ".ts") {
+		result = normalizeTypeScript(result)
 	}
 
 	// Create output directory if needed
@@ -364,11 +374,97 @@ func indent(s string, prefix string) string {
 	return strings.Join(lines, "\n")
 }
 
-func indentWithPrefix(s string, spaces int, spacer, prefix string) string {
+// normalizeTypeScript cleans up the whitespace artifacts that Mustache section
+// rendering leaves in the generated TypeScript sources, so the output matches
+// what a formatter such as Prettier would produce:
+//   - trailing whitespace is stripped from every line;
+//   - a blank line directly after an opening brace is removed;
+//   - a blank line directly before a closing brace is removed;
+//   - an empty JSDoc line ("*") directly before the comment close ("*/") is
+//     removed;
+//   - runs of consecutive blank lines collapse to a single blank line;
+//   - leading and trailing blank lines are removed and the file ends with
+//     exactly one newline.
+func normalizeTypeScript(s string) string {
+	raw := strings.Split(s, "\n")
+	// Right-trim every line first so blank-line detection is reliable.
+	for i, line := range raw {
+		raw[i] = strings.TrimRight(line, " \t")
+	}
+
+	out := make([]string, 0, len(raw))
+	for i, line := range raw {
+		if line != "" {
+			// Drop an empty JSDoc continuation line ("*") sitting directly before
+			// the comment close ("*/"); it is left behind when a description ends
+			// with a trailing newline.
+			if strings.TrimSpace(line) == "*" {
+				next := ""
+				for j := i + 1; j < len(raw); j++ {
+					if raw[j] != "" {
+						next = raw[j]
+						break
+					}
+				}
+				if strings.HasPrefix(strings.TrimLeft(next, " \t"), "*/") {
+					continue
+				}
+			}
+			out = append(out, line)
+			continue
+		}
+
+		// Drop leading blank lines.
+		if len(out) == 0 {
+			continue
+		}
+		prev := out[len(out)-1]
+		// Drop a blank line right after an opening brace, but keep the "${"
+		// template-literal interpolation case intact.
+		if strings.HasSuffix(prev, "{") && !strings.HasSuffix(prev, "${") {
+			continue
+		}
+		// Collapse consecutive blank lines.
+		if prev == "" {
+			continue
+		}
+		// Drop a blank line right before a closing brace, looking past any
+		// further blank lines to the next real line. A blank run that reaches
+		// end-of-file is dropped as trailing whitespace.
+		next := ""
+		for j := i + 1; j < len(raw); j++ {
+			if raw[j] != "" {
+				next = raw[j]
+				break
+			}
+		}
+		if next == "" || strings.HasPrefix(strings.TrimLeft(next, " \t"), "}") {
+			continue
+		}
+		out = append(out, line)
+	}
+
+	return strings.Join(out, "\n") + "\n"
+}
+
+// indentWithPrefix prefixes each line of s with `spaces` copies of `spacer`
+// followed by `prefix` (e.g. " * " for a JSDoc comment body). Blank lines are
+// emitted as the indentation plus the trimmed prefix (e.g. " *") so that
+// multi-paragraph comments keep a continuous left-hand asterisk rail instead of
+// breaking the comment block with empty lines. When indentFirstLine is false the
+// first line is left untouched, for callers that emit the opening prefix in the
+// template literal themselves.
+func indentWithPrefix(s string, spaces int, spacer, prefix string, indentFirstLine bool) string {
 	lines := strings.Split(s, "\n")
 	indentation := strings.Repeat(spacer, spaces)
+	blankLine := indentation + strings.TrimRight(prefix, " ")
 	for i, line := range lines {
-		if line != "" {
+		if i == 0 && !indentFirstLine {
+			continue
+		}
+		if line == "" {
+			lines[i] = blankLine
+		} else {
 			lines[i] = indentation + prefix + line
 		}
 	}
