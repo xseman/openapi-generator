@@ -1070,6 +1070,13 @@ func (p *Parser) schemaToProperty(name string, schema *openapi3.Schema, required
 	// Set lowercase datatype alias for templates
 	prop.Datatype = prop.DataType
 
+	// IsDateType/IsDateTimeType mirror IsDate/IsDateTime. The typescript-fetch model
+	// template keys date (de)serialization (new Date(...) / .toISOString()) off the
+	// *Type variants, so without this the generated FromJSON/ToJSON pass date fields
+	// through as raw ISO strings while still typing them as Date.
+	prop.IsDateType = prop.IsDate
+	prop.IsDateTimeType = prop.IsDateTime
+
 	return prop
 }
 
@@ -1479,7 +1486,9 @@ func (p *Parser) parameterToCodegen(param *openapi3.Parameter) *codegen.CodegenP
 		cp.IsDouble = prop.IsDouble
 		cp.IsBoolean = prop.IsBoolean
 		cp.IsDate = prop.IsDate
+		cp.IsDateType = prop.IsDate
 		cp.IsDateTime = prop.IsDateTime
+		cp.IsDateTimeType = prop.IsDateTime
 		cp.IsEnum = prop.IsEnum
 		cp.IsPrimitiveType = prop.IsPrimitiveType
 		cp.IsModel = prop.IsModel
