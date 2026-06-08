@@ -87,6 +87,7 @@ type CodegenProperty struct {
 	MostInnerItems       *CodegenProperty   `json:"mostInnerItems"`
 	Vars                 []*CodegenProperty `json:"vars"` // For object types
 	RequiredVars         []*CodegenProperty `json:"requiredVars"`
+	ComposedModels       []string           `json:"composedModels"` // member models of a union/intersection property type, for imports
 
 	// Default value
 	DefaultValue          string `json:"defaultValue"`

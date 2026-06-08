@@ -155,7 +155,7 @@ export function {{classname}}FromJSONTyped(json: any, ignoreDiscriminator: boole
         {{/uniqueItems}}
         {{/isArray}}
         {{#isMap}}
-        "{{name}}": {{^required}}json["{{baseName}}"] == null ? undefined : {{/required}}({{#required}}{{#isNullable}}json["{{baseName}}"] == null ? null : {{/isNullable}}{{/required}}{{#items}}{{#isPrimitiveType}}json["{{baseName}}"]{{/isPrimitiveType}}{{^isPrimitiveType}}runtime.mapValues(json["{{baseName}}"], {{{datatype}}}FromJSON){{/isPrimitiveType}}{{/items}}{{^items}}json["{{baseName}}"]{{/items}}),
+        "{{name}}": {{^required}}json["{{baseName}}"] == null ? undefined : {{/required}}({{#required}}{{#isNullable}}json["{{baseName}}"] == null ? null : {{/isNullable}}{{/required}}{{#items.isModel}}runtime.mapValues(json["{{baseName}}"], {{{items.datatype}}}FromJSON){{/items.isModel}}{{^items.isModel}}json["{{baseName}}"]{{/items.isModel}}),
         {{/isMap}}
         {{^isArray}}
         {{^isMap}}
@@ -247,7 +247,7 @@ export function {{classname}}ToJSONTyped(value?: {{#hasReadOnly}}Omit<{{classnam
         {{/uniqueItems}}
         {{/isArray}}
         {{#isMap}}
-        "{{baseName}}": {{^required}}value["{{name}}"] == null ? undefined : {{/required}}({{#required}}{{#isNullable}}value["{{name}}"] == null ? null : {{/isNullable}}{{/required}}{{#items}}{{#isPrimitiveType}}value["{{name}}"]{{/isPrimitiveType}}{{^isPrimitiveType}}runtime.mapValues(value["{{name}}"], {{{datatype}}}ToJSON){{/isPrimitiveType}}{{/items}}{{^items}}value["{{name}}"]{{/items}}),
+        "{{baseName}}": {{^required}}value["{{name}}"] == null ? undefined : {{/required}}({{#required}}{{#isNullable}}value["{{name}}"] == null ? null : {{/isNullable}}{{/required}}{{#items.isModel}}runtime.mapValues(value["{{name}}"], {{{items.datatype}}}ToJSON){{/items.isModel}}{{^items.isModel}}value["{{name}}"]{{/items.isModel}}),
         {{/isMap}}
         {{^isArray}}
         {{^isMap}}

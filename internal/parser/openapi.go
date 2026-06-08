@@ -546,18 +546,24 @@ func (p *Parser) GetOperations() (map[string][]*codegen.CodegenOperation, error)
 			continue
 		}
 
-		// Process each HTTP method
-		methods := map[string]*openapi3.Operation{
-			"GET":     pathItem.Get,
-			"POST":    pathItem.Post,
-			"PUT":     pathItem.Put,
-			"DELETE":  pathItem.Delete,
-			"PATCH":   pathItem.Patch,
-			"OPTIONS": pathItem.Options,
-			"HEAD":    pathItem.Head,
+		// Process each HTTP method. Use a fixed-order slice rather than a map:
+		// Go map iteration is randomised, which would otherwise shuffle the order
+		// of generated methods within a path (and thus within each API class).
+		methods := []struct {
+			name string
+			op   *openapi3.Operation
+		}{
+			{"GET", pathItem.Get},
+			{"POST", pathItem.Post},
+			{"PUT", pathItem.Put},
+			{"DELETE", pathItem.Delete},
+			{"PATCH", pathItem.Patch},
+			{"OPTIONS", pathItem.Options},
+			{"HEAD", pathItem.Head},
 		}
 
-		for method, op := range methods {
+		for _, m := range methods {
+			method, op := m.name, m.op
 			if op == nil {
 				continue
 			}
@@ -585,7 +591,15 @@ func (p *Parser) GetSecuritySchemes() ([]*codegen.CodegenSecurity, error) {
 
 	var schemes []*codegen.CodegenSecurity
 
-	for name, schemeRef := range p.Doc.Components.SecuritySchemes {
+	// Iterate scheme names in sorted order for stable output.
+	names := make([]string, 0, len(p.Doc.Components.SecuritySchemes))
+	for name := range p.Doc.Components.SecuritySchemes {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+
+	for _, name := range names {
+		schemeRef := p.Doc.Components.SecuritySchemes[name]
 		if schemeRef == nil || schemeRef.Value == nil {
 			continue
 		}
@@ -750,10 +764,16 @@ func (p *Parser) schemaToModel(name string, schema *openapi3.Schema) *codegen.Co
 		if len(schema.Discriminator.Mapping) > 0 {
 			model.HasDiscriminatorWithNonEmptyMapping = true
 			model.Discriminator.MappedModels = make([]*codegen.MappedModel, 0)
-			for mappingName, schemaRef := range schema.Discriminator.Mapping {
+			// Iterate mapping keys in sorted order for stable output.
+			mappingNames := make([]string, 0, len(schema.Discriminator.Mapping))
+			for mappingName := range schema.Discriminator.Mapping {
+				mappingNames = append(mappingNames, mappingName)
+			}
+			sort.Strings(mappingNames)
+			for _, mappingName := range mappingNames {
 				model.Discriminator.MappedModels = append(model.Discriminator.MappedModels, &codegen.MappedModel{
 					MappingName: mappingName,
-					ModelName:   extractRefName(schemaRef),
+					ModelName:   extractRefName(schema.Discriminator.Mapping[mappingName]),
 				})
 			}
 		}
@@ -807,11 +827,128 @@ func (p *Parser) extractProperties(schema *openapi3.Schema, model *codegen.Codeg
 		}
 
 		required := requiredSet[name]
-		prop := p.schemaToProperty(name, propRef.Value, required)
+		prop := p.schemaRefToProperty(name, propRef, required)
 		props = append(props, prop)
 	}
 
 	return props
+}
+
+// schemaRefToProperty builds a CodegenProperty from a property's SchemaRef,
+// resolving a direct $ref to a named object schema into that model's type.
+// schemaToProperty only receives the dereferenced *openapi3.Schema, so it cannot
+// see the $ref; without this a property like {"$ref": "#/.../Zamestnanec"} would
+// collapse to `any` via the "object" branch instead of typing as `Zamestnanec`.
+func (p *Parser) schemaRefToProperty(name string, ref *openapi3.SchemaRef, required bool) *codegen.CodegenProperty {
+	if ref == nil || ref.Value == nil {
+		prop := &codegen.CodegenProperty{
+			Name:             p.toVarName(name),
+			BaseName:         name,
+			Required:         required,
+			DataType:         "any",
+			Datatype:         "any",
+			BaseType:         "any",
+			DatatypeWithEnum: "any",
+			IsPrimitiveType:  true,
+			IsAnyType:        true,
+		}
+		return prop
+	}
+
+	prop := p.schemaToProperty(name, ref.Value, required)
+
+	// Only object-like targets need the override: arrays, enums and primitives are
+	// already typed correctly by schemaToProperty, and clobbering them with the
+	// model name would be wrong.
+	if ref.Ref != "" && (isObjectSchema(ref.Value) || len(ref.Value.Properties) > 0) {
+		modelName := p.toModelName(extractRefName(ref.Ref))
+		if modelName != "" && !isPrimitiveType(modelName) {
+			prop.DataType = modelName
+			prop.Datatype = modelName
+			prop.BaseType = modelName
+			prop.ComplexType = modelName
+			prop.DatatypeWithEnum = modelName
+			prop.IsModel = true
+			prop.IsPrimitiveType = false
+			prop.IsFreeFormObject = false
+			prop.IsAnyType = false
+		}
+	}
+
+	return prop
+}
+
+// applyMemberType resolves a single composition member ($ref or inline schema)
+// onto prop, copying its type-bearing fields. Returns false if the member could
+// not be resolved to a concrete (non-any) type, leaving prop untouched.
+func (p *Parser) applyMemberType(prop *codegen.CodegenProperty, ref *openapi3.SchemaRef) bool {
+	member := p.schemaRefToProperty(prop.BaseName, ref, prop.Required)
+	if member == nil || member.DataType == "" || member.DataType == "any" {
+		return false
+	}
+	prop.DataType = member.DataType
+	prop.BaseType = member.BaseType
+	prop.ComplexType = member.ComplexType
+	prop.DatatypeWithEnum = member.DatatypeWithEnum
+	prop.IsModel = member.IsModel
+	prop.IsArray = member.IsArray
+	prop.IsMap = member.IsMap
+	prop.IsContainer = member.IsContainer
+	prop.IsEnum = member.IsEnum
+	prop.IsPrimitiveType = member.IsPrimitiveType
+	prop.IsFreeFormObject = member.IsFreeFormObject
+	prop.Items = member.Items
+	prop.AllowableValues = member.AllowableValues
+	prop.EnumName = member.EnumName
+	return true
+}
+
+// applyCompositeType builds a union ("|") or intersection ("&") type from the
+// composition members and registers the member models for import. No single
+// (de)serializer exists for a union/intersection, so the value is passed through.
+func (p *Parser) applyCompositeType(prop *codegen.CodegenProperty, refs openapi3.SchemaRefs, sep string) bool {
+	names := p.memberTypeNames(refs)
+	if len(names) == 0 {
+		return false
+	}
+	joined := strings.Join(names, sep)
+	prop.DataType = joined
+	prop.BaseType = joined
+	prop.DatatypeWithEnum = joined
+	prop.IsPrimitiveType = false
+	prop.IsFreeFormObject = true
+	for _, n := range names {
+		if !isPrimitiveType(n) {
+			prop.ComposedModels = append(prop.ComposedModels, n)
+		}
+	}
+	return true
+}
+
+// memberTypeNames resolves composition members to their TypeScript type strings,
+// using the referenced model for $ref members and the recursively resolved type
+// for inline members. Empty/any members are dropped and duplicates removed.
+func (p *Parser) memberTypeNames(refs openapi3.SchemaRefs) []string {
+	out := make([]string, 0, len(refs))
+	seen := make(map[string]bool)
+	for _, m := range refs {
+		if m == nil {
+			continue
+		}
+		var t string
+		switch {
+		case m.Ref != "":
+			t = p.toModelName(extractRefName(m.Ref))
+		case m.Value != nil:
+			t = p.schemaToProperty("member", m.Value, false).DataType
+		}
+		if t == "" || t == "any" || seen[t] {
+			continue
+		}
+		seen[t] = true
+		out = append(out, t)
+	}
+	return out
 }
 
 // schemaToProperty converts an OpenAPI schema to a CodegenProperty.
@@ -929,29 +1066,37 @@ func (p *Parser) schemaToProperty(name string, schema *openapi3.Schema, required
 		}
 
 	case "object":
-		if schema.Properties != nil {
+		switch {
+		case len(schema.Properties) > 0:
 			// For inline objects with properties, we don't generate a model
 			// so treat them as "any" for simplicity
 			prop.DataType = "any"
 			prop.BaseType = "any"
 			prop.IsPrimitiveType = true
 			prop.IsFreeFormObject = true
-		} else if schema.AdditionalProperties.Has != nil && *schema.AdditionalProperties.Has {
+		case schema.AdditionalProperties.Schema != nil:
+			// Typed map: `additionalProperties` is a schema (possibly a $ref),
+			// e.g. {[key: string]: boolean} or {[key: string]: SomeModel}.
 			prop.IsMap = true
 			prop.IsContainer = true
 			prop.ContainerType = "map"
-			if schema.AdditionalProperties.Schema != nil {
-				prop.Items = p.schemaToProperty("value", schema.AdditionalProperties.Schema.Value, false)
-				prop.DataType = "{ [key: string]: " + prop.Items.DataType + "; }"
-				prop.BaseType = prop.Items.DataType
-				prop.IsPrimitiveType = prop.Items.IsPrimitiveType
-			} else {
-				prop.DataType = "{ [key: string]: any; }"
-				prop.BaseType = "any"
-				prop.IsPrimitiveType = true
+			prop.Items = p.schemaRefToProperty("value", schema.AdditionalProperties.Schema, false)
+			prop.DataType = "{ [key: string]: " + prop.Items.DataType + "; }"
+			prop.BaseType = prop.Items.DataType
+			prop.IsPrimitiveType = prop.Items.IsPrimitiveType
+			if prop.Items.IsModel {
+				prop.ComplexType = prop.Items.BaseType
 			}
+		case schema.AdditionalProperties.Has != nil && *schema.AdditionalProperties.Has:
+			// Free-form map: `additionalProperties: true`.
+			prop.IsMap = true
+			prop.IsContainer = true
+			prop.ContainerType = "map"
+			prop.DataType = "{ [key: string]: any; }"
+			prop.BaseType = "any"
+			prop.IsPrimitiveType = true
 			prop.IsFreeFormObject = true
-		} else {
+		default:
 			prop.IsFreeFormObject = true
 			prop.DataType = "any"
 			prop.IsPrimitiveType = true
@@ -1018,10 +1163,28 @@ func (p *Parser) schemaToProperty(name string, schema *openapi3.Schema, required
 		prop.DataType = "boolean"
 
 	default:
-		// Check for $ref
-		prop.DataType = p.getSchemaType(schemaType, schema.Format)
-		if prop.DataType != "any" && prop.DataType != "" {
-			prop.IsModel = true
+		// No explicit "type": resolve composition (allOf/oneOf/anyOf) to the
+		// member type(s) that are available instead of collapsing to `any`.
+		resolved := false
+		switch {
+		case len(schema.AllOf) == 1:
+			resolved = p.applyMemberType(prop, schema.AllOf[0])
+		case len(schema.AllOf) > 1:
+			resolved = p.applyCompositeType(prop, schema.AllOf, " & ")
+		case len(schema.OneOf) == 1:
+			resolved = p.applyMemberType(prop, schema.OneOf[0])
+		case len(schema.OneOf) > 1:
+			resolved = p.applyCompositeType(prop, schema.OneOf, " | ")
+		case len(schema.AnyOf) == 1:
+			resolved = p.applyMemberType(prop, schema.AnyOf[0])
+		case len(schema.AnyOf) > 1:
+			resolved = p.applyCompositeType(prop, schema.AnyOf, " | ")
+		}
+		if !resolved {
+			prop.DataType = p.getSchemaType(schemaType, schema.Format)
+			if prop.DataType != "any" && prop.DataType != "" {
+				prop.IsModel = true
+			}
 		}
 	}
 
@@ -1202,8 +1365,7 @@ func (p *Parser) operationToCodegen(path, method string, op *openapi3.Operation,
 				bodyParam.DataType = modelName
 				bodyParam.BaseType = modelName
 				bodyParam.IsModel = true
-				// Name a $ref body after the referenced schema (camelCased), e.g.
-				// Dodavatel -> dodavatel.
+				// Name a $ref body after the referenced schema (camelCased).
 				bodyParam.BaseName = refName
 				bodyParam.ParamName = p.toVarName(refName)
 			} else {
@@ -1235,9 +1397,8 @@ func (p *Parser) operationToCodegen(path, method string, op *openapi3.Operation,
 				}
 
 				// Name an inline body following upstream: an array of a model takes the
-				// (innermost) item model name (e.g. Array<PohybZamestnanca> ->
-				// pohybZamestnanca); an array of primitives or a map uses "requestBody";
-				// everything else (primitives, free-form objects) uses "body".
+				// innermost item model name; an array of primitives or a map uses
+				// "requestBody"; everything else (primitives, free-form objects) uses "body".
 				baseName := "body"
 				switch {
 				case prop.IsArray:
@@ -1281,7 +1442,18 @@ func (p *Parser) operationToCodegen(path, method string, op *openapi3.Operation,
 
 	// Process responses
 	if op.Responses != nil {
-		for code, respRef := range op.Responses.Map() {
+		// Iterate status codes in sorted order. Go map iteration is randomised,
+		// which would otherwise shuffle the generated response list and make the
+		// chosen 2xx return type unstable across runs.
+		respMap := op.Responses.Map()
+		codes := make([]string, 0, len(respMap))
+		for code := range respMap {
+			codes = append(codes, code)
+		}
+		sort.Strings(codes)
+
+		for _, code := range codes {
+			respRef := respMap[code]
 			if respRef == nil || respRef.Value == nil {
 				continue
 			}
@@ -1289,8 +1461,9 @@ func (p *Parser) operationToCodegen(path, method string, op *openapi3.Operation,
 			resp := p.responseToCodegen(code, respRef.Value)
 			co.Responses = append(co.Responses, resp)
 
-			// Set return type from 2xx response
-			if strings.HasPrefix(code, "2") && resp.DataType != "" {
+			// Set return type from the first (lowest) 2xx response that carries
+			// a body, e.g. prefer 200 over 201 when both are present.
+			if co.ReturnType == "" && strings.HasPrefix(code, "2") && resp.DataType != "" {
 				co.ReturnType = resp.DataType
 				co.ReturnBaseType = resp.BaseType
 				co.ReturnSimpleType = resp.SimpleType
@@ -1311,18 +1484,30 @@ func (p *Parser) operationToCodegen(path, method string, op *openapi3.Operation,
 		}
 	}
 
-	// Set content types
+	// Set content types in sorted order for stable output.
 	if op.RequestBody != nil && op.RequestBody.Value != nil {
+		consumes := make([]string, 0, len(op.RequestBody.Value.Content))
 		for ct := range op.RequestBody.Value.Content {
+			consumes = append(consumes, ct)
+		}
+		sort.Strings(consumes)
+		for _, ct := range consumes {
 			co.Consumes = append(co.Consumes, map[string]string{"mediaType": ct})
 		}
 		co.HasConsumes = len(co.Consumes) > 0
 	}
 
-	// Process security
+	// Process security. Each requirement is a map of scheme name -> scopes;
+	// iterate names in sorted order so AuthMethods is stable across runs.
 	if op.Security != nil {
 		for _, secReq := range *op.Security {
-			for name, scopes := range secReq {
+			names := make([]string, 0, len(secReq))
+			for name := range secReq {
+				names = append(names, name)
+			}
+			sort.Strings(names)
+			for _, name := range names {
+				scopes := secReq[name]
 				sec := &codegen.CodegenSecurity{
 					Name:   name,
 					Scopes: make([]map[string]any, len(scopes)),
@@ -1383,7 +1568,7 @@ func (p *Parser) addFormParams(co *codegen.CodegenOperation, schema *openapi3.Sc
 			continue
 		}
 		required := requiredSet[name]
-		prop := p.schemaToProperty(name, propRef.Value, required)
+		prop := p.schemaRefToProperty(name, propRef, required)
 
 		fp := &codegen.CodegenParameter{
 			BaseName:         name,
@@ -1471,7 +1656,7 @@ func (p *Parser) parameterToCodegen(param *openapi3.Parameter) *codegen.CodegenP
 	// Process schema
 	if param.Schema != nil && param.Schema.Value != nil {
 		schema := param.Schema.Value
-		prop := p.schemaToProperty(param.Name, schema, param.Required)
+		prop := p.schemaRefToProperty(param.Name, param.Schema, param.Required)
 
 		cp.DataType = prop.DataType
 		cp.BaseType = prop.BaseType
@@ -1552,8 +1737,16 @@ func (p *Parser) responseToCodegen(code string, resp *openapi3.Response) *codege
 		cr.Is5xx = true
 	}
 
-	// Process content
-	for _, mediaType := range resp.Content {
+	// Process content. Iterate content types in sorted order so the "first"
+	// content type chosen below is stable across runs (Go map iteration is
+	// randomised).
+	respContentTypes := make([]string, 0, len(resp.Content))
+	for ct := range resp.Content {
+		respContentTypes = append(respContentTypes, ct)
+	}
+	sort.Strings(respContentTypes)
+	for _, ct := range respContentTypes {
+		mediaType := resp.Content[ct]
 		if mediaType.Schema == nil {
 			continue
 		}
@@ -1602,8 +1795,14 @@ func (p *Parser) responseToCodegen(code string, resp *openapi3.Response) *codege
 		break // Use first content type
 	}
 
-	// Process headers
-	for name, headerRef := range resp.Headers {
+	// Process headers in sorted order for stable output.
+	headerNames := make([]string, 0, len(resp.Headers))
+	for name := range resp.Headers {
+		headerNames = append(headerNames, name)
+	}
+	sort.Strings(headerNames)
+	for _, name := range headerNames {
+		headerRef := resp.Headers[name]
 		if headerRef == nil || headerRef.Value == nil {
 			continue
 		}
@@ -1795,6 +1994,12 @@ func (p *Parser) collectImports(model *codegen.CodegenModel) []string {
 		// Also check items for arrays
 		if prop.Items != nil && prop.Items.IsModel && prop.Items.DataType != model.Classname && !isPrimitiveType(prop.Items.DataType) {
 			imports[prop.Items.DataType] = true
+		}
+		// Member models of a union/intersection property type.
+		for _, m := range prop.ComposedModels {
+			if m != model.Classname && !isPrimitiveType(m) {
+				imports[m] = true
+			}
 		}
 	}
 
@@ -2071,11 +2276,18 @@ func isPrimitiveType(t string) bool {
 }
 
 func scopesToList(scopes map[string]string) []map[string]any {
+	// Iterate scope names in sorted order for stable output.
+	names := make([]string, 0, len(scopes))
+	for scope := range scopes {
+		names = append(names, scope)
+	}
+	sort.Strings(names)
+
 	result := make([]map[string]any, 0, len(scopes))
-	for scope, desc := range scopes {
+	for _, scope := range names {
 		result = append(result, map[string]any{
 			"scope":       scope,
-			"description": desc,
+			"description": scopes[scope],
 		})
 	}
 	return result
