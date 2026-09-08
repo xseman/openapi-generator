@@ -1,23 +1,26 @@
 /**{{#unescapedDescription}}
  * {{#lambda.indented_star_1}}{{{.}}}{{/lambda.indented_star_1}}{{/unescapedDescription}}
  * @export
+{{^parentIsOneOf}}
  * @interface {{classname}}
  */
 export interface {{classname}} {{#parent}}extends {{{.}}} {{/parent}}{
+{{/parentIsOneOf}}
+{{#parentIsOneOf}}
+ */
+export type {{classname}} = {{{parent}}} & {
+{{/parentIsOneOf}}
 {{#additionalPropertiesType}}
     [key: string]: {{{additionalPropertiesType}}}{{#hasVars}} | any{{/hasVars}};
 {{/additionalPropertiesType}}
 {{#vars}}
-    /**
-     * @type {{=<% %>=}}{<%&datatypeWithEnum%>}<%={{ }}=%>
-     * @memberof {{classname}}
-{{#deprecated}}
-     * @deprecated
-{{/deprecated}}
+    /**{{#unescapedDescription}}
+{{#lambda.indented_star_4}}{{{.}}}{{/lambda.indented_star_4}}{{/unescapedDescription}}{{#deprecated}}
+     * @deprecated{{/deprecated}}
      */
     {{#isReadOnly}}readonly {{/isReadOnly}}{{name}}{{^required}}?{{/required}}: {{{datatypeWithEnum}}}{{#isNullable}} | null{{/isNullable}};
 {{/vars}}
-}{{#hasEnums}}
+}{{#parentIsOneOf}};{{/parentIsOneOf}}{{#hasEnums}}
 
 {{#vars}}
 {{#isEnum}}

@@ -413,7 +413,7 @@ export function mapValues(data: any, fn: (item: any) => any) {
 
 export function canConsumeForm(consumes: Consume[]): boolean {
     for (const consume of consumes) {
-        if ("multipart/form-data" === consume.contentType) {
+        if (consume.contentType?.startsWith("multipart/form-data") == true) {
             return true;
         }
     }
@@ -511,18 +511,6 @@ export function anyToJSON(value: any): any {
     return value;
 }
 
-export function stringFromJSON(json: any): string {
-    return String(json);
-}
-
-export function stringToJSON(value?: string): any {
-    return value;
-}
-
-export function DateFromJSON(json: any): Date {
-    return new Date(json);
-}
-
 export function BlobFromJSON(json: any): Blob {
     if (typeof json === 'string') {
         // Assume base64 encoded
@@ -537,7 +525,7 @@ export function BlobFromJSON(json: any): Blob {
     return json;
 }
 
-export function BlobToJSON(value: Blob): any {
+export function BlobToJSON(value: Blob | null | undefined): any {
     return value;
 }
 
