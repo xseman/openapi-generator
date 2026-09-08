@@ -20,6 +20,7 @@ type CodegenDiscriminator struct {
 type MappedModel struct {
 	MappingName     string        `json:"mappingName"`     // Value in payload
 	ModelName       string        `json:"modelName"`       // Schema/model name
+	ModelFilename   string        `json:"modelFilename"`   // Generated file name (set by the generator's naming convention)
 	Model           *CodegenModel `json:"-"`               // Reference to model
 	ExplicitMapping bool          `json:"explicitMapping"` // From spec vs inferred
 }

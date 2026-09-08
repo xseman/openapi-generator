@@ -51,11 +51,14 @@ type CodegenModel struct {
 	Children     []*CodegenModel `json:"-"`          // Child models
 
 	// Composition (oneOf/anyOf/allOf)
-	OneOf           []string                `json:"oneOf"`       // Set of oneOf schema names
-	OneOfModels     []string                `json:"oneOfModels"` // Non-primitive oneOf members for imports
-	AnyOf           []string                `json:"anyOf"`       // Set of anyOf schema names
-	AllOf           []string                `json:"allOf"`       // Set of allOf schema names
+	OneOf           []string                `json:"oneOf"`           // Set of oneOf schema names
+	OneOfModels     []string                `json:"oneOfModels"`     // Non-primitive oneOf members for imports
+	OneOfArrays     []string                `json:"oneOfArrays"`     // Complex item types of array-typed oneOf members
+	OneOfPrimitives []*CodegenProperty      `json:"oneOfPrimitives"` // Primitive oneOf members for typed JSON conversion
+	AnyOf           []string                `json:"anyOf"`           // Set of anyOf schema names
+	AllOf           []string                `json:"allOf"`           // Set of allOf schema names
 	ComposedSchemas *CodegenComposedSchemas `json:"composedSchemas"`
+	ParentIsOneOf   bool                    `json:"parentIsOneOf"` // Parent is a oneOf union type
 
 	// Properties
 	Vars            []*CodegenProperty `json:"vars"`         // Properties (without parent's)
@@ -85,8 +88,10 @@ type CodegenModel struct {
 	AllowableValues map[string]any `json:"allowableValues"` // {"values": [...]}
 
 	// Discriminator
-	Discriminator                       *CodegenDiscriminator `json:"discriminator"`
-	HasDiscriminatorWithNonEmptyMapping bool                  `json:"hasDiscriminatorWithNonEmptyMapping"`
+	Discriminator                          *CodegenDiscriminator `json:"discriminator"`
+	HasDiscriminatorWithNonEmptyMapping    bool                  `json:"hasDiscriminatorWithNonEmptyMapping"`
+	SelfReferencingDiscriminatorMapping    *MappedModel          `json:"selfReferencingDiscriminatorMapping"`
+	HasSelfReferencingDiscriminatorMapping bool                  `json:"hasSelfReferencingDiscriminatorMapping"`
 
 	// Additional properties
 	AdditionalPropertiesType   string           `json:"additionalPropertiesType"`

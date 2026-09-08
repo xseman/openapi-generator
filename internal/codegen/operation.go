@@ -34,14 +34,15 @@ type CodegenOperation struct {
 	BodyParam      *CodegenParameter   `json:"bodyParam"`
 
 	// Response
-	ReturnType      string             `json:"returnType"`
-	ReturnBaseType  string             `json:"returnBaseType"`
-	ReturnContainer string             `json:"returnContainer"`
-	ReturnFormat    string             `json:"returnFormat"`
-	ReturnProperty  *CodegenProperty   `json:"returnProperty"`
-	Responses       []*CodegenResponse `json:"responses"`
-	ResponseHeaders []*CodegenProperty `json:"responseHeaders"`
-	DefaultResponse string             `json:"defaultResponse"`
+	ReturnType           string             `json:"returnType"`
+	ReturnBaseType       string             `json:"returnBaseType"`
+	ReturnComposedModels []string           `json:"returnComposedModels"` // member models of a union return type, for imports
+	ReturnContainer      string             `json:"returnContainer"`
+	ReturnFormat         string             `json:"returnFormat"`
+	ReturnProperty       *CodegenProperty   `json:"returnProperty"`
+	Responses            []*CodegenResponse `json:"responses"`
+	ResponseHeaders      []*CodegenProperty `json:"responseHeaders"`
+	DefaultResponse      string             `json:"defaultResponse"`
 
 	// Content types
 	Consumes    []map[string]string `json:"consumes"` // [{"mediaType": "application/json"}]

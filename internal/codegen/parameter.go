@@ -93,6 +93,7 @@ type CodegenParameter struct {
 	IsCollectionFormatMulti bool   `json:"isCollectionFormatMulti"`
 
 	// Nested
+	ComposedModels       []string           `json:"composedModels"` // member models of a union/intersection type, for imports
 	Items                *CodegenProperty   `json:"items"`
 	AdditionalProperties *CodegenProperty   `json:"additionalProperties"`
 	Vars                 []*CodegenProperty `json:"vars"`
