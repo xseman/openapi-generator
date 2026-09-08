@@ -1,0 +1,11 @@
+generatorName: dart-fetch
+inputSpec: samples/dart-fetch/petstore-expanded.yaml
+outputDir: samples/dart-fetch/petstore-expanded
+skipValidateSpec: false
+verbose: false
+additionalProperties:
+    pubName: petstore_api
+    pubVersion: 1.0.0
+    pubDescription: "Petstore API client (dart-fetch sample)"
+    useDartIoSender: true
+    sdkConstraint: ">=3.13.0-0 <4.0.0"

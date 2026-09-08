@@ -1,0 +1,310 @@
+{{>licenseInfo}}
+
+import 'dart:async';
+import 'dart:convert';
+import 'dart:typed_data';
+{{#useDartIoSender}}import 'dart:io' show HttpClient;
+{{/useDartIoSender}}
+
+/// Default base path for this client.
+const String basePath = '{{basePath}}';
+
+/// HTTP methods supported by the generated APIs.
+enum HttpMethod {
+    get,
+    post,
+    put,
+    delete,
+    patch,
+    head,
+    options;
+
+    /// The uppercase string value used in the actual HTTP request (e.g. `'GET'`).
+    String get value => name.toUpperCase();
+}
+
+/// A request prepared by an API method but not yet dispatched.
+class HttpRequest {
+    HttpRequest({
+        required this.method,
+        required this.url,
+        Map<String, String>? headers,
+        this.body,
+    }) : headers = Map<String, String>.from(headers ?? const <String, String>{});
+
+    final HttpMethod method;
+    final Uri url;
+    final Map<String, String> headers;
+
+    /// Encoded request body. May be null, a String, or a List<int>.
+    Object? body;
+
+    HttpRequest copyWith({
+        HttpMethod? method,
+        Uri? url,
+        Map<String, String>? headers,
+        Object? body,
+    }) => HttpRequest(
+        method: method ?? this.method,
+        url: url ?? this.url,
+        headers: headers ?? this.headers,
+        body: body ?? this.body,
+    );
+}
+
+/// A raw HTTP response returned by an [HttpSender].
+class HttpResponse({
+    required final int statusCode,
+    required final Map<String, String> headers,
+    required final List<int> body,
+}) {
+    String get bodyString => utf8.decode(body, allowMalformed: true);
+
+    Object? get bodyJson {
+        final s = bodyString;
+        if (s.isEmpty) return null;
+        return jsonDecode(s);
+    }
+
+    bool get isSuccessful => statusCode >= 200 && statusCode < 300;
+}
+
+/// Function signature for a pluggable HTTP transport.
+typedef HttpSender = Future<HttpResponse> Function(HttpRequest request);
+
+/// Hook invoked before a request is sent. May return a modified request.
+typedef PreMiddleware = FutureOr<HttpRequest> Function(HttpRequest request);
+
+/// Hook invoked after a response is received. May return a modified response.
+typedef PostMiddleware = FutureOr<HttpResponse> Function(
+    HttpRequest request,
+    HttpResponse response,
+);
+
+/// Hook invoked when sending a request fails. May rethrow or return a fallback.
+typedef ErrorMiddleware = FutureOr<HttpResponse?> Function(
+    HttpRequest request,
+    Object error,
+    StackTrace stackTrace,
+);
+
+/// Composable middleware applied around every request.
+class Middleware({
+    final PreMiddleware? pre,
+    final PostMiddleware? post,
+    final ErrorMiddleware? onError,
+});
+
+/// Client configuration.
+///
+/// All fields are optional. The defaults assume a Dart VM / Flutter
+/// environment with `dart:io` available.
+class Configuration {
+    Configuration({
+        String? basePath,
+        Map<String, String>? headers,
+        this.username,
+        this.password,
+        this.apiKey,
+        this.accessToken,
+        HttpSender? httpSender,
+        List<Middleware>? middleware,
+    })  : basePath = basePath ?? _defaultBasePath,
+                headers = Map<String, String>.from(headers ?? const <String, String>{}),
+                httpSender = httpSender ?? defaultHttpSender,
+                middleware = List<Middleware>.unmodifiable(middleware ?? const <Middleware>[]);
+
+    static const String _defaultBasePath = '{{basePath}}';
+
+    final String basePath;
+    final Map<String, String> headers;
+    final String? username;
+    final String? password;
+
+    /// Returns an API key for the given header/query parameter name.
+    final String Function(String name)? apiKey;
+
+    /// Returns a bearer token (e.g. for OAuth2).
+    final String Function()? accessToken;
+
+    final HttpSender httpSender;
+    final List<Middleware> middleware;
+}
+
+/// Thrown when the server returns a non-2xx status.
+class ApiException(
+    final int statusCode,
+    final String message, {
+    final String? body,
+    final Map<String, String>? headers,
+}) implements Exception {
+    @override
+    String toString() => 'ApiException($statusCode): $message';
+}
+
+/// Base class for all generated API classes.
+class BaseApi(final Configuration configuration) {
+    /// Builds a [Uri] from [path], replacing `{name}` placeholders with
+    /// [pathParams] values and appending [queryParams] as a query string.
+    Uri buildUri(
+        String path, {
+        Map<String, String>? pathParams,
+        Map<String, List<String>>? queryParams,
+    }) {
+        var resolved = path;
+        pathParams?.forEach((k, v) {
+            resolved = resolved.replaceAll('{$k}', Uri.encodeComponent(v));
+        });
+        final base = Uri.parse(configuration.basePath);
+        final pathSegments = <String>[
+            ...base.pathSegments,
+            ...Uri.parse(resolved).pathSegments,
+        ];
+        final mergedQuery = <String, List<String>>{
+            ...base.queryParametersAll,
+        };
+        queryParams?.forEach((k, v) {
+            if (v.isNotEmpty) mergedQuery[k] = v;
+        });
+        return base.replace(
+            pathSegments: pathSegments,
+            queryParameters: mergedQuery.isEmpty ? null : mergedQuery,
+        );
+    }
+
+    /// Sends [req] through configured middleware and the [HttpSender],
+    /// returning the raw [HttpResponse].
+    Future<HttpResponse> request(HttpRequest req) async {
+        final merged = <String, String>{
+            ...configuration.headers,
+            ...req.headers,
+        };
+        var current = req.copyWith(headers: merged);
+
+        for (final m in configuration.middleware) {
+            if (m.pre case final pre?) {
+                current = await pre(current);
+            }
+        }
+
+        HttpResponse response;
+        try {
+            response = await configuration.httpSender(current);
+        } catch (e, st) {
+            HttpResponse? fallback;
+            for (final m in configuration.middleware) {
+                if (m.onError case final onError?) {
+                    fallback = await onError(current, e, st);
+                    if (fallback != null) break;
+                }
+            }
+            if (fallback == null) rethrow;
+            response = fallback;
+        }
+
+        for (final m in configuration.middleware) {
+            if (m.post case final post?) {
+                response = await post(current, response);
+            }
+        }
+
+        if (!response.isSuccessful) {
+            throw ApiException(
+                response.statusCode,
+                'HTTP ${response.statusCode}',
+                body: response.bodyString,
+                headers: response.headers,
+            );
+        }
+
+        return response;
+    }
+
+    /// Converts an arbitrary value into a list of query-string-safe strings.
+    List<String> queryValues(Object? value) {
+        if (value == null) return const <String>[];
+        if (value is Iterable) return value.map(_toQueryString).toList();
+        return <String>[_toQueryString(value)];
+    }
+
+    String _toQueryString(Object? value) {
+        if (value == null) return '';
+        if (value is DateTime) return value.toUtc().toIso8601String();
+        return value.toString();
+    }
+}
+
+/// Encodes a `Map<String, dynamic>` body as `application/x-www-form-urlencoded`.
+String encodeFormData(Map<String, Object?> form) {
+    final parts = <String>[];
+    form.forEach((k, v) {
+        if (v != null) {
+            parts.add(
+                '${Uri.encodeQueryComponent(k)}=${Uri.encodeQueryComponent(v.toString())}',
+            );
+        }
+    });
+    return parts.join('&');
+}
+
+/// Helpers for primitive deserialization used by generated models.
+DateTime? dateTimeFromJson(Object? json) {
+    if (json == null) return null;
+    return DateTime.parse(json as String);
+}
+
+Object? dateTimeToJson(DateTime? value) {
+    if (value == null) return null;
+    return value.toUtc().toIso8601String();
+}
+
+{{#useDartIoSender}}
+/// Default [HttpSender] backed by `dart:io`'s [HttpClient].
+///
+/// Usable on the Dart VM and Flutter mobile/desktop. For browser targets,
+/// supply a custom sender via [Configuration.httpSender].
+Future<HttpResponse> defaultHttpSender(HttpRequest req) async {
+    final client = HttpClient();
+    try {
+        final dartReq = await client.openUrl(req.method.value, req.url);
+        req.headers.forEach(dartReq.headers.add);
+
+        final body = req.body;
+        if (body is String) {
+            dartReq.add(utf8.encode(body));
+        } else if (body is List<int>) {
+            dartReq.add(body);
+        }
+
+        final dartRes = await dartReq.close();
+        final bytes = await _collectBytes(dartRes);
+        final headers = <String, String>{};
+        dartRes.headers.forEach((name, values) => headers[name] = values.join(', '));
+        return HttpResponse(
+            statusCode: dartRes.statusCode,
+            headers: headers,
+            body: bytes,
+        );
+    } finally {
+        client.close(force: false);
+    }
+}
+
+Future<List<int>> _collectBytes(Stream<List<int>> stream) async {
+    final builder = BytesBuilder(copy: false);
+    await for (final chunk in stream) {
+        builder.add(chunk);
+    }
+    return builder.takeBytes();
+}
+{{/useDartIoSender}}
+{{^useDartIoSender}}
+/// No default [HttpSender] is bundled with this client.
+///
+/// Supply one explicitly via [Configuration.httpSender]. Until you do,
+/// every request will throw [UnimplementedError].
+Future<HttpResponse> defaultHttpSender(HttpRequest req) =>
+        throw UnimplementedError(
+            'No HttpSender configured. Pass one to Configuration(httpSender: ...).',
+        );
+{{/useDartIoSender}}

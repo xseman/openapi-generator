@@ -5,5 +5,5 @@ import "embed"
 
 // FS contains all embedded template files.
 //
-//go:embed typescript-fetch/*.mustache typescript-fetch/*.md
+//go:embed typescript-fetch/*.mustache typescript-fetch/*.md dart-fetch/*.mustache
 var FS embed.FS

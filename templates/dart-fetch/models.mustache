@@ -1,0 +1,88 @@
+{{>licenseInfo}}
+
+{{#models}}
+{{#model}}
+{{#hasImports}}
+{{#dartImports}}
+import '{{filename}}.dart';
+{{/dartImports}}
+{{/hasImports}}
+{{#isEnum}}
+
+/// {{#description}}{{{description}}}{{/description}}{{^description}}{{classname}}{{/description}}
+enum {{classname}} {
+{{#allowableValues}}
+{{#enumVars}}
+    {{name}}('{{{value}}}'){{^-last}},{{/-last}}{{#-last}};{{/-last}}
+{{/enumVars}}
+{{/allowableValues}}
+
+    const {{classname}}(this.value);
+
+    /// The wire/JSON value for this enum constant.
+    final String value;
+
+    /// Parses an [{{classname}}] from its JSON value.
+    static {{classname}} fromJson(Object? json) {
+        final s = json?.toString();
+        for (final v in {{classname}}.values) {
+            if (v.value == s) return v;
+        }
+        throw ArgumentError('Unknown {{classname}} value: $s');
+    }
+
+    /// Returns the wire/JSON value.
+    Object? toJson() => value;
+}
+{{/isEnum}}
+{{^isEnum}}
+{{#hasOneOf}}
+
+/// {{#description}}{{{description}}}{{/description}}{{^description}}{{classname}} (oneOf union){{/description}}
+///
+/// This class wraps any of the following types: {{#oneOf}}{{.}}{{^-last}}, {{/-last}}{{/oneOf}}.
+/// Use [value] to retrieve the underlying object.
+class {{classname}}(final Object? value) {
+    factory {{classname}}.fromJson(Object? json) => {{classname}}(json);
+
+    Object? toJson() {
+        final v = value;
+        if (v == null) return null;
+        try {
+            return (v as dynamic).toJson();
+        } catch (_) {
+            return v;
+        }
+    }
+}
+{{/hasOneOf}}
+{{^hasOneOf}}
+
+/// {{#description}}{{{description}}}{{/description}}{{^description}}{{classname}}{{/description}}
+class {{classname}}({
+{{#allVars}}
+    /// {{#description}}{{{description}}}{{/description}}{{^description}}`{{baseName}}`{{/description}}
+    {{#required}}required {{/required}}final {{{dataType}}}{{^required}}?{{/required}}{{#required}}{{#isNullable}}?{{/isNullable}}{{/required}} {{name}}{{^required}}{{#defaultValue}} = {{{defaultValue}}}{{/defaultValue}}{{/required}},
+{{/allVars}}
+}) {
+    factory {{classname}}.fromJson(Map<String, dynamic> json) => {{classname}}(
+{{#allVars}}
+        {{name}}: {{>modelPropertyFromJson}},
+{{/allVars}}
+    );
+
+    Map<String, dynamic> toJson() => {
+{{#allVars}}
+{{#required}}
+        '{{baseName}}': {{>modelPropertyToJson}},
+{{/required}}
+{{^required}}
+        if ({{name}} != null) '{{baseName}}': {{>modelPropertyToJson}},
+{{/required}}
+{{/allVars}}
+    };
+}
+{{/hasOneOf}}
+{{/isEnum}}
+{{/model}}
+{{/models}}

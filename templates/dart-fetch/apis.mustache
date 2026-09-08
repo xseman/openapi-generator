@@ -1,0 +1,232 @@
+{{>licenseInfo}}
+// ignore_for_file: unused_import
+
+import 'dart:convert';
+
+import '../runtime.dart';
+{{#hasImports}}
+{{#imports}}
+import '../models/{{filename}}.dart';
+{{/imports}}
+{{/hasImports}}
+
+/// {{#description}}{{{description}}}{{/description}}{{^description}}{{classname}} client.{{/description}}
+class {{classname}} extends BaseApi {
+    {{classname}}(super.configuration);
+
+{{#operations}}
+{{#operation}}
+
+    /// Build the [HttpRequest] for `{{nickname}}` without sending it.
+{{#summary}}
+    ///
+    /// {{{summary}}}
+{{/summary}}
+{{#isDeprecated}}
+    @Deprecated('This operation is deprecated.')
+{{/isDeprecated}}
+    HttpRequest {{nickname}}RequestOpts({
+{{#allParams}}
+        {{#required}}required {{/required}}{{{dataType}}}{{^required}}?{{/required}} {{paramName}},
+{{/allParams}}
+    }) {
+        final pathParams = <String, String>{
+{{#pathParams}}
+            '{{baseName}}': {{paramName}}{{^isPrimitiveType}}{{^isString}}.toString(){{/isString}}{{/isPrimitiveType}}{{#isPrimitiveType}}{{^isString}}.toString(){{/isString}}{{/isPrimitiveType}},
+{{/pathParams}}
+        };
+
+        final queryParams = <String, List<String>>{};
+{{#queryParams}}
+        if ({{paramName}} != null) {
+            queryParams['{{baseName}}'] = queryValues({{paramName}});
+        }
+{{/queryParams}}
+
+        final headers = <String, String>{};
+{{#headerParams}}
+        if ({{paramName}} != null) {
+            headers['{{baseName}}'] = {{paramName}}.toString();
+        }
+{{/headerParams}}
+{{#authMethods}}
+{{#isApiKey}}
+        {
+            final apiKey = configuration.apiKey;
+            if (apiKey != null) {
+                final v = apiKey('{{keyParamName}}');
+                if (v.isNotEmpty) {
+{{#isKeyInHeader}}          headers['{{keyParamName}}'] = v;
+{{/isKeyInHeader}}{{#isKeyInQuery}}          queryParams['{{keyParamName}}'] = <String>[v];
+{{/isKeyInQuery}}        }
+            }
+        }
+{{/isApiKey}}
+{{#isBasicBearer}}
+        {
+            final tokenFn = configuration.accessToken;
+            if (tokenFn != null) {
+                final tok = tokenFn();
+                if (tok.isNotEmpty) {
+                    headers['Authorization'] = 'Bearer $tok';
+                }
+            }
+        }
+{{/isBasicBearer}}
+{{#isOAuth}}
+        {
+            final tokenFn = configuration.accessToken;
+            if (tokenFn != null) {
+                final tok = tokenFn();
+                if (tok.isNotEmpty) {
+                    headers['Authorization'] = 'Bearer $tok';
+                }
+            }
+        }
+{{/isOAuth}}
+{{#isBasicBasic}}
+        if (configuration.username != null || configuration.password != null) {
+            final creds = '${configuration.username ?? ''}:${configuration.password ?? ''}';
+            headers['Authorization'] = 'Basic ${base64Encode(utf8.encode(creds))}';
+        }
+{{/isBasicBasic}}
+{{/authMethods}}
+
+        Object? requestBody;
+{{#bodyParams}}
+{{#required}}
+        headers['Content-Type'] = 'application/json';
+{{#isArray}}
+{{#items.isModel}}
+        requestBody = jsonEncode({{paramName}}.map((e) => e.toJson()).toList());
+{{/items.isModel}}
+{{^items.isModel}}
+        requestBody = jsonEncode({{paramName}});
+{{/items.isModel}}
+{{/isArray}}
+{{^isArray}}
+{{#isModel}}
+        requestBody = jsonEncode({{paramName}}.toJson());
+{{/isModel}}
+{{^isModel}}
+        requestBody = jsonEncode({{paramName}});
+{{/isModel}}
+{{/isArray}}
+{{/required}}
+{{^required}}
+        if ({{paramName}} != null) {
+            headers['Content-Type'] = 'application/json';
+{{#isArray}}
+{{#items.isModel}}
+            requestBody = jsonEncode({{paramName}}.map((e) => e.toJson()).toList());
+{{/items.isModel}}
+{{^items.isModel}}
+            requestBody = jsonEncode({{paramName}});
+{{/items.isModel}}
+{{/isArray}}
+{{^isArray}}
+{{#isModel}}
+            requestBody = jsonEncode({{paramName}}.toJson());
+{{/isModel}}
+{{^isModel}}
+            requestBody = jsonEncode({{paramName}});
+{{/isModel}}
+{{/isArray}}
+        }
+{{/required}}
+{{/bodyParams}}
+{{#hasFormParams}}
+        {
+            final form = <String, Object?>{
+{{#formParams}}
+                if ({{paramName}} != null) '{{baseName}}': {{paramName}},
+{{/formParams}}
+            };
+            if (form.isNotEmpty) {
+                headers['Content-Type'] = 'application/x-www-form-urlencoded';
+                requestBody = encodeFormData(form);
+            }
+        }
+{{/hasFormParams}}
+
+        final url = buildUri(
+            '{{{path}}}',
+            pathParams: pathParams,
+            queryParams: queryParams,
+        );
+
+        return HttpRequest(
+            method: HttpMethod.{{#lambda.lowercase}}{{httpMethod}}{{/lambda.lowercase}},
+            url: url,
+            headers: headers,
+            body: requestBody,
+        );
+    }
+
+    /// Send the request for `{{nickname}}` and return the raw [HttpResponse].
+{{#isDeprecated}}
+    @Deprecated('This operation is deprecated.')
+{{/isDeprecated}}
+    Future<HttpResponse> {{nickname}}Raw({
+{{#allParams}}
+        {{#required}}required {{/required}}{{{dataType}}}{{^required}}?{{/required}} {{paramName}},
+{{/allParams}}
+    }) async {
+        final req = {{nickname}}RequestOpts(
+{{#allParams}}
+            {{paramName}}: {{paramName}},
+{{/allParams}}
+        );
+        return request(req);
+    }
+
+    /// {{#summary}}{{{summary}}}{{/summary}}{{^summary}}Invoke `{{nickname}}`.{{/summary}}
+{{#isDeprecated}}
+    @Deprecated('This operation is deprecated.')
+{{/isDeprecated}}
+    Future<{{#returnType}}{{{returnType}}}?{{/returnType}}{{^returnType}}void{{/returnType}}> {{nickname}}({
+{{#allParams}}
+        {{#required}}required {{/required}}{{{dataType}}}{{^required}}?{{/required}} {{paramName}},
+{{/allParams}}
+    }) async {
+{{^returnType}}
+        await {{nickname}}Raw(
+{{#allParams}}
+            {{paramName}}: {{paramName}},
+{{/allParams}}
+        );
+{{/returnType}}
+{{#returnType}}
+        final res = await {{nickname}}Raw(
+{{#allParams}}
+            {{paramName}}: {{paramName}},
+{{/allParams}}
+        );
+        if (res.body.isEmpty) return null;
+        final decoded = res.bodyJson;
+{{#isArray}}
+{{#returnTypeIsPrimitive}}
+        return (decoded as List<dynamic>).cast<{{{returnBaseType}}}>().toList();
+{{/returnTypeIsPrimitive}}
+{{^returnTypeIsPrimitive}}
+        return (decoded as List<dynamic>).map((e) => {{returnBaseType}}.fromJson(e as Map<String, dynamic>)).toList();
+{{/returnTypeIsPrimitive}}
+{{/isArray}}
+{{^isArray}}
+{{#isMap}}
+        return (decoded as Map<String, dynamic>).cast<String, {{{returnBaseType}}}>();
+{{/isMap}}
+{{^isMap}}
+{{#returnTypeIsPrimitive}}
+        return decoded as {{{returnType}}}?;
+{{/returnTypeIsPrimitive}}
+{{^returnTypeIsPrimitive}}
+        return {{returnBaseType}}.fromJson(decoded as Map<String, dynamic>);
+{{/returnTypeIsPrimitive}}
+{{/isMap}}
+{{/isArray}}
+{{/returnType}}
+    }
+{{/operation}}
+{{/operations}}
+}

@@ -1,0 +1,11 @@
+{{>licenseInfo}}
+
+/// {{#appName}}{{{appName}}}{{/appName}}{{^appName}}OpenAPI Client{{/appName}}
+///
+/// Single import for end users: `import 'package:{{pubName}}/{{pubName}}.dart';`.
+library {{pubName}};
+
+export 'src/runtime.dart';
+{{#hasModels}}export 'src/models/models.dart';
+{{/hasModels}}{{#hasApis}}export 'src/apis/apis.dart';
+{{/hasApis}}
