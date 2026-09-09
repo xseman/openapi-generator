@@ -82,6 +82,7 @@ go install github.com/xseman/openapi-generator/cmd/openapi-generator@latest
 ### Client
 
 - [typescript-fetch](./templates/typescript-fetch/README.md)
+- dart-fetch
 
 ### Server
 
@@ -113,7 +114,7 @@ openapi-generator validate -i openapi.yaml --recommend
 | Option                      | Short | Description                                      |
 | --------------------------- | ----- | ------------------------------------------------ |
 | `--input-spec`              | `-i`  | Location of the OpenAPI spec (file or URL)       |
-| `--generator-name`          | `-g`  | Generator to use (currently: typescript-fetch)   |
+| `--generator-name`          | `-g`  | Generator to use: typescript-fetch, dart-fetch   |
 | `--output`                  | `-o`  | Output directory                                 |
 | `--config`                  | `-c`  | Configuration file (JSON/YAML)                   |
 | `--template-dir`            | `-t`  | Custom template directory                        |
@@ -185,8 +186,6 @@ This project includes a comprehensive CI/CD pipeline:
 - **Automated Releases**: Release-please based releases with multi-platform binary builds
 - **Platform Support**: Linux (amd64, arm64), macOS (amd64, arm64), Windows (amd64)
 - **Package Formats**: .deb and .rpm packages for Linux distributions
-
-See [CI_CD_IMPLEMENTATION.md](./CI_CD_IMPLEMENTATION.md) for detailed documentation.
 
 
 ## Architecture
