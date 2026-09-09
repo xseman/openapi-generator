@@ -1,5 +1,31 @@
 # Changelog
 
+## [0.2.0](https://github.com/xseman/openapi-generator/compare/v0.1.1...v0.2.0) (2026-09-09)
+
+
+### Features
+
+* **cli:** add validate command ([96352f1](https://github.com/xseman/openapi-generator/commit/96352f11d71e8b2e7eaa7fe560d48b73822836e5))
+* **dart-fetch:** add dart-fetch generator ([915026e](https://github.com/xseman/openapi-generator/commit/915026eecba716acd92de62943008b679cec96c6))
+
+
+### Bug Fixes
+
+* **typescript-fetch:** align identifier sanitization with upstream ([3a73bef](https://github.com/xseman/openapi-generator/commit/3a73bef3b72ceb049ce1bb040c66a2da7f31e0c8))
+* **typescript-fetch:** array-enum naming and ES2022 lib requirement ([0b9ca0d](https://github.com/xseman/openapi-generator/commit/0b9ca0d8793c153dda6c8479cd0f094d8464df89))
+* **typescript-fetch:** date, map & composition codegen + stable output ([a21985c](https://github.com/xseman/openapi-generator/commit/a21985c75542d6ee67cc6bc45bb86b12cc9f04f0))
+* **typescript-fetch:** expand form params, fix enum names, reserved-keyword escaping, and AbortError handling ([92709a3](https://github.com/xseman/openapi-generator/commit/92709a3d89d9989381c26878fc550fb39a268da8))
+* **typescript-fetch:** fix codegen bugs in parser and templates ([f42207f](https://github.com/xseman/openapi-generator/commit/f42207fa0f694052bd2a3e209fb6008afcc9cefc))
+* **typescript-fetch:** normalize generated whitespace and JSDoc formatting ([585c9bc](https://github.com/xseman/openapi-generator/commit/585c9bce46ad16d5efee6e4e4b86ecc38fb22cb8))
+* **typescript-fetch:** nullable, oneOf and import fixes in templates ([a3d7e17](https://github.com/xseman/openapi-generator/commit/a3d7e1714efd467f3d6a2fc4f7c8bcbf01c91cc6))
+* **typescript-fetch:** serialize date and date-time fields and params ([17b9d82](https://github.com/xseman/openapi-generator/commit/17b9d826e4f7f67699c9f391ddaa403d71f539eb))
+
+
+### Maintenance
+
+* **cli:** move generation pipeline into internal/gen ([3a7166d](https://github.com/xseman/openapi-generator/commit/3a7166de5df0b55bfe7f933e4225b1bed389edcf))
+* **parser:** split openapi.go into per-concern files ([cfa0eab](https://github.com/xseman/openapi-generator/commit/cfa0eab5ffbf5e06fca834b29f8a9b583502b754))
+
 ## [0.1.1](https://github.com/xseman/openapi-generator/compare/v0.1.0...v0.1.1) (2026-05-21)
 
 
