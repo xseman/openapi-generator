@@ -82,7 +82,7 @@ go install github.com/xseman/openapi-generator/cmd/openapi-generator@latest
 ### Client
 
 - [typescript-fetch](./templates/typescript-fetch/README.md)
-- dart-fetch
+- [dart-fetch](./samples/dart-fetch/README.md)
 
 ### Server
 
