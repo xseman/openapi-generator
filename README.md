@@ -99,7 +99,16 @@ openapi-generator generate \
     --verbose
 ```
 
+Validate a spec without generating code (exits with status 1 on errors;
+`--recommend` also lists unused models):
+
+```bash
+openapi-generator validate -i openapi.yaml --recommend
+```
+
 ## CLI Options
+
+### `generate`
 
 | Option                      | Short | Description                                      |
 | --------------------------- | ----- | ------------------------------------------------ |
@@ -111,6 +120,13 @@ openapi-generator generate \
 | `--additional-properties`   | `-p`  | Key=value pairs for generator options            |
 | `--skip-validate-spec`      |       | Skip OpenAPI spec validation                     |
 | `--verbose`                 | `-v`  | Enable verbose output                            |
+
+### `validate`
+
+| Option                      | Short | Description                                      |
+| --------------------------- | ----- | ------------------------------------------------ |
+| `--input-spec`              | `-i`  | Location of the OpenAPI spec (file or URL)       |
+| `--recommend`               |       | Also report recommendations (e.g. unused models) |
 
 **Note:** For generator-specific options, see the template documentation (e.g., [typescript-fetch options](./templates/typescript-fetch/README.md#usage)).
 

@@ -47,6 +47,22 @@ Example:
 	RunE: runGenerate,
 }
 
+var validateCmd = &cobra.Command{
+	Use:   "validate",
+	Short: "Validate an OpenAPI specification",
+	Long: `Validate an OpenAPI specification without generating code.
+
+Errors are reported to stderr and the command exits with status 1.
+With --recommend, non-fatal recommendations (such as unused models) are
+listed as well.
+
+Example:
+  openapi-generator validate -i petstore.yaml --recommend`,
+	SilenceUsage:  true,
+	SilenceErrors: true,
+	RunE:          runValidate,
+}
+
 var (
 	inputSpec            string
 	outputDir            string
@@ -56,10 +72,12 @@ var (
 	additionalProperties []string
 	skipValidation       bool
 	verbose              bool
+	recommend            bool
 )
 
 func init() {
 	rootCmd.AddCommand(generateCmd)
+	rootCmd.AddCommand(validateCmd)
 	rootCmd.AddCommand(listCmd)
 	rootCmd.AddCommand(configHelpCmd)
 	rootCmd.AddCommand(versionCmd)
@@ -73,6 +91,11 @@ func init() {
 	generateCmd.Flags().StringArrayVarP(&additionalProperties, "additional-properties", "p", nil, "Key=value")
 	generateCmd.Flags().BoolVar(&skipValidation, "skip-validate-spec", false, "Skip spec validation")
 	generateCmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "Verbose output")
+
+	// Validate command flags
+	validateCmd.Flags().StringVarP(&inputSpec, "input-spec", "i", "", "OpenAPI spec file or URL (required)")
+	validateCmd.Flags().BoolVar(&recommend, "recommend", false, "Also list recommendations (e.g. unused models)")
+	_ = validateCmd.MarkFlagRequired("input-spec")
 }
 
 var listCmd = &cobra.Command{
@@ -114,6 +137,57 @@ var versionCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Printf("openapi-generator %s\n", version)
 	},
+}
+
+// runValidate validates the spec given via --input-spec and prints a
+// report in the same format as the Java openapi-generator's validate
+// command. Errors go to stderr and make the process exit with status 1.
+func runValidate(cmd *cobra.Command, args []string) error {
+	fmt.Printf("Validating spec (%s)\n", inputSpec)
+
+	res := gen.Validate(inputSpec)
+	report, ok := formatValidationReport(res, recommend)
+	if !ok {
+		fmt.Fprint(os.Stderr, report)
+		os.Exit(1)
+	}
+	fmt.Print(report)
+	return nil
+}
+
+// formatValidationReport renders a ValidationResult the way the Java CLI
+// does: an optional "Warnings:" block (only when recommend is set), an
+// "Errors:" block, and a summary line. ok is false when the spec has
+// errors.
+func formatValidationReport(res gen.ValidationResult, recommend bool) (report string, ok bool) {
+	var sb strings.Builder
+
+	warnings := res.Warnings
+	if !recommend {
+		warnings = nil
+	}
+
+	if len(warnings) > 0 {
+		sb.WriteString("Warnings:\n")
+		for _, msg := range warnings {
+			fmt.Fprintf(&sb, "\t- %s\n", msg)
+		}
+	}
+
+	switch {
+	case len(res.Errors) > 0:
+		sb.WriteString("Errors:\n")
+		for _, msg := range res.Errors {
+			fmt.Fprintf(&sb, "\t- %s\n", msg)
+		}
+		fmt.Fprintf(&sb, "[error] Spec has %d errors.\n", len(res.Errors))
+		return sb.String(), false
+	case len(warnings) > 0:
+		fmt.Fprintf(&sb, "[info] Spec has %d recommendation(s).\n", len(warnings))
+	default:
+		sb.WriteString("No validation issues detected.\n")
+	}
+	return sb.String(), true
 }
 
 // Config represents the configuration file structure.

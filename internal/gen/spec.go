@@ -2,6 +2,7 @@ package gen
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/xseman/openapi-generator/internal/generator"
@@ -38,6 +39,10 @@ func assembleSpec(cg generator.CodegenConfig, opts Options) (*specData, error) {
 
 	if err := loadSpec(p, opts.InputSpec); err != nil {
 		return nil, err
+	}
+	if opts.SkipValidation && len(p.ValidationErrors) > 0 {
+		fmt.Fprintln(os.Stderr, "There were issues with the specification, but validation has been explicitly disabled.")
+		fmt.Fprint(os.Stderr, parser.FormatValidationIssues(p.ValidationErrors, p.ValidationWarnings))
 	}
 
 	models, err := p.GetModels()

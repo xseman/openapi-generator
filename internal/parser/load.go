@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/getkin/kin-openapi/openapi2"
@@ -240,60 +241,51 @@ func convertParameterRef(v2Ref string) string {
 	return v2Ref
 }
 
-// validateSpec validates the OpenAPI specification.
-// It collects errors and warnings, and either returns an error or logs warnings
-// depending on the SkipValidation flag.
+// validateSpec validates the loaded document, appending kin-openapi
+// validation errors to ValidationErrors and unused-model warnings to
+// ValidationWarnings.
+//
+// It returns an error describing the issues when errors were found and
+// SkipValidation is false. With SkipValidation set it always returns nil
+// and leaves reporting to the caller (see FormatValidationIssues).
 func (p *Parser) validateSpec() error {
 	if p.Doc == nil {
 		return fmt.Errorf("no document loaded")
 	}
 
-	ctx := context.Background()
-	err := p.Doc.Validate(ctx)
-
-	// Collect validation errors
-	if err != nil {
+	if err := p.Doc.Validate(context.Background()); err != nil {
 		p.ValidationErrors = append(p.ValidationErrors, err.Error())
 	}
-
-	// Collect warnings about unused schemas
 	p.collectWarnings()
 
-	// If there are validation errors
-	if len(p.ValidationErrors) > 0 {
-		if p.SkipValidation {
-			// Log warnings but don't fail
-			fmt.Fprintf(os.Stderr, "There were issues with the specification, but validation has been explicitly disabled.\n")
-			fmt.Fprintf(os.Stderr, "Errors:\n")
-			for _, msg := range p.ValidationErrors {
-				fmt.Fprintf(os.Stderr, "  - %s\n", msg)
-			}
-			if len(p.ValidationWarnings) > 0 {
-				fmt.Fprintf(os.Stderr, "Warnings:\n")
-				for _, msg := range p.ValidationWarnings {
-					fmt.Fprintf(os.Stderr, "  - %s\n", msg)
-				}
-			}
-			return nil
-		}
-
-		// Fail with detailed error message
-		var sb strings.Builder
-		sb.WriteString("There were issues with the specification. The option can be disabled via --skip-validate-spec (CLI).\n")
-		sb.WriteString("Errors:\n")
-		for _, msg := range p.ValidationErrors {
-			fmt.Fprintf(&sb, "  - %s\n", msg)
-		}
-		if len(p.ValidationWarnings) > 0 {
-			sb.WriteString("Warnings:\n")
-			for _, msg := range p.ValidationWarnings {
-				fmt.Fprintf(&sb, "  - %s\n", msg)
-			}
-		}
-		return errors.New(sb.String())
+	if len(p.ValidationErrors) == 0 || p.SkipValidation {
+		return nil
 	}
 
-	return nil
+	var sb strings.Builder
+	sb.WriteString("There were issues with the specification. The option can be disabled via --skip-validate-spec (CLI).\n")
+	sb.WriteString(FormatValidationIssues(p.ValidationErrors, p.ValidationWarnings))
+	return errors.New(sb.String())
+}
+
+// FormatValidationIssues renders validation errors and warnings as an
+// "Errors:" block followed by an optional "Warnings:" block, one "  - "
+// bullet per message. The result is empty when both slices are empty.
+func FormatValidationIssues(errs, warnings []string) string {
+	var sb strings.Builder
+	if len(errs) > 0 {
+		sb.WriteString("Errors:\n")
+		for _, msg := range errs {
+			fmt.Fprintf(&sb, "  - %s\n", msg)
+		}
+	}
+	if len(warnings) > 0 {
+		sb.WriteString("Warnings:\n")
+		for _, msg := range warnings {
+			fmt.Fprintf(&sb, "  - %s\n", msg)
+		}
+	}
+	return sb.String()
 }
 
 // collectWarnings collects warnings about the spec (e.g., unused schemas).
@@ -315,11 +307,17 @@ func (p *Parser) collectWarnings() {
 		}
 	}
 
-	// Check for unused schemas
+	// Check for unused schemas. Components.Schemas is a map, so sort the
+	// names to keep the warning order stable across runs.
+	names := make([]string, 0, len(p.Doc.Components.Schemas))
 	for schemaName := range p.Doc.Components.Schemas {
 		if !usedSchemas[schemaName] {
-			p.ValidationWarnings = append(p.ValidationWarnings, fmt.Sprintf("Unused model: %s", schemaName))
+			names = append(names, schemaName)
 		}
+	}
+	sort.Strings(names)
+	for _, schemaName := range names {
+		p.ValidationWarnings = append(p.ValidationWarnings, fmt.Sprintf("Unused model: %s", schemaName))
 	}
 }
 
