@@ -98,6 +98,11 @@ export function {{classname}}FromJSONTyped(json: any, ignoreDiscriminator: boole
     {{/items}}
     {{/isArray}}
     {{^isArray}}
+    {{#isMap}}
+    if (typeof json === 'object' && !Array.isArray(json)) {
+            return json;
+    }
+    {{/isMap}}
     {{#isDateType}}
     if (!(isNaN(new Date(json).getTime()))) {
             return {{^required}}json == null ? undefined : {{/required}}({{#required}}{{#isNullable}}json == null ? null : {{/isNullable}}{{/required}}new Date(json));
@@ -225,6 +230,11 @@ export function {{classname}}ToJSONTyped(value?: {{classname}} | null, ignoreDis
     {{/items}}
     {{/isArray}}
     {{^isArray}}
+    {{#isMap}}
+    if (typeof value === 'object' && !Array.isArray(value)) {
+            return value;
+    }
+    {{/isMap}}
     {{#isDateType}}
     if (value instanceof Date) {
             return ((value{{#isNullable}} as any{{/isNullable}}){{^required}}{{#isNullable}}?{{/isNullable}}{{/required}}.toISOString().substring(0,10));

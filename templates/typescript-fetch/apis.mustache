@@ -452,7 +452,7 @@ export class {{classname}} extends runtime.BaseAPI {
 export enum {{operationIdCamelCase}}{{enumName}} {
 {{#allowableValues}}
     {{#enumVars}}
-    {{{name}}} = {{{value}}}{{^-last}},{{/-last}}
+    {{{name}}} = {{#isString}}'{{{value}}}'{{/isString}}{{#isNull}}{{{value}}}{{/isNull}}{{^isString}}{{^isNull}}{{{value}}}{{/isNull}}{{/isString}}{{^-last}},{{/-last}}
     {{/enumVars}}
 {{/allowableValues}}
 }

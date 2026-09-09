@@ -177,7 +177,7 @@ func (p *Parser) schemaToModel(name string, schema *openapi3.Schema) *codegen.Co
 					// Array of models: import the item type so the template can
 					// narrow with instanceOf on each element.
 					oneOfArraysMap[prop.ComplexType] = true
-				case prop.IsArray || (prop.IsPrimitiveType && !prop.IsFreeFormObject):
+				case prop.IsArray || prop.IsMap || (prop.IsPrimitiveType && !prop.IsFreeFormObject):
 					// Primitive members (including arrays of primitives) get typed
 					// JSON conversion branches instead of model imports.
 					model.OneOfPrimitives = append(model.OneOfPrimitives, prop)
