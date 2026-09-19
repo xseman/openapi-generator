@@ -21,6 +21,7 @@ func (p *Parser) GetModels() ([]*codegen.CodegenModel, error) {
 	for name := range p.Doc.Components.Schemas {
 		schemaNames = append(schemaNames, name)
 	}
+
 	sort.Strings(schemaNames)
 
 	for _, name := range schemaNames {
@@ -37,11 +38,13 @@ func (p *Parser) GetModels() ([]*codegen.CodegenModel, error) {
 	// interface to extend a union type, so templates emit an intersection type
 	// alias for these models instead.
 	oneOfClassnames := make(map[string]bool)
+
 	for _, m := range models {
 		if len(m.OneOf) > 0 {
 			oneOfClassnames[m.Classname] = true
 		}
 	}
+
 	for _, m := range models {
 		if m.Parent != "" && oneOfClassnames[m.Parent] {
 			m.ParentIsOneOf = true
@@ -106,6 +109,7 @@ func (p *Parser) schemaToModel(name string, schema *openapi3.Schema) *codegen.Co
 			if schema.AdditionalProperties.Has != nil && *schema.AdditionalProperties.Has {
 				model.IsAdditionalPropertiesTrue = true
 			}
+
 			if schema.AdditionalProperties.Schema != nil {
 				// Resolve the full property shape, not just its data type, and keep
 				// it on the model: container values render with their parameters
@@ -128,14 +132,17 @@ func (p *Parser) schemaToModel(name string, schema *openapi3.Schema) *codegen.Co
 		case "string":
 			model.IsString = true
 			model.IsPrimitiveType = true
+
 		case "integer":
 			model.IsInteger = true
 			model.IsNumeric = true
 			model.IsPrimitiveType = true
+
 		case "number":
 			model.IsNumber = true
 			model.IsNumeric = true
 			model.IsPrimitiveType = true
+
 		case "boolean":
 			model.IsBoolean = true
 			model.IsPrimitiveType = true
@@ -144,63 +151,8 @@ func (p *Parser) schemaToModel(name string, schema *openapi3.Schema) *codegen.Co
 		model.DataType = p.getSchemaType(primaryType, schema.Format)
 	}
 
-	// Handle composition
 	if len(schema.OneOf) > 0 {
-		model.OneOf = make([]string, 0, len(schema.OneOf))
-		oneOfModelsMap := make(map[string]bool) // Use map for deduplication
-		oneOfArraysMap := make(map[string]bool)
-		for _, ref := range schema.OneOf {
-			if ref.Ref != "" {
-				refName := extractRefName(ref.Ref)
-				modelName := p.toModelName(refName)
-				model.OneOf = append(model.OneOf, modelName)
-				// Add non-primitive models to OneOfModels for import generation
-				if !isPrimitiveType(modelName) {
-					oneOfModelsMap[modelName] = true
-				}
-			} else if ref.Value != nil {
-				// Members render as required: a null payload is handled before
-				// the per-member conversion branches ever run.
-				prop := p.schemaToProperty("member", ref.Value, true)
-				// Prefer the resolved property type: it carries type parameters
-				// (Array<Pet>) where getTypeDeclaration returns a bare "Array".
-				// Composite declarations ("A & B") collapse to their first $ref
-				// so the alias members stay assignable from the narrowing
-				// conversions below.
-				typeName := prop.DataType
-				if typeName == "" || typeName == "any" || isCompositeType(typeName) {
-					typeName = p.getTypeDeclaration(ref.Value)
-				}
-				model.OneOf = append(model.OneOf, typeName)
-				switch {
-				case prop.IsArray && prop.ComplexType != "":
-					// Array of models: import the item type so the template can
-					// narrow with instanceOf on each element.
-					oneOfArraysMap[prop.ComplexType] = true
-				case prop.IsArray || prop.IsMap || (prop.IsPrimitiveType && !prop.IsFreeFormObject):
-					// Primitive members (including arrays of primitives) get typed
-					// JSON conversion branches instead of model imports.
-					model.OneOfPrimitives = append(model.OneOfPrimitives, prop)
-				case !isPrimitiveType(typeName) && !isCompositeType(typeName):
-					// Model members, including inline compositions that collapse
-					// to a single referenced model. Free-form "any" members are
-					// excluded by the guard.
-					oneOfModelsMap[typeName] = true
-				}
-			}
-		}
-		// Convert maps to sorted slices
-		model.OneOfModels = make([]string, 0, len(oneOfModelsMap))
-		for modelName := range oneOfModelsMap {
-			model.OneOfModels = append(model.OneOfModels, modelName)
-		}
-		sort.Strings(model.OneOfModels)
-		model.OneOfArrays = make([]string, 0, len(oneOfArraysMap))
-		for itemName := range oneOfArraysMap {
-			model.OneOfArrays = append(model.OneOfArrays, itemName)
-		}
-		sort.Strings(model.OneOfArrays)
-		model.HasOneOf = len(model.OneOf) > 0
+		p.oneOfMembers(model, schema)
 	}
 
 	if len(schema.AnyOf) > 0 {
@@ -217,6 +169,7 @@ func (p *Parser) schemaToModel(name string, schema *openapi3.Schema) *codegen.Co
 		for _, ref := range schema.AllOf {
 			if ref.Ref != "" {
 				refName := extractRefName(ref.Ref)
+
 				model.AllOf = append(model.AllOf, refName)
 				if model.Parent == "" {
 					// Convert to valid model name for TypeScript/other languages
@@ -245,7 +198,9 @@ func (p *Parser) schemaToModel(name string, schema *openapi3.Schema) *codegen.Co
 			for mappingName := range schema.Discriminator.Mapping {
 				mappingNames = append(mappingNames, mappingName)
 			}
+
 			sort.Strings(mappingNames)
+
 			for _, mappingName := range mappingNames {
 				mapped := &codegen.MappedModel{
 					MappingName: mappingName,
@@ -257,8 +212,10 @@ func (p *Parser) schemaToModel(name string, schema *openapi3.Schema) *codegen.Co
 				if p.toModelName(mapped.ModelName) == model.Classname {
 					model.SelfReferencingDiscriminatorMapping = mapped
 					model.HasSelfReferencingDiscriminatorMapping = true
+
 					continue
 				}
+
 				model.Discriminator.MappedModels = append(model.Discriminator.MappedModels, mapped)
 			}
 		}
@@ -272,9 +229,11 @@ func (p *Parser) schemaToModel(name string, schema *openapi3.Schema) *codegen.Co
 	if schema.Min != nil {
 		model.Minimum = fmt.Sprintf("%v", *schema.Min)
 	}
+
 	if schema.Max != nil {
 		model.Maximum = fmt.Sprintf("%v", *schema.Max)
 	}
+
 	model.MinLength = intPtr(int(schema.MinLength))
 	model.MaxLength = uint64ToIntPtr(schema.MaxLength)
 	model.MinItems = intPtr(int(schema.MinItems))
@@ -288,30 +247,107 @@ func (p *Parser) schemaToModel(name string, schema *openapi3.Schema) *codegen.Co
 
 func filterRequired(props []*codegen.CodegenProperty) []*codegen.CodegenProperty {
 	var result []*codegen.CodegenProperty
+
 	for _, p := range props {
 		if p.Required {
 			result = append(result, p)
 		}
 	}
+
 	return result
 }
 
 func filterOptional(props []*codegen.CodegenProperty) []*codegen.CodegenProperty {
 	var result []*codegen.CodegenProperty
+
 	for _, p := range props {
 		if !p.Required {
 			result = append(result, p)
 		}
 	}
+
 	return result
 }
 
 func filterReadOnly(props []*codegen.CodegenProperty) []*codegen.CodegenProperty {
 	var result []*codegen.CodegenProperty
+
 	for _, p := range props {
 		if p.IsReadOnly {
 			result = append(result, p)
 		}
 	}
+
 	return result
+}
+
+// oneOfMembers fills model.OneOf and the import lists it needs: referenced
+// models by name, inline members by their resolved type, with arrays of
+// models and primitive members told apart for the template's conversions.
+func (p *Parser) oneOfMembers(model *codegen.CodegenModel, schema *openapi3.Schema) {
+	model.OneOf = make([]string, 0, len(schema.OneOf))
+	models := make(map[string]bool) // deduplicated, sorted below
+	arrays := make(map[string]bool)
+
+	for _, ref := range schema.OneOf {
+		if ref.Ref != "" {
+			modelName := p.toModelName(extractRefName(ref.Ref))
+			model.OneOf = append(model.OneOf, modelName)
+			// Non-primitive models are imported.
+			if !isPrimitiveType(modelName) {
+				models[modelName] = true
+			}
+
+			continue
+		}
+
+		if ref.Value == nil {
+			continue
+		}
+		// Members render as required: a null payload is handled before the
+		// per-member conversion branches ever run.
+		prop := p.schemaToProperty("member", ref.Value, true)
+		// Prefer the resolved property type: it carries type parameters
+		// (Array<Pet>) where getTypeDeclaration returns a bare "Array".
+		// Composite declarations ("A & B") collapse to their first $ref so the
+		// alias members stay assignable from the narrowing conversions below.
+		typeName := prop.DataType
+		if typeName == "" || typeName == "any" || isCompositeType(typeName) {
+			typeName = p.getTypeDeclaration(ref.Value)
+		}
+
+		model.OneOf = append(model.OneOf, typeName)
+
+		switch {
+		case prop.IsArray && prop.ComplexType != "":
+			// Array of models: import the item type so the template can narrow
+			// with instanceOf on each element.
+			arrays[prop.ComplexType] = true
+		case prop.IsArray || prop.IsMap || (prop.IsPrimitiveType && !prop.IsFreeFormObject):
+			// Primitive members (arrays of primitives included) get typed JSON
+			// conversion branches instead of model imports.
+			model.OneOfPrimitives = append(model.OneOfPrimitives, prop)
+		case !isPrimitiveType(typeName) && !isCompositeType(typeName):
+			// Model members, inline compositions that collapse to a single
+			// referenced model included; free-form "any" is excluded by the guard.
+			models[typeName] = true
+		}
+	}
+
+	model.OneOfModels = sortedKeys(models)
+	model.OneOfArrays = sortedKeys(arrays)
+	model.HasOneOf = len(model.OneOf) > 0
+}
+
+// sortedKeys is a map's keys in order, an empty (not nil) slice for none, so
+// the template sees [] rather than null.
+func sortedKeys(m map[string]bool) []string {
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+
+	sort.Strings(keys)
+
+	return keys
 }

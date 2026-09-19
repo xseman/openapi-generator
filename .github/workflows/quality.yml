@@ -8,7 +8,8 @@ on:
             - "go.mod"
             - "go.sum"
             - "Makefile"
-            - ".github/workflows/go-quality.yml"
+            - ".github/workflows/quality.yml"
+            - ".golangci.yml"
     pull_request:
         branches: [master]
         paths:
@@ -16,7 +17,8 @@ on:
             - "go.mod"
             - "go.sum"
             - "Makefile"
-            - ".github/workflows/go-quality.yml"
+            - ".github/workflows/quality.yml"
+            - ".golangci.yml"
 
 permissions:
     contents: read
@@ -32,7 +34,7 @@ jobs:
 
             - uses: actions/setup-go@v6
               with:
-                  go-version: "stable"
+                  go-version-file: go.mod
                   cache-dependency-path: go.sum
 
             - name: Run tests with coverage
@@ -55,13 +57,10 @@ jobs:
 
             - uses: actions/setup-go@v6
               with:
-                  go-version: "stable"
+                  go-version-file: go.mod
                   cache-dependency-path: go.sum
 
-            - name: golangci-lint
-              uses: golangci/golangci-lint-action@v9
-              with:
-                  version: latest
+            - run: make lint
 
     build:
         name: Build
@@ -72,7 +71,7 @@ jobs:
 
             - uses: actions/setup-go@v6
               with:
-                  go-version: "stable"
+                  go-version-file: go.mod
                   cache-dependency-path: go.sum
 
             - name: Build binary

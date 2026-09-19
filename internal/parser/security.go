@@ -21,6 +21,7 @@ func (p *Parser) GetSecuritySchemes() ([]*codegen.CodegenSecurity, error) {
 	for name := range p.Doc.Components.SecuritySchemes {
 		names = append(names, name)
 	}
+
 	sort.Strings(names)
 
 	for _, name := range names {
@@ -49,6 +50,7 @@ func (p *Parser) securitySchemeToCodegen(name string, scheme *openapi3.SecurityS
 	switch scheme.Type {
 	case "apiKey":
 		cs.IsApiKey = true
+
 		cs.KeyParamName = scheme.Name
 		switch scheme.In {
 		case "query":
@@ -61,6 +63,7 @@ func (p *Parser) securitySchemeToCodegen(name string, scheme *openapi3.SecurityS
 
 	case "http":
 		cs.IsBasic = true
+
 		switch strings.ToLower(scheme.Scheme) {
 		case "basic":
 			cs.IsBasicBasic = true
@@ -71,27 +74,33 @@ func (p *Parser) securitySchemeToCodegen(name string, scheme *openapi3.SecurityS
 
 	case "oauth2":
 		cs.IsOAuth = true
+
 		if scheme.Flows != nil {
-			if scheme.Flows.AuthorizationCode != nil {
+			switch flows := scheme.Flows; {
+			case flows.AuthorizationCode != nil:
 				cs.IsCode = true
-				cs.AuthorizationUrl = scheme.Flows.AuthorizationCode.AuthorizationURL
-				cs.TokenUrl = scheme.Flows.AuthorizationCode.TokenURL
-				cs.RefreshUrl = scheme.Flows.AuthorizationCode.RefreshURL
-				cs.Scopes = scopesToList(scheme.Flows.AuthorizationCode.Scopes)
-			} else if scheme.Flows.Implicit != nil {
+				cs.AuthorizationUrl = flows.AuthorizationCode.AuthorizationURL
+				cs.TokenUrl = flows.AuthorizationCode.TokenURL
+				cs.RefreshUrl = flows.AuthorizationCode.RefreshURL
+				cs.Scopes = scopesToList(flows.AuthorizationCode.Scopes)
+
+			case flows.Implicit != nil:
 				cs.IsImplicit = true
-				cs.AuthorizationUrl = scheme.Flows.Implicit.AuthorizationURL
-				cs.Scopes = scopesToList(scheme.Flows.Implicit.Scopes)
-			} else if scheme.Flows.Password != nil {
+				cs.AuthorizationUrl = flows.Implicit.AuthorizationURL
+				cs.Scopes = scopesToList(flows.Implicit.Scopes)
+
+			case flows.Password != nil:
 				cs.IsPassword = true
-				cs.TokenUrl = scheme.Flows.Password.TokenURL
-				cs.Scopes = scopesToList(scheme.Flows.Password.Scopes)
-			} else if scheme.Flows.ClientCredentials != nil {
+				cs.TokenUrl = flows.Password.TokenURL
+				cs.Scopes = scopesToList(flows.Password.Scopes)
+
+			case flows.ClientCredentials != nil:
 				cs.IsApplication = true
-				cs.TokenUrl = scheme.Flows.ClientCredentials.TokenURL
-				cs.Scopes = scopesToList(scheme.Flows.ClientCredentials.Scopes)
+				cs.TokenUrl = flows.ClientCredentials.TokenURL
+				cs.Scopes = scopesToList(flows.ClientCredentials.Scopes)
 			}
 		}
+
 		cs.HasScopes = len(cs.Scopes) > 0
 
 	case "openIdConnect":
@@ -110,6 +119,7 @@ func scopesToList(scopes map[string]string) []map[string]any {
 	for scope := range scopes {
 		names = append(names, scope)
 	}
+
 	sort.Strings(names)
 
 	result := make([]map[string]any, 0, len(scopes))
@@ -119,5 +129,6 @@ func scopesToList(scopes map[string]string) []map[string]any {
 			"description": scopes[scope],
 		})
 	}
+
 	return result
 }

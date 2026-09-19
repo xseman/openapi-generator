@@ -10,6 +10,7 @@
 package gen
 
 import (
+	"errors"
 	"fmt"
 	"os"
 
@@ -56,14 +57,17 @@ func Generate(opts Options) error {
 	}
 
 	if opts.InputSpec == "" {
-		return fmt.Errorf("input-spec is required (use -i flag or inputSpec in config file)")
+		return errors.New("input-spec is required (use -i flag or inputSpec in config file)")
 	}
+
 	if opts.OutputDir == "" {
-		return fmt.Errorf("output is required (use -o flag or outputDir in config file)")
+		return errors.New("output is required (use -o flag or outputDir in config file)")
 	}
+
 	if opts.GeneratorName == "" {
-		return fmt.Errorf("generator-name is required (use -g flag or generatorName in config file)")
+		return errors.New("generator-name is required (use -g flag or generatorName in config file)")
 	}
+
 	if opts.GeneratorName != "typescript-fetch" && opts.GeneratorName != "dart-fetch" {
 		return fmt.Errorf("unsupported generator: %s (supported: 'typescript-fetch', 'dart-fetch')", opts.GeneratorName)
 	}
@@ -87,17 +91,21 @@ func Generate(opts Options) error {
 		tsGen   *typescript.FetchGenerator
 		dartGen *dart.FetchGenerator
 	)
+
 	switch opts.GeneratorName {
 	case "typescript-fetch":
 		tsConfig := config.NewTypeScriptFetchConfig()
 		applyTypeScriptAdditionalProperties(tsConfig, additionalProps)
+
 		tsGen = typescript.NewFetchGenerator()
 		tsGen.SetConfig(cfg)
 		tsGen.TSConfig = tsConfig
 		cg = tsGen
+
 	case "dart-fetch":
 		dartConfig := config.NewDartFetchConfig()
 		applyDartAdditionalProperties(dartConfig, additionalProps)
+
 		dartGen = dart.NewFetchGenerator()
 		dartGen.SetConfig(cfg)
 		dartGen.DartConfig = dartConfig
@@ -110,10 +118,12 @@ func Generate(opts Options) error {
 
 	// Capture per-language paths/extensions used by the generation pipeline.
 	var apiPackage, modelPackage string
+
 	switch {
 	case tsGen != nil:
 		apiPackage = tsGen.ApiPackage
 		modelPackage = tsGen.ModelPackage
+
 	case dartGen != nil:
 		apiPackage = dartGen.ApiPackage
 		modelPackage = dartGen.ModelPackage
@@ -131,7 +141,7 @@ func Generate(opts Options) error {
 
 	baseData := buildBaseData(spec, apiPackage, modelPackage, opts.Version, cg)
 
-	if err := os.MkdirAll(opts.OutputDir, 0755); err != nil {
+	if err := os.MkdirAll(opts.OutputDir, 0o755); err != nil {
 		return fmt.Errorf("failed to create output directory: %w", err)
 	}
 
@@ -159,24 +169,28 @@ func Generate(opts Options) error {
 	if err != nil {
 		return err
 	}
+
 	generatedFiles = append(generatedFiles, supportingFiles...)
 
 	modelFiles, err := r.renderModels(baseData, spec.models, modelMaps)
 	if err != nil {
 		return err
 	}
+
 	generatedFiles = append(generatedFiles, modelFiles...)
 
 	apiFiles, err := r.renderAPIs(baseData, spec.operationsByTag)
 	if err != nil {
 		return err
 	}
+
 	generatedFiles = append(generatedFiles, apiFiles...)
 
 	indexFiles, err := r.writeIndexFiles(spec.models, spec.operationsByTag)
 	if err != nil {
 		return err
 	}
+
 	generatedFiles = append(generatedFiles, indexFiles...)
 
 	if err := generateMetadata(opts.OutputDir, generatedFiles, opts.Version); err != nil {
@@ -184,5 +198,6 @@ func Generate(opts Options) error {
 	}
 
 	fmt.Printf("\nGeneration complete! Output written to: %s\n", opts.OutputDir)
+
 	return nil
 }

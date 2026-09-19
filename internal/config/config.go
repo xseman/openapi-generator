@@ -153,18 +153,20 @@ func NewDartFetchConfig() *DartFetchConfig {
 	}
 }
 
-// FileNamingType represents the file naming convention
+// FileNamingType represents the file naming convention.
 type FileNamingType string
 
+// The file naming conventions a generator accepts.
 const (
 	FileNamingPascalCase FileNamingType = "PascalCase"
 	FileNamingCamelCase  FileNamingType = "camelCase"
 	FileNamingKebabCase  FileNamingType = "kebab-case"
 )
 
-// ModelPropertyNamingType represents the property naming convention
+// ModelPropertyNamingType represents the property naming convention.
 type ModelPropertyNamingType string
 
+// The property naming conventions a generator accepts.
 const (
 	PropertyNamingOriginal   ModelPropertyNamingType = "original"
 	PropertyNamingCamelCase  ModelPropertyNamingType = "camelCase"

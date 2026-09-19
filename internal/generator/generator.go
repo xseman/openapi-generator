@@ -6,14 +6,19 @@ import (
 	"github.com/xseman/openapi-generator/internal/config"
 )
 
-// Type aliases for codegen types to be used by CLI and other packages
 type (
-	CodegenModel     = codegen.CodegenModel
+	// CodegenModel is codegen.CodegenModel, re-exported so callers import one package.
+	CodegenModel = codegen.CodegenModel
+	// CodegenOperation is codegen.CodegenOperation, re-exported so callers import one package.
 	CodegenOperation = codegen.CodegenOperation
-	CodegenProperty  = codegen.CodegenProperty
+	// CodegenProperty is codegen.CodegenProperty, re-exported so callers import one package.
+	CodegenProperty = codegen.CodegenProperty
+	// CodegenParameter is codegen.CodegenParameter, re-exported so callers import one package.
 	CodegenParameter = codegen.CodegenParameter
-	CodegenResponse  = codegen.CodegenResponse
-	CodegenSecurity  = codegen.CodegenSecurity
+	// CodegenResponse is codegen.CodegenResponse, re-exported so callers import one package.
+	CodegenResponse = codegen.CodegenResponse
+	// CodegenSecurity is codegen.CodegenSecurity, re-exported so callers import one package.
+	CodegenSecurity = codegen.CodegenSecurity
 )
 
 // CodegenConfig is the interface that all generators must implement.
@@ -119,9 +124,10 @@ type CodegenConfig interface {
 	GetImportMapping() map[string]string
 }
 
-// GeneratorType represents the type of generator
+// GeneratorType represents the type of generator.
 type GeneratorType string
 
+// The generator kinds, upstream's GeneratorType values.
 const (
 	GeneratorTypeClient        GeneratorType = "CLIENT"
 	GeneratorTypeServer        GeneratorType = "SERVER"
@@ -131,14 +137,14 @@ const (
 	GeneratorTypeOther         GeneratorType = "OTHER"
 )
 
-// SupportingFile represents a file to be generated
+// SupportingFile represents a file to be generated.
 type SupportingFile struct {
 	TemplateFile        string // Template file name
 	Folder              string // Output folder relative to output directory
 	DestinationFilename string // Output file name
 }
 
-// NewSupportingFile creates a new SupportingFile
+// NewSupportingFile creates a new SupportingFile.
 func NewSupportingFile(templateFile, folder, destinationFilename string) SupportingFile {
 	return SupportingFile{
 		TemplateFile:        templateFile,
@@ -147,7 +153,7 @@ func NewSupportingFile(templateFile, folder, destinationFilename string) Support
 	}
 }
 
-// TemplateData holds data passed to templates
+// TemplateData holds data passed to templates.
 type TemplateData struct {
 	// Package info
 	PackageName    string `json:"packageName"`
@@ -186,12 +192,12 @@ type TemplateData struct {
 	AdditionalProperties map[string]any `json:"-"`
 }
 
-// ApiInfo holds information about API classes
+// ApiInfo holds information about API classes.
 type ApiInfo struct {
 	Apis []*ApiClass `json:"apis"`
 }
 
-// ApiClass holds information about a single API class
+// ApiClass holds information about a single API class.
 type ApiClass struct {
 	Classname     string              `json:"classname"`
 	ClassVarName  string              `json:"classVarName"`
@@ -203,14 +209,14 @@ type ApiClass struct {
 	Description   string              `json:"description"`
 }
 
-// OperationGroup holds a group of operations
+// OperationGroup holds a group of operations.
 type OperationGroup struct {
 	Operation  []*codegen.CodegenOperation `json:"operation"`
 	Classname  string                      `json:"classname"`
 	PathPrefix string                      `json:"pathPrefix"`
 }
 
-// ModelData holds data for model template
+// ModelData holds data for model template.
 type ModelData struct {
 	Model      *codegen.CodegenModel `json:"model"`
 	Models     []*ModelMap           `json:"models"`
@@ -219,7 +225,7 @@ type ModelData struct {
 	TsImports  []map[string]string   `json:"tsImports"`
 }
 
-// ModelMap wraps a model for template rendering
+// ModelMap wraps a model for template rendering.
 type ModelMap struct {
 	Model      *codegen.CodegenModel `json:"model"`
 	ImportPath string                `json:"importPath"`

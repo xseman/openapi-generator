@@ -21,55 +21,19 @@ minimal dependencies.
 
 ## Installation
 
-### Standalone Binaries
-
-Download pre-built binaries from the [releases page](https://github.com/xseman/openapi-generator/releases/latest):
-
-**Linux (amd64/arm64)**
-```bash
-# Download the binary (replace with your architecture)
-curl -LO https://github.com/xseman/openapi-generator/releases/latest/download/openapi-generator-linux-amd64
-
-# Make it executable
-chmod +x openapi-generator-linux-amd64
-
-# Move to your PATH
-sudo mv openapi-generator-linux-amd64 /usr/local/bin/openapi-generator
+```sh
+curl -fsSL https://raw.githubusercontent.com/xseman/openapi-generator/master/install.sh | sh
 ```
 
-**macOS (amd64/arm64)**
-```bash
-# Download the binary (amd64 for Intel, arm64 for Apple Silicon)
-curl -LO https://github.com/xseman/openapi-generator/releases/latest/download/openapi-generator-darwin-arm64
+The script downloads the release binary for this platform, checks it against
+the release's `CHECKSUMS.txt` and puts it in `~/.local/bin`.
+`OPENAPI_GENERATOR_VERSION` pins a release, `OPENAPI_GENERATOR_INSTALL_DIR`
+changes where it lands. Later, `openapi-generator update` installs the newest
+release over the binary the same way.
 
-# Make it executable
-chmod +x openapi-generator-darwin-arm64
-
-# Move to your PATH
-sudo mv openapi-generator-darwin-arm64 /usr/local/bin/openapi-generator
-```
-
-**Windows (amd64)**
-```powershell
-# Download from: https://github.com/xseman/openapi-generator/releases/latest/download/openapi-generator-windows-amd64.exe
-# Add the .exe to your PATH
-```
-
-### Package Managers
-
-**Debian/Ubuntu**
-```bash
-# Download and install (replace version and architecture as needed)
-curl -LO https://github.com/xseman/openapi-generator/releases/latest/download/openapi-generator_0.1.0_amd64.deb
-sudo dpkg -i openapi-generator_0.1.0_amd64.deb
-```
-
-**RHEL/Fedora/CentOS**
-```bash
-# Download and install (replace version and architecture as needed)
-curl -LO https://github.com/xseman/openapi-generator/releases/latest/download/openapi-generator-0.1.0-1.x86_64.rpm
-sudo rpm -i openapi-generator-0.1.0-1.x86_64.rpm
-```
+**Windows:** download `openapi-generator-windows-amd64.exe` (or `arm64`) from
+the [latest release](https://github.com/xseman/openapi-generator/releases/latest)
+and put it on your `PATH`; `openapi-generator update` works there too.
 
 ### From Source
 
@@ -135,31 +99,16 @@ openapi-generator validate -i openapi.yaml --recommend
 
 ### Building and Testing
 
-```bash
-# Build the binary
-make build
-
-# Run tests
-make test
-
-# Run tests with coverage
-make cover
-
-# Format code
-make fmt
-
-# Run linter
-make lint
-
-# Run all quality checks
-make quality
-
-# Clean build artifacts
-make clean
-
-# Show all available targets
-make help
+```sh
+make build              # bin/openapi-generator
+make test               # go vet + go test -race ./...
+make lint               # golangci-lint, config in .golangci.yml
+make fmt                # gofumpt
+make cover              # coverage report
 ```
+
+`CLAUDE.md` maps the packages and states the conventions, for people and
+agents alike.
 
 ### Manual Testing
 

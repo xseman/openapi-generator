@@ -16,7 +16,7 @@ type CodegenDiscriminator struct {
 	VendorExtensions map[string]any `json:"vendorExtensions"`
 }
 
-// MappedModel represents a discriminator mapping entry
+// MappedModel represents a discriminator mapping entry.
 type MappedModel struct {
 	MappingName     string        `json:"mappingName"`     // Value in payload
 	ModelName       string        `json:"modelName"`       // Schema/model name

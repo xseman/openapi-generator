@@ -40,6 +40,7 @@ func assembleSpec(cg generator.CodegenConfig, opts Options) (*specData, error) {
 	if err := loadSpec(p, opts.InputSpec); err != nil {
 		return nil, err
 	}
+
 	if opts.SkipValidation && len(p.ValidationErrors) > 0 {
 		fmt.Fprintln(os.Stderr, "There were issues with the specification, but validation has been explicitly disabled.")
 		fmt.Fprint(os.Stderr, parser.FormatValidationIssues(p.ValidationErrors, p.ValidationWarnings))
@@ -64,10 +65,12 @@ func assembleSpec(cg generator.CodegenConfig, opts Options) (*specData, error) {
 
 	if opts.Verbose {
 		fmt.Printf("Found %d models\n", len(models))
+
 		opCount := 0
 		for _, ops := range operationsByTag {
 			opCount += len(ops)
 		}
+
 		fmt.Printf("Found %d operations in %d tags\n", opCount, len(operationsByTag))
 	}
 
@@ -97,6 +100,7 @@ func loadSpec(p *parser.Parser, inputSpec string) error {
 			return fmt.Errorf("failed to load spec from file: %w", err)
 		}
 	}
+
 	return nil
 }
 
@@ -107,15 +111,18 @@ func resolveOperationIDConflicts(operationsByTag map[string][]*generator.Codegen
 	for _, tag := range sortedTags(operationsByTag) {
 		ops := operationsByTag[tag]
 		operationIDs := make(map[string]int)
+
 		for i := range ops {
 			opID := ops[i].OperationId
 			if count, exists := operationIDs[opID]; exists {
 				// Conflict detected - rename by appending suffix
 				suffix := count + 1
+
 				newID := fmt.Sprintf("%s%d", opID, suffix)
 				if verbose {
 					fmt.Printf("Warning: Duplicate operation ID '%s' in tag '%s', renaming to '%s'\n", opID, tag, newID)
 				}
+
 				ops[i].OperationId = newID
 				ops[i].Nickname = newID
 				operationIDs[opID] = suffix

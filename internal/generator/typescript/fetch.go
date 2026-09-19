@@ -1,6 +1,7 @@
 package typescript
 
 import (
+	"slices"
 	"strings"
 
 	"github.com/xseman/openapi-generator/internal/codegen"
@@ -25,7 +26,7 @@ type FetchGenerator struct {
 	ValidationAttributes      bool
 }
 
-// NewFetchGenerator creates a new TypeScript Fetch generator
+// NewFetchGenerator creates a new TypeScript Fetch generator.
 func NewFetchGenerator() *FetchGenerator {
 	base := NewBaseGenerator()
 
@@ -44,22 +45,22 @@ func NewFetchGenerator() *FetchGenerator {
 	return g
 }
 
-// GetName returns the generator name
+// GetName returns the generator name.
 func (g *FetchGenerator) GetName() string {
 	return "typescript-fetch"
 }
 
-// GetTag returns the generator type
+// GetTag returns the generator type.
 func (g *FetchGenerator) GetTag() generator.GeneratorType {
 	return generator.GeneratorTypeClient
 }
 
-// GetHelp returns the help text
+// GetHelp returns the help text.
 func (g *FetchGenerator) GetHelp() string {
 	return "Generates a TypeScript client library using Fetch API."
 }
 
-// ProcessOpts processes CLI options and initializes the generator
+// ProcessOpts processes CLI options and initializes the generator.
 func (g *FetchGenerator) ProcessOpts() error {
 	// Process TypeScript config
 	if g.TSConfig != nil {
@@ -75,6 +76,7 @@ func (g *FetchGenerator) ProcessOpts() error {
 		if g.TSConfig.FileNaming != "" {
 			g.FileNaming = g.TSConfig.FileNaming
 		}
+
 		if g.TSConfig.ModelPropertyNaming != "" {
 			g.ModelPropertyNaming = config.ModelPropertyNamingType(g.TSConfig.ModelPropertyNaming)
 		}
@@ -126,48 +128,51 @@ func (g *FetchGenerator) ProcessOpts() error {
 	return nil
 }
 
-// ToApiFilename returns the API file name with file naming convention applied
+// ToApiFilename returns the API file name with file naming convention applied.
 func (g *FetchGenerator) ToApiFilename(name string) string {
 	return g.convertUsingFileNamingConvention(g.BaseGenerator.ToApiFilename(name))
 }
 
-// ToModelFilename returns the model file name with file naming convention applied
+// ToModelFilename returns the model file name with file naming convention applied.
 func (g *FetchGenerator) ToModelFilename(name string) string {
 	return g.convertUsingFileNamingConvention(g.BaseGenerator.ToModelFilename(name))
 }
 
-// GetTypeDeclaration returns the type declaration for file/binary types
+// GetTypeDeclaration returns the type declaration for file/binary types.
 func (g *FetchGenerator) GetTypeDeclaration(schemaType, format string) string {
 	if schemaType == "file" || format == "binary" {
 		return "Blob"
 	}
+
 	return g.BaseGenerator.GetTypeDeclaration(schemaType, format)
 }
 
-// EscapeReservedWord escapes reserved words
+// EscapeReservedWord escapes reserved words.
 func (g *FetchGenerator) EscapeReservedWord(name string) string {
 	return g.BaseGenerator.EscapeReservedWord(name)
 }
 
-// PostProcessModels post-processes models for TypeScript-Fetch
+// PostProcessModels post-processes models for TypeScript-Fetch.
 func (g *FetchGenerator) PostProcessModels(models []*codegen.CodegenModel) []*codegen.CodegenModel {
 	for _, cm := range models {
 		g.processCodeGenModel(cm)
 	}
+
 	return models
 }
 
-// PostProcessOperations post-processes operations for TypeScript-Fetch
+// PostProcessOperations post-processes operations for TypeScript-Fetch.
 func (g *FetchGenerator) PostProcessOperations(operations []*codegen.CodegenOperation) []*codegen.CodegenOperation {
 	for _, op := range operations {
 		g.escapeOperationId(op)
 		g.updateOperationParameterForEnum(op)
 		g.addOperationObjectResponseInformation(op)
 	}
+
 	return operations
 }
 
-// processCodeGenModel processes a model for TypeScript-Fetch specific transformations
+// processCodeGenModel processes a model for TypeScript-Fetch specific transformations.
 func (g *FetchGenerator) processCodeGenModel(cm *codegen.CodegenModel) {
 	// Process enum names
 	for _, v := range cm.Vars {
@@ -189,7 +194,7 @@ func (g *FetchGenerator) processCodeGenModel(cm *codegen.CodegenModel) {
 	}
 }
 
-// processCodegenProperty processes a property for TypeScript-Fetch specific transformations
+// processCodegenProperty processes a property for TypeScript-Fetch specific transformations.
 func (g *FetchGenerator) processCodegenProperty(prop *codegen.CodegenProperty, parentClassName string) {
 	// Name enum with model name, e.g., StatusEnum => PetStatusEnum
 	if prop.IsEnum {
@@ -209,18 +214,14 @@ func (g *FetchGenerator) processCodegenProperty(prop *codegen.CodegenProperty, p
 	}
 }
 
-// escapeOperationId escapes operation IDs that conflict with imports or naming patterns
+// escapeOperationId escapes operation IDs that conflict with imports or naming patterns.
 func (g *FetchGenerator) escapeOperationId(op *codegen.CodegenOperation) {
 	// Check for conflict with "Request" suffix import
-	param := op.OperationIdCamelCase + "Request"
-	for _, imp := range op.Imports {
-		if imp == param {
-			op.OperationIdCamelCase += "Operation"
-			op.OperationIdLowerCase += "operation"
-			op.OperationIdSnakeCase += "_operation"
-			op.Nickname += "Operation"
-			break
-		}
+	if slices.Contains(op.Imports, op.OperationIdCamelCase+"Request") {
+		op.OperationIdCamelCase += "Operation"
+		op.OperationIdLowerCase += "operation"
+		op.OperationIdSnakeCase += "_operation"
+		op.Nickname += "Operation"
 	}
 
 	// Check if operationId ends with "Raw" which would conflict with the internal method naming pattern
@@ -234,7 +235,7 @@ func (g *FetchGenerator) escapeOperationId(op *codegen.CodegenOperation) {
 	}
 }
 
-// updateOperationParameterForEnum updates parameter enum names
+// updateOperationParameterForEnum updates parameter enum names.
 func (g *FetchGenerator) updateOperationParameterForEnum(op *codegen.CodegenOperation) {
 	for _, param := range op.AllParams {
 		if param.IsEnum {
@@ -248,7 +249,7 @@ func (g *FetchGenerator) updateOperationParameterForEnum(op *codegen.CodegenOper
 	}
 }
 
-// addOperationObjectResponseInformation handles object response types
+// addOperationObjectResponseInformation handles object response types.
 func (g *FetchGenerator) addOperationObjectResponseInformation(op *codegen.CodegenOperation) {
 	if op.ReturnType == "object" {
 		op.IsMap = true
@@ -256,7 +257,7 @@ func (g *FetchGenerator) addOperationObjectResponseInformation(op *codegen.Codeg
 	}
 }
 
-// convertUsingFileNamingConvention applies file naming convention
+// convertUsingFileNamingConvention applies file naming convention.
 func (g *FetchGenerator) convertUsingFileNamingConvention(name string) string {
 	switch g.FileNaming {
 	case "kebab-case":
@@ -268,7 +269,7 @@ func (g *FetchGenerator) convertUsingFileNamingConvention(name string) string {
 	}
 }
 
-// addExtraReservedWords adds typescript-fetch specific reserved words
+// addExtraReservedWords adds typescript-fetch specific reserved words.
 func (g *FetchGenerator) addExtraReservedWords() {
 	extraWords := []string{
 		"BASE_PATH", "BaseAPI", "RequiredError", "COLLECTION_FORMATS",

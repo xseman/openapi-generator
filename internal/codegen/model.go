@@ -137,7 +137,7 @@ type CodegenModel struct {
 	ModelJson string `json:"modelJson"`
 }
 
-// CodegenComposedSchemas holds composed schema references
+// CodegenComposedSchemas holds composed schema references.
 type CodegenComposedSchemas struct {
 	AllOf []*CodegenProperty `json:"allOf"`
 	OneOf []*CodegenProperty `json:"oneOf"`

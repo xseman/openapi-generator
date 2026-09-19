@@ -73,10 +73,12 @@ func parseYAMLDocument(data []byte) (*yaml.Node, bool) {
 	if err := yaml.Unmarshal(data, &root); err != nil || len(root.Content) == 0 {
 		return nil, false
 	}
+
 	doc := root.Content[0]
 	if doc.Kind != yaml.MappingNode {
 		return nil, false
 	}
+
 	return doc, true
 }
 
@@ -92,12 +94,15 @@ func (p *Parser) recordSchemaOrder(schemasNode *yaml.Node) {
 	if p.propOrder == nil {
 		p.propOrder = make(map[*openapi3.Schema][]string)
 	}
+
 	for i := 0; i+1 < len(schemasNode.Content); i += 2 {
 		name := schemasNode.Content[i].Value
+
 		ref := p.Doc.Components.Schemas[name]
 		if ref == nil || ref.Value == nil {
 			continue
 		}
+
 		p.walkSchemaOrder(schemasNode.Content[i+1], ref.Value)
 	}
 }
@@ -118,11 +123,13 @@ func (p *Parser) walkSchemaOrder(node *yaml.Node, schema *openapi3.Schema) {
 		names := make([]string, 0, len(propsNode.Content)/2)
 		for i := 0; i+1 < len(propsNode.Content); i += 2 {
 			propName := propsNode.Content[i].Value
+
 			names = append(names, propName)
 			if propRef := schema.Properties[propName]; propRef != nil && propRef.Value != nil {
 				p.walkSchemaOrder(propsNode.Content[i+1], propRef.Value)
 			}
 		}
+
 		p.propOrder[schema] = names
 	}
 
@@ -131,10 +138,12 @@ func (p *Parser) walkSchemaOrder(node *yaml.Node, schema *openapi3.Schema) {
 		if seqNode == nil || seqNode.Kind != yaml.SequenceNode {
 			return
 		}
+
 		for i, item := range seqNode.Content {
 			if i >= len(refs) || refs[i] == nil || refs[i].Value == nil {
 				continue
 			}
+
 			p.walkSchemaOrder(item, refs[i].Value)
 		}
 	}
@@ -145,6 +154,7 @@ func (p *Parser) walkSchemaOrder(node *yaml.Node, schema *openapi3.Schema) {
 	if schema.Items != nil && schema.Items.Value != nil {
 		p.walkSchemaOrder(yamlMappingValue(node, "items"), schema.Items.Value)
 	}
+
 	if schema.AdditionalProperties.Schema != nil && schema.AdditionalProperties.Schema.Value != nil {
 		p.walkSchemaOrder(yamlMappingValue(node, "additionalProperties"), schema.AdditionalProperties.Schema.Value)
 	}
@@ -156,11 +166,13 @@ func yamlMappingValue(node *yaml.Node, key string) *yaml.Node {
 	if node == nil || node.Kind != yaml.MappingNode {
 		return nil
 	}
+
 	for i := 0; i+1 < len(node.Content); i += 2 {
 		if node.Content[i].Value == key {
 			return node.Content[i+1]
 		}
 	}
+
 	return nil
 }
 
@@ -175,11 +187,14 @@ func (p *Parser) orderedPropertyNames(schema *openapi3.Schema) []string {
 		for name := range schema.Properties {
 			names = append(names, name)
 		}
+
 		sort.Strings(names)
+
 		return names
 	}
 
 	names := make([]string, 0, len(schema.Properties))
+
 	seen := make(map[string]bool, len(order))
 	for _, name := range order {
 		if _, exists := schema.Properties[name]; exists {
@@ -191,13 +206,16 @@ func (p *Parser) orderedPropertyNames(schema *openapi3.Schema) []string {
 	// order (shouldn't normally happen); append alphabetically so nothing is dropped.
 	if len(names) != len(schema.Properties) {
 		var extra []string
+
 		for name := range schema.Properties {
 			if !seen[name] {
 				extra = append(extra, name)
 			}
 		}
+
 		sort.Strings(extra)
 		names = append(names, extra...)
 	}
+
 	return names
 }

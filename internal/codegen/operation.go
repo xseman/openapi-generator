@@ -101,14 +101,14 @@ type CodegenOperation struct {
 	ExternalDocs map[string]any `json:"externalDocs"`
 }
 
-// CodegenServer represents server configuration
+// CodegenServer represents server configuration.
 type CodegenServer struct {
 	URL         string         `json:"url"`
 	Description string         `json:"description"`
 	Variables   map[string]any `json:"variables"`
 }
 
-// CodegenCallback represents a callback
+// CodegenCallback represents a callback.
 type CodegenCallback struct {
 	Name       string              `json:"name"`
 	Operations []*CodegenOperation `json:"operations"`

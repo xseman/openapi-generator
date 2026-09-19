@@ -41,6 +41,7 @@ func NewFetchGenerator() *FetchGenerator {
 	g.ModelTemplateFiles["models.mustache"] = ".dart"
 
 	g.addExtraReservedWords()
+
 	return g
 }
 
@@ -61,18 +62,23 @@ func (g *FetchGenerator) ProcessOpts() error {
 		if g.DartConfig.PubName != "" {
 			g.PubName = g.DartConfig.PubName
 		}
+
 		if g.DartConfig.PubVersion != "" {
 			g.PubVersion = g.DartConfig.PubVersion
 		}
+
 		if g.DartConfig.PubDescription != "" {
 			g.PubDescription = g.DartConfig.PubDescription
 		}
+
 		g.PubAuthor = g.DartConfig.PubAuthor
 		g.PubHomepage = g.DartConfig.PubHomepage
+
 		g.PubRepository = g.DartConfig.PubRepository
 		if g.DartConfig.SdkConstraint != "" {
 			g.SdkConstraint = g.DartConfig.SdkConstraint
 		}
+
 		g.UseDartIoSender = g.DartConfig.UseDartIoSender
 	}
 
@@ -112,19 +118,24 @@ func (g *FetchGenerator) PostProcessModels(models []*codegen.CodegenModel) []*co
 		for _, v := range m.Vars {
 			g.translateProperty(v)
 		}
+
 		for _, v := range m.AllVars {
 			g.translateProperty(v)
 		}
+
 		for _, v := range m.RequiredVars {
 			g.translateProperty(v)
 		}
+
 		for _, v := range m.OptionalVars {
 			g.translateProperty(v)
 		}
+
 		if m.Items != nil {
 			g.translateProperty(m.Items)
 		}
 	}
+
 	return models
 }
 
@@ -134,33 +145,43 @@ func (g *FetchGenerator) PostProcessModels(models []*codegen.CodegenModel) []*co
 func (g *FetchGenerator) PostProcessOperations(ops []*codegen.CodegenOperation) []*codegen.CodegenOperation {
 	for _, op := range ops {
 		op.ReturnType = g.translateType(op.ReturnType)
+
 		op.ReturnBaseType = g.translateType(op.ReturnBaseType)
 		if op.ReturnProperty != nil {
 			g.translateProperty(op.ReturnProperty)
 		}
+
 		for _, p := range op.AllParams {
 			g.translateParameter(p)
 		}
+
 		for _, p := range op.BodyParams {
 			g.translateParameter(p)
 		}
+
 		for _, p := range op.PathParams {
 			g.translateParameter(p)
 		}
+
 		for _, p := range op.QueryParams {
 			g.translateParameter(p)
 		}
+
 		for _, p := range op.HeaderParams {
 			g.translateParameter(p)
 		}
+
 		for _, p := range op.FormParams {
 			g.translateParameter(p)
 		}
+
 		if op.BodyParam != nil {
 			g.translateParameter(op.BodyParam)
 		}
+
 		g.escapeOperationId(op)
 	}
+
 	return ops
 }
 
@@ -170,15 +191,19 @@ func (g *FetchGenerator) translateProperty(p *codegen.CodegenProperty) {
 	if p == nil {
 		return
 	}
+
 	if p.Items != nil {
 		g.translateProperty(p.Items)
 	}
+
 	if p.AdditionalProperties != nil {
 		g.translateProperty(p.AdditionalProperties)
 	}
+
 	if p.MostInnerItems != nil {
 		g.translateProperty(p.MostInnerItems)
 	}
+
 	p.DataType = g.translateType(p.DataType)
 	p.Datatype = p.DataType
 	p.BaseType = g.translateBaseType(p.BaseType)
@@ -189,12 +214,15 @@ func (g *FetchGenerator) translateParameter(p *codegen.CodegenParameter) {
 	if p == nil {
 		return
 	}
+
 	if p.Items != nil {
 		g.translateProperty(p.Items)
 	}
+
 	if p.AdditionalProperties != nil {
 		g.translateProperty(p.AdditionalProperties)
 	}
+
 	p.DataType = g.translateType(p.DataType)
 	p.BaseType = g.translateBaseType(p.BaseType)
 	p.DatatypeWithEnum = g.translateType(p.DatatypeWithEnum)
@@ -219,6 +247,7 @@ func (g *FetchGenerator) translateBaseType(t string) string {
 	case "Blob":
 		return "List<int>"
 	}
+
 	return t
 }
 
@@ -257,12 +286,14 @@ func (g *FetchGenerator) translateType(t string) string {
 		inner = strings.TrimSpace(inner)
 		inner = strings.TrimSuffix(inner, ";")
 		inner = strings.TrimSpace(inner)
+
 		return "Map<String, " + g.translateType(inner) + ">"
 	}
 	// Union types (TS "A | B") collapse to Object? in Dart for now.
 	if strings.Contains(t, " | ") {
 		return "Object?"
 	}
+
 	switch t {
 	case "any":
 		return "Object?"
@@ -279,6 +310,7 @@ func (g *FetchGenerator) translateType(t string) string {
 	case "void", "undefined":
 		return "void"
 	}
+
 	return t
 }
 
@@ -291,10 +323,12 @@ func (g *FetchGenerator) escapeOperationId(op *codegen.CodegenOperation) {
 		op.OperationIdLowerCase += "method"
 		op.OperationIdSnakeCase += "_method"
 		op.Nickname = op.OperationIdCamelCase
+
 		return
 	}
+
 	if g.IsReservedWord(op.Nickname) {
-		op.Nickname = op.Nickname + "_"
+		op.Nickname += "_"
 	}
 }
 
@@ -319,8 +353,11 @@ func sanitizePubName(name string) string {
 	if name == "" {
 		return "openapi"
 	}
+
 	name = Underscore(name)
+
 	var out strings.Builder
+
 	for i, r := range name {
 		switch {
 		case r >= 'a' && r <= 'z':
@@ -329,13 +366,17 @@ func sanitizePubName(name string) string {
 			if i == 0 {
 				out.WriteByte('_')
 			}
+
 			out.WriteRune(r)
+
 		case r == '_':
 			out.WriteRune(r)
 		}
 	}
+
 	if out.Len() == 0 {
 		return "openapi"
 	}
+
 	return out.String()
 }

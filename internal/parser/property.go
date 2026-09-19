@@ -9,7 +9,7 @@ import (
 )
 
 // extractProperties extracts properties from an object schema.
-func (p *Parser) extractProperties(schema *openapi3.Schema, model *codegen.CodegenModel) []*codegen.CodegenProperty {
+func (p *Parser) extractProperties(schema *openapi3.Schema, _ *codegen.CodegenModel) []*codegen.CodegenProperty {
 	if schema.Properties == nil {
 		return nil
 	}
@@ -20,6 +20,7 @@ func (p *Parser) extractProperties(schema *openapi3.Schema, model *codegen.Codeg
 	}
 
 	var props []*codegen.CodegenProperty
+
 	for _, name := range p.orderedPropertyNames(schema) {
 		propRef := schema.Properties[name]
 		if propRef == nil || propRef.Value == nil {
@@ -52,6 +53,7 @@ func (p *Parser) schemaRefToProperty(name string, ref *openapi3.SchemaRef, requi
 			IsPrimitiveType:  true,
 			IsAnyType:        true,
 		}
+
 		return prop
 	}
 
@@ -86,6 +88,7 @@ func (p *Parser) applyMemberType(prop *codegen.CodegenProperty, ref *openapi3.Sc
 	if member == nil || member.DataType == "" || member.DataType == "any" {
 		return false
 	}
+
 	prop.DataType = member.DataType
 	prop.BaseType = member.BaseType
 	prop.ComplexType = member.ComplexType
@@ -100,6 +103,7 @@ func (p *Parser) applyMemberType(prop *codegen.CodegenProperty, ref *openapi3.Sc
 	prop.Items = member.Items
 	prop.AllowableValues = member.AllowableValues
 	prop.EnumName = member.EnumName
+
 	return true
 }
 
@@ -111,6 +115,7 @@ func (p *Parser) applyCompositeType(prop *codegen.CodegenProperty, refs openapi3
 	if len(names) == 0 {
 		return false
 	}
+
 	joined := strings.Join(names, sep)
 	prop.DataType = joined
 	prop.BaseType = joined
@@ -118,6 +123,7 @@ func (p *Parser) applyCompositeType(prop *codegen.CodegenProperty, refs openapi3
 	prop.IsPrimitiveType = false
 	prop.IsFreeFormObject = true
 	prop.ComposedModels = models
+
 	return true
 }
 
@@ -131,17 +137,22 @@ func (p *Parser) memberTypeNames(refs openapi3.SchemaRefs) ([]string, []string) 
 	models := make([]string, 0, len(refs))
 	seen := make(map[string]bool)
 	seenModels := make(map[string]bool)
+
 	for _, m := range refs {
 		if m == nil {
 			continue
 		}
+
 		var t, imp string
+
 		switch {
 		case m.Ref != "":
 			t = p.toModelName(extractRefName(m.Ref))
 			imp = t
+
 		case m.Value != nil:
 			mp := p.schemaToProperty("member", m.Value, false)
+
 			t = mp.DataType
 			switch {
 			case mp.ComplexType != "":
@@ -150,16 +161,20 @@ func (p *Parser) memberTypeNames(refs openapi3.SchemaRefs) ([]string, []string) 
 				imp = t
 			}
 		}
+
 		if t == "" || t == "any" || seen[t] {
 			continue
 		}
+
 		seen[t] = true
 		names = append(names, t)
+
 		if imp != "" && !isPrimitiveType(imp) && !seenModels[imp] {
 			seenModels[imp] = true
 			models = append(models, imp)
 		}
 	}
+
 	return names, models
 }
 
@@ -196,6 +211,7 @@ func (p *Parser) schemaToProperty(name string, schema *openapi3.Schema, required
 	if schema.Type != nil && len(schema.Type.Slice()) > 0 {
 		schemaType = schema.Type.Slice()[0]
 	}
+
 	prop.OpenApiType = schemaType
 
 	// Handle enums
@@ -210,6 +226,7 @@ func (p *Parser) schemaToProperty(name string, schema *openapi3.Schema, required
 		// fallback to the enclosing property: an array-of-enum parameter is not itself a
 		// string, so the values of its inherited enumVars would otherwise render unquoted.
 		isStringEnum := schemaType == "string"
+
 		enumVars := make([]map[string]any, 0, len(schema.Enum))
 		for _, v := range schema.Enum {
 			// Escape single quotes for TypeScript string literals
@@ -221,6 +238,7 @@ func (p *Parser) schemaToProperty(name string, schema *openapi3.Schema, required
 				"isString": isStringEnum,
 			})
 		}
+
 		prop.AllowableValues["enumVars"] = enumVars
 		prop.EnumName = p.toEnumName(name)
 		prop.DatatypeWithEnum = prop.EnumName
@@ -232,44 +250,43 @@ func (p *Parser) schemaToProperty(name string, schema *openapi3.Schema, required
 		prop.IsArray = true
 		prop.IsContainer = true
 		prop.ContainerType = "array"
-		if schema.Items != nil {
-			// Check if items has a $ref
-			if schema.Items.Ref != "" {
-				refName := extractRefName(schema.Items.Ref)
-				modelName := p.toModelName(refName)
-				prop.Items = &codegen.CodegenProperty{
-					DataType: modelName,
-					Datatype: modelName,
-					IsModel:  true,
-				}
-				prop.DataType = "Array<" + modelName + ">"
-				prop.Datatype = "Array<" + modelName + ">"
-				prop.BaseType = modelName
-				prop.ComplexType = modelName
-			} else if schema.Items.Value != nil {
-				prop.Items = p.schemaToProperty(name+"Item", schema.Items.Value, false)
-				prop.DataType = "Array<" + prop.Items.DataType + ">"
-				prop.Datatype = "Array<" + prop.Items.DataType + ">"
-				prop.BaseType = prop.Items.DataType
-				if prop.Items.IsModel {
-					prop.ComplexType = prop.Items.DataType
-				}
-				// Composite (union) items have no per-element (de)serializer;
-				// treat them as primitive so elements are passed through instead
-				// of referencing an undefined <union>FromJSON helper.
-				if prop.Items.IsFreeFormObject && !prop.Items.IsPrimitiveType {
-					prop.Items.IsPrimitiveType = true
-				}
-			} else {
-				prop.DataType = "Array<any>"
-				prop.Datatype = "Array<any>"
-				prop.BaseType = "any"
+
+		switch {
+		case schema.Items != nil && schema.Items.Ref != "":
+			modelName := p.toModelName(extractRefName(schema.Items.Ref))
+			prop.Items = &codegen.CodegenProperty{
+				DataType: modelName,
+				Datatype: modelName,
+				IsModel:  true,
 			}
-		} else {
+			prop.DataType = "Array<" + modelName + ">"
+			prop.Datatype = "Array<" + modelName + ">"
+			prop.BaseType = modelName
+			prop.ComplexType = modelName
+
+		case schema.Items != nil && schema.Items.Value != nil:
+			prop.Items = p.schemaToProperty(name+"Item", schema.Items.Value, false)
+			prop.DataType = "Array<" + prop.Items.DataType + ">"
+			prop.Datatype = "Array<" + prop.Items.DataType + ">"
+
+			prop.BaseType = prop.Items.DataType
+			if prop.Items.IsModel {
+				prop.ComplexType = prop.Items.DataType
+			}
+
+			// Composite (union) items have no per-element (de)serializer: treat
+			// them as primitive so elements pass through instead of referencing
+			// an undefined <union>FromJSON helper.
+			if prop.Items.IsFreeFormObject && !prop.Items.IsPrimitiveType {
+				prop.Items.IsPrimitiveType = true
+			}
+
+		default:
 			prop.DataType = "Array<any>"
 			prop.Datatype = "Array<any>"
 			prop.BaseType = "any"
 		}
+
 		prop.UniqueItems = schema.UniqueItems
 
 		// When the array items are an enum, surface the enum on the array itself so a named
@@ -292,6 +309,7 @@ func (p *Parser) schemaToProperty(name string, schema *openapi3.Schema, required
 			prop.BaseType = "any"
 			prop.IsPrimitiveType = true
 			prop.IsFreeFormObject = true
+
 		case schema.AdditionalProperties.Schema != nil:
 			// Typed map: `additionalProperties` is a schema (possibly a $ref),
 			// e.g. {[key: string]: boolean} or {[key: string]: SomeModel}.
@@ -301,10 +319,12 @@ func (p *Parser) schemaToProperty(name string, schema *openapi3.Schema, required
 			prop.Items = p.schemaRefToProperty("value", schema.AdditionalProperties.Schema, false)
 			prop.DataType = "{ [key: string]: " + prop.Items.DataType + "; }"
 			prop.BaseType = prop.Items.DataType
+
 			prop.IsPrimitiveType = prop.Items.IsPrimitiveType
 			if prop.Items.IsModel {
 				prop.ComplexType = prop.Items.BaseType
 			}
+
 		case schema.AdditionalProperties.Has != nil && *schema.AdditionalProperties.Has:
 			// Free-form map: `additionalProperties: true`.
 			prop.IsMap = true
@@ -314,6 +334,7 @@ func (p *Parser) schemaToProperty(name string, schema *openapi3.Schema, required
 			prop.BaseType = "any"
 			prop.IsPrimitiveType = true
 			prop.IsFreeFormObject = true
+
 		default:
 			prop.IsFreeFormObject = true
 			prop.DataType = "any"
@@ -323,33 +344,42 @@ func (p *Parser) schemaToProperty(name string, schema *openapi3.Schema, required
 	case "string":
 		prop.IsString = true
 		prop.IsPrimitiveType = true
+
 		switch schema.Format {
 		case "date":
 			prop.IsDate = true
 			prop.DataType = p.getSchemaType("string", "date")
+
 		case "date-time":
 			prop.IsDateTime = true
 			prop.DataType = p.getSchemaType("string", "date-time")
+
 		case "uuid":
 			prop.IsUuid = true
 			prop.DataType = "string"
+
 		case "uri":
 			prop.IsUri = true
 			prop.DataType = "string"
+
 		case "email":
 			prop.IsEmail = true
 			prop.DataType = "string"
+
 		case "password":
 			prop.IsPassword = true
 			prop.DataType = "string"
+
 		case "binary":
 			prop.IsBinary = true
 			prop.IsFile = true
 			prop.DataType = "Blob"
 			prop.IsPrimitiveType = false
+
 		case "byte":
 			prop.IsByteArray = true
 			prop.DataType = "string"
+
 		default:
 			prop.DataType = "string"
 		}
@@ -357,22 +387,26 @@ func (p *Parser) schemaToProperty(name string, schema *openapi3.Schema, required
 	case "integer":
 		prop.IsInteger = true
 		prop.IsNumeric = true
+
 		prop.IsPrimitiveType = true
 		if schema.Format == "int64" {
 			prop.IsLong = true
 		}
+
 		prop.DataType = "number"
 
 	case "number":
 		prop.IsNumber = true
 		prop.IsNumeric = true
 		prop.IsPrimitiveType = true
+
 		switch schema.Format {
 		case "float":
 			prop.IsFloat = true
 		case "double":
 			prop.IsDouble = true
 		}
+
 		prop.DataType = "number"
 
 	case "boolean":
@@ -384,6 +418,7 @@ func (p *Parser) schemaToProperty(name string, schema *openapi3.Schema, required
 		// No explicit "type": resolve composition (allOf/oneOf/anyOf) to the
 		// member type(s) that are available instead of collapsing to `any`.
 		resolved := false
+
 		switch {
 		case len(schema.AllOf) == 1:
 			resolved = p.applyMemberType(prop, schema.AllOf[0])
@@ -398,6 +433,7 @@ func (p *Parser) schemaToProperty(name string, schema *openapi3.Schema, required
 		case len(schema.AnyOf) > 1:
 			resolved = p.applyCompositeType(prop, schema.AnyOf, " | ")
 		}
+
 		if !resolved {
 			prop.DataType = p.getSchemaType(schemaType, schema.Format)
 			if prop.DataType != "any" && prop.DataType != "" {
@@ -430,9 +466,11 @@ func (p *Parser) schemaToProperty(name string, schema *openapi3.Schema, required
 	if schema.Min != nil {
 		prop.Minimum = fmt.Sprintf("%v", *schema.Min)
 	}
+
 	if schema.Max != nil {
 		prop.Maximum = fmt.Sprintf("%v", *schema.Max)
 	}
+
 	prop.MinLength = intPtr(int(schema.MinLength))
 	prop.MaxLength = uint64ToIntPtr(schema.MaxLength)
 	prop.MinItems = intPtr(int(schema.MinItems))

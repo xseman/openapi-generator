@@ -4,19 +4,16 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
-	"sort"
+	"slices"
 	"strings"
 
 	"github.com/spf13/cobra"
 	"github.com/xseman/openapi-generator/internal/gen"
+	"github.com/xseman/openapi-generator/internal/update"
 	"gopkg.in/yaml.v3"
-)
-
-var (
-	// version is set at build time using -ldflags="-X main.version=x.y.z"
-	version = "dev"
 )
 
 func main() {
@@ -34,7 +31,7 @@ It generates TypeScript Fetch API clients from OpenAPI 3.x specifications.
 
 This tool is compatible with the Java-based openapi-generator and uses
 the same Mustache templates for code generation.`,
-	Version: version,
+	Version: update.Version,
 }
 
 var generateCmd = &cobra.Command{
@@ -81,6 +78,7 @@ func init() {
 	rootCmd.AddCommand(listCmd)
 	rootCmd.AddCommand(configHelpCmd)
 	rootCmd.AddCommand(versionCmd)
+	rootCmd.AddCommand(updateCmd)
 
 	// Generate command flags
 	generateCmd.Flags().StringVarP(&inputSpec, "input-spec", "i", "", "OpenAPI spec file")
@@ -101,7 +99,7 @@ func init() {
 var listCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List available generators",
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, _ []string) {
 		fmt.Println("Available generators:")
 		fmt.Println()
 		fmt.Println("CLIENT generators:")
@@ -114,7 +112,7 @@ var listCmd = &cobra.Command{
 var configHelpCmd = &cobra.Command{
 	Use:   "config-help",
 	Short: "Show configuration options for a generator",
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, args []string) {
 		if len(args) == 0 {
 			fmt.Println("Usage: openapi-generator config-help <generator-name>")
 			return
@@ -134,24 +132,68 @@ var configHelpCmd = &cobra.Command{
 var versionCmd = &cobra.Command{
 	Use:   "version",
 	Short: "Print version information",
-	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Printf("openapi-generator %s\n", version)
+	Run: func(_ *cobra.Command, _ []string) {
+		fmt.Printf("openapi-generator %s\n", update.Version)
 	},
+}
+
+var updateCmd = &cobra.Command{
+	Use:   "update",
+	Short: "Install the latest release over this binary",
+	Long: `Check GitHub for a newer release and replace this executable with it.
+The download is verified against the release's CHECKSUMS.txt before anything
+is replaced; the new binary runs from the next start.`,
+	SilenceUsage: true,
+	RunE:         runUpdate,
+}
+
+// runUpdate replaces this binary with the latest release. A build without a
+// version (a local go build) installs the latest release as well: it is the
+// way back from a working copy to a released openapi-generator.
+func runUpdate(cmd *cobra.Command, _ []string) error {
+	rel, err := update.Check(cmd.Context())
+	if err != nil {
+		return err
+	}
+
+	if !rel.Newer() && update.Version != update.Dev {
+		fmt.Printf("openapi-generator %s is the latest release\n", update.Version)
+		return nil
+	}
+
+	fmt.Printf("openapi-generator %s → %s\n", update.Version, rel.Version)
+
+	progress := func(done, total int64) {
+		if total > 0 {
+			fmt.Fprintf(os.Stderr, "\r%3d%%", done*100/total)
+		}
+	}
+	if err := update.Install(cmd.Context(), rel, progress); err != nil {
+		return err
+	}
+
+	fmt.Fprintln(os.Stderr)
+	fmt.Printf("installed openapi-generator %s, it runs from the next start\n", rel.Version)
+
+	return nil
 }
 
 // runValidate validates the spec given via --input-spec and prints a
 // report in the same format as the Java openapi-generator's validate
 // command. Errors go to stderr and make the process exit with status 1.
-func runValidate(cmd *cobra.Command, args []string) error {
+func runValidate(_ *cobra.Command, _ []string) error {
 	fmt.Printf("Validating spec (%s)\n", inputSpec)
 
 	res := gen.Validate(inputSpec)
+
 	report, ok := formatValidationReport(res, recommend)
 	if !ok {
 		fmt.Fprint(os.Stderr, report)
 		os.Exit(1)
 	}
+
 	fmt.Print(report)
+
 	return nil
 }
 
@@ -169,6 +211,7 @@ func formatValidationReport(res gen.ValidationResult, recommend bool) (report st
 
 	if len(warnings) > 0 {
 		sb.WriteString("Warnings:\n")
+
 		for _, msg := range warnings {
 			fmt.Fprintf(&sb, "\t- %s\n", msg)
 		}
@@ -177,16 +220,21 @@ func formatValidationReport(res gen.ValidationResult, recommend bool) (report st
 	switch {
 	case len(res.Errors) > 0:
 		sb.WriteString("Errors:\n")
+
 		for _, msg := range res.Errors {
 			fmt.Fprintf(&sb, "\t- %s\n", msg)
 		}
+
 		fmt.Fprintf(&sb, "[error] Spec has %d errors.\n", len(res.Errors))
+
 		return sb.String(), false
+
 	case len(warnings) > 0:
 		fmt.Fprintf(&sb, "[info] Spec has %d recommendation(s).\n", len(warnings))
 	default:
 		sb.WriteString("No validation issues detected.\n")
 	}
+
 	return sb.String(), true
 }
 
@@ -218,10 +266,12 @@ func loadConfigFile(path string) (*Config, error) {
 		if err := json.Unmarshal(data, &cfg); err != nil {
 			return nil, fmt.Errorf("failed to parse JSON config: %w", err)
 		}
+
 	case ".yaml", ".yml":
 		if err := yaml.Unmarshal(data, &cfg); err != nil {
 			return nil, fmt.Errorf("failed to parse YAML config: %w", err)
 		}
+
 	default:
 		// Try JSON first, then YAML
 		if err := json.Unmarshal(data, &cfg); err != nil {
@@ -237,55 +287,14 @@ func loadConfigFile(path string) (*Config, error) {
 // runGenerate resolves the effective options from CLI flags and an optional
 // config file (CLI flags take precedence), then runs the generation
 // pipeline.
-func runGenerate(cmd *cobra.Command, args []string) error {
-	// Load config file if specified
+func runGenerate(_ *cobra.Command, _ []string) error {
 	if configFile != "" {
 		cfg, err := loadConfigFile(configFile)
 		if err != nil {
 			return err
 		}
 
-		// Apply config values, CLI flags override config file
-		if inputSpec == "" && cfg.InputSpec != "" {
-			inputSpec = cfg.InputSpec
-		}
-		if outputDir == "" && cfg.OutputDir != "" {
-			outputDir = cfg.OutputDir
-		}
-		if generatorName == "" && cfg.GeneratorName != "" {
-			generatorName = cfg.GeneratorName
-		}
-		if templateDir == "" && cfg.TemplateDir != "" {
-			templateDir = cfg.TemplateDir
-		}
-		if cfg.SkipValidation {
-			skipValidation = true
-		}
-		if cfg.Verbose {
-			verbose = true
-		}
-		// Merge additional properties from config (CLI takes precedence).
-		// Iterate keys in sorted order so the merged slice is stable across runs.
-		if cfg.AdditionalProperties != nil {
-			cfgKeys := make([]string, 0, len(cfg.AdditionalProperties))
-			for k := range cfg.AdditionalProperties {
-				cfgKeys = append(cfgKeys, k)
-			}
-			sort.Strings(cfgKeys)
-			for _, k := range cfgKeys {
-				// Only add if not already specified via CLI
-				found := false
-				for _, prop := range additionalProperties {
-					if strings.HasPrefix(prop, k+"=") {
-						found = true
-						break
-					}
-				}
-				if !found {
-					additionalProperties = append(additionalProperties, k+"="+cfg.AdditionalProperties[k])
-				}
-			}
-		}
+		applyConfig(cfg)
 	}
 
 	return gen.Generate(gen.Options{
@@ -296,6 +305,37 @@ func runGenerate(cmd *cobra.Command, args []string) error {
 		AdditionalProperties: additionalProperties,
 		SkipValidation:       skipValidation,
 		Verbose:              verbose,
-		Version:              version,
+		Version:              update.Version,
 	})
+}
+
+// applyConfig fills every option the flags left empty from the config file;
+// a flag always wins. The file's additional properties join the flags' in
+// key order, so the merged list is stable across runs.
+func applyConfig(cfg *Config) {
+	if inputSpec == "" {
+		inputSpec = cfg.InputSpec
+	}
+
+	if outputDir == "" {
+		outputDir = cfg.OutputDir
+	}
+
+	if generatorName == "" {
+		generatorName = cfg.GeneratorName
+	}
+
+	if templateDir == "" {
+		templateDir = cfg.TemplateDir
+	}
+
+	skipValidation = skipValidation || cfg.SkipValidation
+	verbose = verbose || cfg.Verbose
+
+	for _, k := range slices.Sorted(maps.Keys(cfg.AdditionalProperties)) {
+		given := func(prop string) bool { return strings.HasPrefix(prop, k+"=") }
+		if !slices.ContainsFunc(additionalProperties, given) {
+			additionalProperties = append(additionalProperties, k+"="+cfg.AdditionalProperties[k])
+		}
+	}
 }

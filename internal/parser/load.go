@@ -61,10 +61,12 @@ func (p *Parser) LoadFromURL(urlStr string) error {
 
 	// Fetch the URL content first to detect the version
 	client := &http.Client{}
+
 	resp, err := client.Get(urlStr)
 	if err != nil {
 		return fmt.Errorf("failed to fetch URL: %w", err)
 	}
+
 	defer func() {
 		_ = resp.Body.Close()
 	}()
@@ -104,6 +106,7 @@ func (p *Parser) LoadFromData(data []byte) error {
 
 	// Load as OpenAPI 3.x
 	loader := openapi3.NewLoader()
+
 	doc, err := loader.LoadFromData(data)
 	if err != nil {
 		return fmt.Errorf("failed to parse OpenAPI spec: %w", err)
@@ -177,6 +180,7 @@ func (p *Parser) fixPathItemParameters(doc2 *openapi2.T, doc3 *openapi3.T) {
 
 		// Convert v2 parameter refs to v3 parameter refs
 		var v3Params openapi3.Parameters
+
 		for _, v2Param := range v2PathItem.Parameters {
 			if v2Param.Ref != "" {
 				// Convert ref format from #/parameters/name to #/components/parameters/name
@@ -198,38 +202,36 @@ func (p *Parser) fixPathItemParameters(doc2 *openapi2.T, doc3 *openapi3.T) {
 			v3PathItem.Get, v3PathItem.Post, v3PathItem.Put, v3PathItem.Delete,
 			v3PathItem.Patch, v3PathItem.Options, v3PathItem.Head,
 		} {
-			if op != nil {
-				// Create a set of existing parameter refs and names to avoid duplicates
-				existingRefs := make(map[string]bool)
-				existingNames := make(map[string]bool)
+			if op == nil {
+				continue
+			}
+			// A PathItem parameter joins the operation only when the operation
+			// does not already carry it, by $ref or by in:name.
+			existing := make(map[string]bool, len(op.Parameters))
+			for _, param := range op.Parameters {
+				existing[paramKey(param)] = true
+			}
 
-				for _, param := range op.Parameters {
-					if param.Ref != "" {
-						existingRefs[param.Ref] = true
-					} else if param.Value != nil {
-						key := param.Value.In + ":" + param.Value.Name
-						existingNames[key] = true
-					}
-				}
-
-				// Only add PathItem parameters that don't already exist
-				for _, pathParam := range v3Params {
-					shouldAdd := false
-
-					if pathParam.Ref != "" {
-						shouldAdd = !existingRefs[pathParam.Ref]
-					} else if pathParam.Value != nil {
-						key := pathParam.Value.In + ":" + pathParam.Value.Name
-						shouldAdd = !existingNames[key]
-					}
-
-					if shouldAdd {
-						op.Parameters = append([]*openapi3.ParameterRef{pathParam}, op.Parameters...)
-					}
+			for _, pathParam := range v3Params {
+				if key := paramKey(pathParam); key != "" && !existing[key] {
+					op.Parameters = append([]*openapi3.ParameterRef{pathParam}, op.Parameters...)
 				}
 			}
 		}
 	}
+}
+
+// paramKey identifies a parameter for de-duplication: its $ref, else its
+// location and name, else "" for one that has neither.
+func paramKey(p *openapi3.ParameterRef) string {
+	switch {
+	case p.Ref != "":
+		return p.Ref
+	case p.Value != nil:
+		return p.Value.In + ":" + p.Value.Name
+	}
+
+	return ""
 }
 
 // convertParameterRef converts a Swagger 2.0 parameter ref to OpenAPI 3 format.
@@ -238,6 +240,7 @@ func convertParameterRef(v2Ref string) string {
 	if strings.HasPrefix(v2Ref, "#/parameters/") {
 		return strings.Replace(v2Ref, "#/parameters/", "#/components/parameters/", 1)
 	}
+
 	return v2Ref
 }
 
@@ -250,12 +253,13 @@ func convertParameterRef(v2Ref string) string {
 // and leaves reporting to the caller (see FormatValidationIssues).
 func (p *Parser) validateSpec() error {
 	if p.Doc == nil {
-		return fmt.Errorf("no document loaded")
+		return errors.New("no document loaded")
 	}
 
 	if err := p.Doc.Validate(context.Background()); err != nil {
 		p.ValidationErrors = append(p.ValidationErrors, err.Error())
 	}
+
 	p.collectWarnings()
 
 	if len(p.ValidationErrors) == 0 || p.SkipValidation {
@@ -265,6 +269,7 @@ func (p *Parser) validateSpec() error {
 	var sb strings.Builder
 	sb.WriteString("There were issues with the specification. The option can be disabled via --skip-validate-spec (CLI).\n")
 	sb.WriteString(FormatValidationIssues(p.ValidationErrors, p.ValidationWarnings))
+
 	return errors.New(sb.String())
 }
 
@@ -275,16 +280,20 @@ func FormatValidationIssues(errs, warnings []string) string {
 	var sb strings.Builder
 	if len(errs) > 0 {
 		sb.WriteString("Errors:\n")
+
 		for _, msg := range errs {
 			fmt.Fprintf(&sb, "  - %s\n", msg)
 		}
 	}
+
 	if len(warnings) > 0 {
 		sb.WriteString("Warnings:\n")
+
 		for _, msg := range warnings {
 			fmt.Fprintf(&sb, "  - %s\n", msg)
 		}
 	}
+
 	return sb.String()
 }
 
@@ -315,9 +324,11 @@ func (p *Parser) collectWarnings() {
 			names = append(names, schemaName)
 		}
 	}
+
 	sort.Strings(names)
+
 	for _, schemaName := range names {
-		p.ValidationWarnings = append(p.ValidationWarnings, fmt.Sprintf("Unused model: %s", schemaName))
+		p.ValidationWarnings = append(p.ValidationWarnings, "Unused model: "+schemaName)
 	}
 }
 
@@ -370,27 +381,25 @@ func (p *Parser) markSchemaAsUsed(schemaRef *openapi3.SchemaRef, usedSchemas map
 		return
 	}
 
-	// If it's a reference, extract the schema name
+	// A reference names its schema last: #/components/schemas/Name.
 	if schemaRef.Ref != "" {
-		// Extract name from #/components/schemas/Name
 		parts := strings.Split(schemaRef.Ref, "/")
-		if len(parts) > 0 {
-			schemaName := parts[len(parts)-1]
 
-			// Check if already marked to prevent infinite recursion
-			if usedSchemas[schemaName] {
-				return
-			}
-
-			usedSchemas[schemaName] = true
-
-			// Recursively check referenced schema
-			if p.Doc.Components != nil && p.Doc.Components.Schemas != nil {
-				if refSchema := p.Doc.Components.Schemas[schemaName]; refSchema != nil && refSchema.Value != nil {
-					p.markSchemaPropertiesAsUsed(refSchema.Value, usedSchemas)
-				}
-			}
+		schemaName := parts[len(parts)-1]
+		if usedSchemas[schemaName] { // seen already, or a cycle would recurse forever
+			return
 		}
+
+		usedSchemas[schemaName] = true
+
+		if p.Doc.Components == nil || p.Doc.Components.Schemas == nil {
+			return
+		}
+
+		if refSchema := p.Doc.Components.Schemas[schemaName]; refSchema != nil && refSchema.Value != nil {
+			p.markSchemaPropertiesAsUsed(refSchema.Value, usedSchemas)
+		}
+
 		return
 	}
 
@@ -425,9 +434,11 @@ func (p *Parser) markSchemaPropertiesAsUsed(schema *openapi3.Schema, usedSchemas
 	for _, s := range schema.AllOf {
 		p.markSchemaAsUsed(s, usedSchemas)
 	}
+
 	for _, s := range schema.AnyOf {
 		p.markSchemaAsUsed(s, usedSchemas)
 	}
+
 	for _, s := range schema.OneOf {
 		p.markSchemaAsUsed(s, usedSchemas)
 	}

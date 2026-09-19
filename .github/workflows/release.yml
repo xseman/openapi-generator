@@ -2,24 +2,13 @@ name: Release Please
 
 on:
     push:
-        branches:
-            - master
-        paths:
-            - "**/*.go"
-            - "go.mod"
-            - "go.sum"
-            - ".github/.release-manifest.json"
-            - ".github/.release-config.json"
+        branches: [master]
     workflow_dispatch:
         inputs:
-            release:
-                description: "Build and upload release artifacts"
-                type: boolean
-                default: false
             tag:
-                description: "Tag name (required when release=true, e.g., v0.2.0)"
+                description: "Rebuild and upload the artifacts of this tag (e.g. v0.2.0)"
                 type: string
-                required: false
+                required: true
 
 permissions:
     contents: write
@@ -28,6 +17,7 @@ permissions:
 jobs:
     release-please:
         name: Release Please
+        if: github.event_name == 'push'
         runs-on: ubuntu-latest
         outputs:
             release_created: ${{ steps.release.outputs.release_created }}
@@ -40,134 +30,53 @@ jobs:
                   config-file: .github/.release-config.json
                   manifest-file: .github/.release-manifest.json
 
-    build:
-        name: Build Artifacts
+    artifacts:
+        name: Build and Upload Artifacts
         needs: release-please
-        if: ${{ (github.event_name == 'push' && needs.release-please.outputs.release_created) || (github.event_name == 'workflow_dispatch' && inputs.release == true) }}
-        runs-on: ${{ matrix.os }}
-        strategy:
-            matrix:
-                include:
-                    - os: ubuntu-latest
-                      goos: linux
-                      goarch: amd64
-                    - os: ubuntu-latest
-                      goos: linux
-                      goarch: arm64
-                    - os: macos-latest
-                      goos: darwin
-                      goarch: amd64
-                    - os: macos-latest
-                      goos: darwin
-                      goarch: arm64
-                    - os: windows-latest
-                      goos: windows
-                      goarch: amd64
-                    - os: windows-latest
-                      goos: windows
-                      goarch: arm64
+        # Either release-please just cut a release, or a tag was given by hand.
+        if: ${{ always() && (needs.release-please.outputs.release_created == 'true' || github.event_name == 'workflow_dispatch') }}
+        runs-on: ubuntu-latest
+        env:
+            TAG: ${{ needs.release-please.outputs.tag_name || inputs.tag }}
         steps:
             - uses: actions/checkout@v6
+              with:
+                  ref: ${{ needs.release-please.outputs.tag_name || inputs.tag }}
 
             - uses: actions/setup-go@v6
               with:
-                  go-version: "stable"
+                  go-version-file: go.mod
                   cache-dependency-path: go.sum
 
-            - name: Install cross-compilation tools
-              if: matrix.goos == 'linux' && matrix.goarch == 'arm64'
-              run: |
-                  sudo apt-get update
-                  sudo apt-get install -y gcc-aarch64-linux-gnu
-
-            - name: Build CLI
-              shell: bash
-              env:
-                  VERSION: ${{ needs.release-please.outputs.tag_name || inputs.tag }}
+            # Pure Go, no cgo: one runner cross-compiles every target. The
+            # version is linked in without its v, so `openapi-generator
+            # version` and the update check in a release binary agree with
+            # the manifest.
+            - name: Build
               run: |
                   mkdir -p artifacts
-                  CGO_ENABLED=0 GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build \
-                      -ldflags="-s -w -X main.version=${VERSION}" \
-                      -o artifacts/openapi-generator-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.goos == 'windows' && '.exe' || '' }} \
-                      ./cmd/openapi-generator
+                  for target in linux/amd64 linux/arm64 darwin/amd64 darwin/arm64 windows/amd64 windows/arm64; do
+                      goos="${target%/*}"
+                      goarch="${target#*/}"
+                      ext=""
+                      [ "$goos" = windows ] && ext=".exe"
+                      CGO_ENABLED=0 GOOS="$goos" GOARCH="$goarch" go build \
+                          -trimpath \
+                          -ldflags "-s -w -X github.com/xseman/openapi-generator/internal/update.Version=${TAG#v}" \
+                          -o "artifacts/openapi-generator-${goos}-${goarch}${ext}" \
+                          ./cmd/openapi-generator
+                  done
+                  cp install.sh artifacts/install.sh
+                  ls -lah artifacts
 
-            - name: Install nfpm
-              if: matrix.goos == 'linux'
-              shell: bash
-              run: go install github.com/goreleaser/nfpm/v2/cmd/nfpm@latest
-
-            - name: Create packages
-              if: matrix.goos == 'linux'
-              shell: bash
-              env:
-                  VERSION: ${{ needs.release-please.outputs.tag_name || inputs.tag }}
-                  GOARCH: ${{ matrix.goarch }}
-              run: |
-                  if [ -z "$VERSION" ]; then
-                    echo "Error: VERSION is not set"
-                    echo "When manually triggering workflow, provide tag input (e.g., v0.1.0)"
-                    exit 1
-                  fi
-                  VERSION_NUM=${VERSION#v}
-
-                  cat > nfpm.yaml << EOF
-                  name: openapi-generator
-                  arch: ${GOARCH}
-                  platform: linux
-                  version: ${VERSION_NUM}
-                  section: devel
-                  priority: optional
-                  maintainer: Filip Seman <filip.seman@pm.me>
-                  description: |
-                    OpenAPI Generator - Generate API clients and server stubs from OpenAPI specs.
-                    A fast, portable, single-binary alternative to the Java-based OpenAPI Generator.
-                  homepage: https://github.com/xseman/openapi-generator
-                  license: Apache-2.0
-
-                  contents:
-                    - src: artifacts/openapi-generator-linux-${GOARCH}
-                      dst: /usr/bin/openapi-generator
-                      file_info:
-                        mode: 0755
-
-                    - src: LICENSE
-                      dst: /usr/share/doc/openapi-generator/LICENSE
-                      file_info:
-                        mode: 0644
-                  EOF
-
-                  nfpm package --packager deb --target artifacts/
-                  nfpm package --packager rpm --target artifacts/
-
-            - uses: actions/upload-artifact@v6
-              with:
-                  name: openapi-generator-${{ matrix.goos }}-${{ matrix.goarch }}
-                  path: artifacts/*
-                  retention-days: 1
-
-    upload:
-        name: Upload Release Assets
-        needs: [release-please, build]
-        if: ${{ (github.event_name == 'push' && needs.release-please.outputs.release_created) || (github.event_name == 'workflow_dispatch' && inputs.release == true) }}
-        runs-on: ubuntu-latest
-        steps:
-            - uses: actions/download-artifact@v7
-              with:
-                  pattern: openapi-generator-*
-                  path: artifacts
-                  merge-multiple: true
-
-            - name: Generate checksums
+            # install.sh and `openapi-generator update` both refuse a binary
+            # this file does not cover, so it ships with every release.
+            - name: Checksums
               working-directory: artifacts
-              run: |
-                  sha256sum * > CHECKSUMS.txt
+              run: sha256sum openapi-generator-* > CHECKSUMS.txt
 
-            - name: Upload artifacts to release
+            - name: Upload
               env:
                   GH_TOKEN: ${{ github.token }}
                   GH_REPO: ${{ github.repository }}
-              run: |
-                  gh release upload \
-                      ${{ github.event_name == 'push' && needs.release-please.outputs.tag_name || inputs.tag }} \
-                      artifacts/* \
-                      --clobber
+              run: gh release upload "$TAG" artifacts/* --clobber

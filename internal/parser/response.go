@@ -19,18 +19,19 @@ func (p *Parser) responseToCodegen(code string, resp *openapi3.Response) *codege
 		VendorExtensions:     convertExtensions(resp.Extensions),
 	}
 
-	// Set status code categories
-	if code == "default" {
+	// Status code categories.
+	switch {
+	case code == "default":
 		cr.IsDefault = true
-	} else if strings.HasPrefix(code, "1") {
+	case strings.HasPrefix(code, "1"):
 		cr.Is1xx = true
-	} else if strings.HasPrefix(code, "2") {
+	case strings.HasPrefix(code, "2"):
 		cr.Is2xx = true
-	} else if strings.HasPrefix(code, "3") {
+	case strings.HasPrefix(code, "3"):
 		cr.Is3xx = true
-	} else if strings.HasPrefix(code, "4") {
+	case strings.HasPrefix(code, "4"):
 		cr.Is4xx = true
-	} else if strings.HasPrefix(code, "5") {
+	case strings.HasPrefix(code, "5"):
 		cr.Is5xx = true
 	}
 
@@ -41,7 +42,9 @@ func (p *Parser) responseToCodegen(code string, resp *openapi3.Response) *codege
 	for ct := range resp.Content {
 		respContentTypes = append(respContentTypes, ct)
 	}
+
 	sort.Strings(respContentTypes)
+
 	for _, ct := range respContentTypes {
 		mediaType := resp.Content[ct]
 		if mediaType.Schema == nil {
@@ -50,10 +53,12 @@ func (p *Parser) responseToCodegen(code string, resp *openapi3.Response) *codege
 
 		if mediaType.Schema.Ref != "" {
 			refName := extractRefName(mediaType.Schema.Ref)
+
 			modelName := p.toModelName(refName)
 			if modelName == "" {
 				modelName = "any"
 			}
+
 			cr.DataType = modelName
 			cr.BaseType = modelName
 			cr.IsModel = true
@@ -85,6 +90,7 @@ func (p *Parser) responseToCodegen(code string, resp *openapi3.Response) *codege
 			if (prop.IsArray || prop.IsMap) && prop.Items != nil {
 				basePrimitive = prop.Items.IsPrimitiveType
 			}
+
 			cr.SimpleType = prop.IsPrimitiveType && !prop.IsArray && !prop.IsMap
 			cr.PrimitiveType = basePrimitive
 			cr.ComposedModels = prop.ComposedModels
@@ -107,13 +113,17 @@ func (p *Parser) responseToCodegen(code string, resp *openapi3.Response) *codege
 	for name := range resp.Headers {
 		headerNames = append(headerNames, name)
 	}
+
 	sort.Strings(headerNames)
+
 	for _, name := range headerNames {
 		headerRef := resp.Headers[name]
 		if headerRef == nil || headerRef.Value == nil {
 			continue
 		}
+
 		header := headerRef.Value
+
 		prop := &codegen.CodegenProperty{
 			Name:        name,
 			BaseName:    name,
@@ -126,9 +136,11 @@ func (p *Parser) responseToCodegen(code string, resp *openapi3.Response) *codege
 		if prop.DataType == "" {
 			prop.DataType = "any"
 		}
+
 		prop.Datatype = prop.DataType
 		cr.Headers = append(cr.Headers, prop)
 	}
+
 	cr.HasHeaders = len(cr.Headers) > 0
 
 	return cr
@@ -139,5 +151,6 @@ func ptrString(s *string) string {
 	if s == nil {
 		return ""
 	}
+
 	return *s
 }

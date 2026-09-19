@@ -1,6 +1,7 @@
 package template
 
 import (
+	"errors"
 	"fmt"
 	"io/fs"
 	"strings"
@@ -23,7 +24,7 @@ func NewEngineFromFS(fsys fs.FS, subdir string) *Engine {
 // LoadPartialsFromFS loads all partial templates from the embedded filesystem.
 func (e *Engine) LoadPartialsFromFS() error {
 	if e.fsys == nil {
-		return fmt.Errorf("no embedded filesystem configured")
+		return errors.New("no embedded filesystem configured")
 	}
 
 	return fs.WalkDir(e.fsys, e.TemplateDir, func(path string, d fs.DirEntry, err error) error {
@@ -50,6 +51,7 @@ func (e *Engine) LoadPartialsFromFS() error {
 		if e.Verbose {
 			fmt.Printf("[TEMPLATE] Loaded embedded partial: %s\n", name)
 		}
+
 		return nil
 	})
 }

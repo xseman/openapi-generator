@@ -18,14 +18,17 @@ func collectPropertyImports(prop *codegen.CodegenProperty, selfClassname string,
 	if prop == nil {
 		return
 	}
+
 	if prop.IsModel && prop.DataType != selfClassname && !isPrimitiveType(prop.DataType) {
 		imports[prop.DataType] = true
 	}
+
 	for _, m := range prop.ComposedModels {
 		if m != selfClassname && !isPrimitiveType(m) {
 			imports[m] = true
 		}
 	}
+
 	collectPropertyImports(prop.Items, selfClassname, imports)
 }
 
@@ -46,12 +49,14 @@ func (p *Parser) collectImports(model *codegen.CodegenModel) []string {
 			imports[ref] = true
 		}
 	}
+
 	for _, ref := range model.AnyOf {
 		// Skip self-references to avoid circular imports
 		if ref != model.Classname && !isPrimitiveType(ref) {
 			imports[ref] = true
 		}
 	}
+
 	for _, ref := range model.AllOf {
 		if ref != model.Classname && !isPrimitiveType(ref) {
 			imports[ref] = true
@@ -62,7 +67,9 @@ func (p *Parser) collectImports(model *codegen.CodegenModel) []string {
 	for imp := range imports {
 		result = append(result, imp)
 	}
+
 	sort.Strings(result)
+
 	return result
 }
 
@@ -93,6 +100,7 @@ func (p *Parser) collectOperationImports(op *codegen.CodegenOperation) []string 
 		!isPrimitiveType(op.ReturnType) && !isPrimitiveType(op.ReturnBaseType) && !isCompositeType(op.ReturnBaseType) {
 		imports[op.ReturnBaseType] = true
 	}
+
 	for _, m := range op.ReturnComposedModels {
 		imports[m] = true
 	}
@@ -101,6 +109,8 @@ func (p *Parser) collectOperationImports(op *codegen.CodegenOperation) []string 
 	for imp := range imports {
 		result = append(result, imp)
 	}
+
 	sort.Strings(result)
+
 	return result
 }
