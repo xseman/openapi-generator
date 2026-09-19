@@ -18,7 +18,7 @@ go test ./internal/parser -run TestName
 
 `make test` and `make lint` are what CI runs (`.github/workflows/quality.yml`).
 
-Go 1.24, stdlib + kin-openapi (spec loading), cbroglie/mustache, cobra,
+Go 1.26, stdlib + kin-openapi (spec loading), cbroglie/mustache, cobra,
 yaml.v3, x/text. No cgo.
 
 ## Layout
