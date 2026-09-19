@@ -19,6 +19,7 @@ func isPrimitiveType(t string) bool {
 		"any": true, "void": true, "null": true,
 		"Date": true, "Blob": true,
 	}
+
 	return primitives[t]
 }
 
@@ -42,6 +43,7 @@ func (p *Parser) getSchemaType(schemaType, format string) string {
 		default:
 			return "string"
 		}
+
 	case "array":
 		return "Array"
 	case "object":
@@ -50,6 +52,7 @@ func (p *Parser) getSchemaType(schemaType, format string) string {
 		if schemaType == "" {
 			return "any"
 		}
+
 		return schemaType
 	}
 }
@@ -89,6 +92,7 @@ func (p *Parser) toModelName(name string) string {
 	if p.ToModelNameFunc != nil {
 		return p.ToModelNameFunc(name)
 	}
+
 	return toPascalCase(name)
 }
 
@@ -96,6 +100,7 @@ func (p *Parser) toVarName(name string) string {
 	if p.ToVarNameFunc != nil {
 		return p.ToVarNameFunc(name)
 	}
+
 	return toCamelCase(name)
 }
 

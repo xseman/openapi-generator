@@ -11,7 +11,7 @@ import (
 // GetOperations extracts all operations grouped by tag.
 func (p *Parser) GetOperations() (map[string][]*codegen.CodegenOperation, error) {
 	if p.Doc == nil || p.Doc.Paths == nil {
-		return nil, nil
+		return map[string][]*codegen.CodegenOperation{}, nil
 	}
 
 	operationsByTag := make(map[string][]*codegen.CodegenOperation)
@@ -21,6 +21,7 @@ func (p *Parser) GetOperations() (map[string][]*codegen.CodegenOperation, error)
 	for path := range p.Doc.Paths.Map() {
 		pathNames = append(pathNames, path)
 	}
+
 	sort.Strings(pathNames)
 
 	for _, path := range pathNames {
@@ -64,6 +65,7 @@ func (p *Parser) GetOperations() (map[string][]*codegen.CodegenOperation, error)
 			if len(tags) == 0 {
 				tags = []string{"default"}
 			}
+
 			for _, tag := range tags {
 				operation := p.operationToCodegen(path, method, op, pathItem.Parameters)
 				operation.BaseName = tag
@@ -146,6 +148,7 @@ func (p *Parser) operationToCodegen(path, method string, op *openapi3.Operation,
 		if paramRef == nil || paramRef.Value == nil {
 			continue
 		}
+
 		param := p.parameterToCodegen(paramRef.Value)
 		co.AllParams = append(co.AllParams, param)
 		co.PathParams = append(co.PathParams, param)
@@ -156,6 +159,7 @@ func (p *Parser) operationToCodegen(path, method string, op *openapi3.Operation,
 		if paramRef == nil || paramRef.Value == nil {
 			continue
 		}
+
 		param := p.parameterToCodegen(paramRef.Value)
 		co.AllParams = append(co.AllParams, param)
 
@@ -178,189 +182,12 @@ func (p *Parser) operationToCodegen(path, method string, op *openapi3.Operation,
 		}
 	}
 
-	// Process request body
 	if op.RequestBody != nil && op.RequestBody.Value != nil {
-		body := op.RequestBody.Value
-
-		// Iterate content types in a deterministic order. Go map iteration is randomised,
-		// which would otherwise make the chosen schema/content-type (and therefore the
-		// generated output) unstable across runs.
-		contentTypes := make([]string, 0, len(body.Content))
-		for ct := range body.Content {
-			contentTypes = append(contentTypes, ct)
-		}
-		sort.Strings(contentTypes)
-
-		for _, contentType := range contentTypes {
-			mediaType := body.Content[contentType]
-			if mediaType.Schema == nil || mediaType.Schema.Value == nil {
-				continue
-			}
-			schema := mediaType.Schema.Value
-
-			// multipart/form-data and form-urlencoded bodies expand into one form
-			// parameter per schema property (e.g. `file`), matching upstream
-			// openapi-generator, rather than a single opaque `body` parameter.
-			isForm := strings.HasPrefix(contentType, "multipart/") ||
-				contentType == "application/x-www-form-urlencoded"
-			if isForm && isObjectSchema(schema) && len(schema.Properties) > 0 {
-				p.addFormParams(co, schema, contentType)
-				if strings.HasPrefix(contentType, "multipart/") {
-					co.IsMultipart = true
-				}
-				break
-			}
-
-			bodyParam := &codegen.CodegenParameter{
-				IsBodyParam: true,
-				Required:    body.Required,
-				IsNullable:  schema.Nullable,
-				Description: escapeUnsafeChars(body.Description),
-				ContentType: contentType,
-			}
-
-			if mediaType.Schema.Ref != "" {
-				refName := extractRefName(mediaType.Schema.Ref)
-				modelName := p.toModelName(refName)
-				// Use "any" if model name is empty
-				if modelName == "" {
-					modelName = "any"
-				}
-				bodyParam.DataType = modelName
-				bodyParam.BaseType = modelName
-				bodyParam.IsModel = true
-				// Name a $ref body after the referenced schema (camelCased).
-				bodyParam.BaseName = refName
-				bodyParam.ParamName = p.toVarName(refName)
-			} else {
-				// Derive the full property shape so inline bodies (arrays, primitives,
-				// maps) carry their container/item information instead of collapsing to a
-				// bare type. Without this an array body renders as `Array` and an
-				// undefined `ArrayToJSON` helper.
-				prop := p.schemaToProperty("body", schema, body.Required)
-				bodyParam.DataType = prop.DataType
-				bodyParam.BaseType = prop.BaseType
-				bodyParam.IsArray = prop.IsArray
-				bodyParam.IsMap = prop.IsMap
-				bodyParam.IsContainer = prop.IsContainer
-				bodyParam.IsPrimitiveType = prop.IsPrimitiveType
-				bodyParam.IsModel = prop.IsModel
-				bodyParam.IsString = prop.IsString
-				bodyParam.IsNumber = prop.IsNumber
-				bodyParam.IsInteger = prop.IsInteger
-				bodyParam.IsBoolean = prop.IsBoolean
-				bodyParam.Items = prop.Items
-				bodyParam.ComposedModels = prop.ComposedModels
-
-				// Union/intersection bodies have no single ToJSON helper; treat
-				// them as primitive so the template passes the value through.
-				// applyCompositeType marks these free-form without the primitive
-				// flag, which also covers unions collapsed to a single member.
-				if isCompositeType(prop.DataType) || (prop.IsFreeFormObject && !prop.IsPrimitiveType) {
-					bodyParam.IsPrimitiveType = true
-					bodyParam.IsModel = false
-					bodyParam.IsContainer = false
-				}
-
-				// Fall back to the legacy declaration for composed schemas (allOf/oneOf)
-				// that schemaToProperty cannot resolve to a concrete model.
-				if (bodyParam.DataType == "" || bodyParam.DataType == "any") && len(schema.AllOf) > 0 {
-					bodyParam.DataType = p.getTypeDeclaration(schema)
-					bodyParam.BaseType = bodyParam.DataType
-					// Composite declarations ("A & B") have no ToJSON helper and
-					// must be passed through like primitives.
-					composite := isCompositeType(bodyParam.DataType)
-					bodyParam.IsModel = !isPrimitiveType(bodyParam.DataType) && !composite
-					bodyParam.IsPrimitiveType = isPrimitiveType(bodyParam.DataType) || composite
-				}
-
-				// Name an inline body following upstream: an array of a model takes the
-				// innermost item model name; an array of primitives or a map uses
-				// "requestBody"; everything else (primitives, free-form objects) uses "body".
-				baseName := "body"
-				switch {
-				case prop.IsArray:
-					inner := prop.Items
-					for inner != nil && inner.Items != nil {
-						inner = inner.Items
-					}
-					if inner != nil && inner.IsModel && !isPrimitiveType(inner.DataType) {
-						baseName = inner.DataType
-					} else {
-						baseName = "request_body"
-					}
-				case prop.IsMap:
-					baseName = "request_body"
-				}
-				bodyParam.BaseName = baseName
-				bodyParam.ParamName = p.toVarName(baseName)
-			}
-
-			// Use "any" if type declaration is empty
-			if bodyParam.DataType == "" {
-				bodyParam.DataType = "any"
-				bodyParam.BaseType = "any"
-			}
-
-			co.BodyParam = bodyParam
-			co.BodyParams = append(co.BodyParams, bodyParam)
-			co.AllParams = append(co.AllParams, bodyParam)
-
-			// Add to required/optional params
-			if bodyParam.Required {
-				co.RequiredParams = append(co.RequiredParams, bodyParam)
-			} else {
-				co.OptionalParams = append(co.OptionalParams, bodyParam)
-				co.HasOptionalParams = true
-			}
-
-			break // Use first (sorted) content type
-		}
+		p.requestBody(co, op.RequestBody.Value)
 	}
 
-	// Process responses
 	if op.Responses != nil {
-		// Iterate status codes in sorted order. Go map iteration is randomised,
-		// which would otherwise shuffle the generated response list and make the
-		// chosen 2xx return type unstable across runs.
-		respMap := op.Responses.Map()
-		codes := make([]string, 0, len(respMap))
-		for code := range respMap {
-			codes = append(codes, code)
-		}
-		sort.Strings(codes)
-
-		for _, code := range codes {
-			respRef := respMap[code]
-			if respRef == nil || respRef.Value == nil {
-				continue
-			}
-
-			resp := p.responseToCodegen(code, respRef.Value)
-			co.Responses = append(co.Responses, resp)
-
-			// Set return type from the first (lowest) 2xx response that carries
-			// a body, e.g. prefer 200 over 201 when both are present.
-			if co.ReturnType == "" && strings.HasPrefix(code, "2") && resp.DataType != "" {
-				co.ReturnType = resp.DataType
-				co.ReturnBaseType = resp.BaseType
-				co.ReturnComposedModels = resp.ComposedModels
-				co.ReturnSimpleType = resp.SimpleType
-				co.ReturnTypeIsPrimitive = resp.PrimitiveType
-				if resp.IsArray {
-					co.IsArray = true
-					co.ReturnContainer = "array"
-				}
-				if resp.IsMap {
-					co.IsMap = true
-					co.ReturnContainer = "map"
-				}
-				if resp.IsBinary || resp.IsFile {
-					co.IsResponseBinary = true
-					co.IsResponseFile = resp.IsFile
-				}
-			}
-		}
+		p.responses(co, op.Responses)
 	}
 
 	// Set content types in sorted order for stable output.
@@ -369,10 +196,13 @@ func (p *Parser) operationToCodegen(path, method string, op *openapi3.Operation,
 		for ct := range op.RequestBody.Value.Content {
 			consumes = append(consumes, ct)
 		}
+
 		sort.Strings(consumes)
+
 		for _, ct := range consumes {
 			co.Consumes = append(co.Consumes, map[string]string{"mediaType": ct})
 		}
+
 		co.HasConsumes = len(co.Consumes) > 0
 	}
 
@@ -384,9 +214,12 @@ func (p *Parser) operationToCodegen(path, method string, op *openapi3.Operation,
 			for name := range secReq {
 				names = append(names, name)
 			}
+
 			sort.Strings(names)
+
 			for _, name := range names {
 				scopes := secReq[name]
+
 				sec := &codegen.CodegenSecurity{
 					Name:   name,
 					Scopes: make([]map[string]any, len(scopes)),
@@ -394,9 +227,11 @@ func (p *Parser) operationToCodegen(path, method string, op *openapi3.Operation,
 				for i, scope := range scopes {
 					sec.Scopes[i] = map[string]any{"scope": scope}
 				}
+
 				co.AuthMethods = append(co.AuthMethods, sec)
 			}
 		}
+
 		co.HasAuthMethods = len(co.AuthMethods) > 0
 	}
 
@@ -409,6 +244,7 @@ func (p *Parser) operationToCodegen(path, method string, op *openapi3.Operation,
 	// Rebuild required and optional params from deduplicated allParams
 	co.RequiredParams = nil
 	co.OptionalParams = nil
+
 	co.HasOptionalParams = false
 	for _, param := range co.AllParams {
 		if param.Required {
@@ -440,6 +276,7 @@ func (p *Parser) addFormParams(co *codegen.CodegenOperation, schema *openapi3.Sc
 		if propRef == nil || propRef.Value == nil {
 			continue
 		}
+
 		required := requiredSet[name]
 		prop := p.schemaRefToProperty(name, propRef, required)
 
@@ -486,6 +323,7 @@ func (p *Parser) addFormParams(co *codegen.CodegenOperation, schema *openapi3.Sc
 		}
 
 		co.FormParams = append(co.FormParams, fp)
+
 		co.AllParams = append(co.AllParams, fp)
 		if required {
 			co.RequiredParams = append(co.RequiredParams, fp)
@@ -504,6 +342,7 @@ func deduplicateParams(params []*codegen.CodegenParameter) []*codegen.CodegenPar
 	}
 
 	seen := make(map[string]int)
+
 	var result []*codegen.CodegenParameter
 
 	// Iterate through parameters and track positions
@@ -511,6 +350,7 @@ func deduplicateParams(params []*codegen.CodegenParameter) []*codegen.CodegenPar
 		if param == nil {
 			continue
 		}
+
 		key := param.ParamName
 		if idx, exists := seen[key]; exists {
 			// Replace previous occurrence
@@ -520,8 +360,222 @@ func deduplicateParams(params []*codegen.CodegenParameter) []*codegen.CodegenPar
 			seen[key] = len(result)
 			result = append(result, param)
 		}
+
 		_ = i // unused
 	}
 
 	return result
+}
+
+// requestBody turns the first content type of a request body, in sorted
+// order, into the operation's body parameter; form bodies expand into one
+// parameter per property instead.
+func (p *Parser) requestBody(co *codegen.CodegenOperation, body *openapi3.RequestBody) {
+	// Iterate content types in a deterministic order. Go map iteration is randomised,
+	// which would otherwise make the chosen schema/content-type (and therefore the
+	// generated output) unstable across runs.
+	contentTypes := make([]string, 0, len(body.Content))
+	for ct := range body.Content {
+		contentTypes = append(contentTypes, ct)
+	}
+
+	sort.Strings(contentTypes)
+
+	for _, contentType := range contentTypes {
+		mediaType := body.Content[contentType]
+		if mediaType.Schema == nil || mediaType.Schema.Value == nil {
+			continue
+		}
+
+		schema := mediaType.Schema.Value
+
+		// multipart/form-data and form-urlencoded bodies expand into one form
+		// parameter per schema property (e.g. `file`), matching upstream
+		// openapi-generator, rather than a single opaque `body` parameter.
+		isForm := strings.HasPrefix(contentType, "multipart/") ||
+			contentType == "application/x-www-form-urlencoded"
+		if isForm && isObjectSchema(schema) && len(schema.Properties) > 0 {
+			p.addFormParams(co, schema, contentType)
+
+			if strings.HasPrefix(contentType, "multipart/") {
+				co.IsMultipart = true
+			}
+
+			return
+		}
+
+		bodyParam := &codegen.CodegenParameter{
+			IsBodyParam: true,
+			Required:    body.Required,
+			IsNullable:  schema.Nullable,
+			Description: escapeUnsafeChars(body.Description),
+			ContentType: contentType,
+		}
+
+		if mediaType.Schema.Ref != "" {
+			refName := extractRefName(mediaType.Schema.Ref)
+			modelName := p.toModelName(refName)
+			// Use "any" if model name is empty
+			if modelName == "" {
+				modelName = "any"
+			}
+
+			bodyParam.DataType = modelName
+			bodyParam.BaseType = modelName
+			bodyParam.IsModel = true
+			// Name a $ref body after the referenced schema (camelCased).
+			bodyParam.BaseName = refName
+			bodyParam.ParamName = p.toVarName(refName)
+		} else {
+			p.inlineBody(bodyParam, schema, body.Required)
+		}
+
+		// Use "any" if type declaration is empty
+		if bodyParam.DataType == "" {
+			bodyParam.DataType = "any"
+			bodyParam.BaseType = "any"
+		}
+
+		co.BodyParam = bodyParam
+		co.BodyParams = append(co.BodyParams, bodyParam)
+		co.AllParams = append(co.AllParams, bodyParam)
+
+		// Add to required/optional params
+		if bodyParam.Required {
+			co.RequiredParams = append(co.RequiredParams, bodyParam)
+		} else {
+			co.OptionalParams = append(co.OptionalParams, bodyParam)
+			co.HasOptionalParams = true
+		}
+
+		return // the first (sorted) content type wins
+	}
+}
+
+// inlineBody shapes a body parameter from an inline schema, so arrays,
+// primitives and maps keep their container and item information instead of
+// collapsing to a bare type, and names it the way upstream does.
+func (p *Parser) inlineBody(bodyParam *codegen.CodegenParameter, schema *openapi3.Schema, required bool) {
+	// Derive the full property shape so inline bodies (arrays, primitives,
+	// maps) carry their container/item information instead of collapsing to a
+	// bare type. Without this an array body renders as `Array` and an
+	// undefined `ArrayToJSON` helper.
+	prop := p.schemaToProperty("body", schema, required)
+	bodyParam.DataType = prop.DataType
+	bodyParam.BaseType = prop.BaseType
+	bodyParam.IsArray = prop.IsArray
+	bodyParam.IsMap = prop.IsMap
+	bodyParam.IsContainer = prop.IsContainer
+	bodyParam.IsPrimitiveType = prop.IsPrimitiveType
+	bodyParam.IsModel = prop.IsModel
+	bodyParam.IsString = prop.IsString
+	bodyParam.IsNumber = prop.IsNumber
+	bodyParam.IsInteger = prop.IsInteger
+	bodyParam.IsBoolean = prop.IsBoolean
+	bodyParam.Items = prop.Items
+	bodyParam.ComposedModels = prop.ComposedModels
+
+	// Union/intersection bodies have no single ToJSON helper; treat
+	// them as primitive so the template passes the value through.
+	// applyCompositeType marks these free-form without the primitive
+	// flag, which also covers unions collapsed to a single member.
+	if isCompositeType(prop.DataType) || (prop.IsFreeFormObject && !prop.IsPrimitiveType) {
+		bodyParam.IsPrimitiveType = true
+		bodyParam.IsModel = false
+		bodyParam.IsContainer = false
+	}
+
+	// Fall back to the legacy declaration for composed schemas (allOf/oneOf)
+	// that schemaToProperty cannot resolve to a concrete model.
+	if (bodyParam.DataType == "" || bodyParam.DataType == "any") && len(schema.AllOf) > 0 {
+		bodyParam.DataType = p.getTypeDeclaration(schema)
+		bodyParam.BaseType = bodyParam.DataType
+		// Composite declarations ("A & B") have no ToJSON helper and
+		// must be passed through like primitives.
+		composite := isCompositeType(bodyParam.DataType)
+		bodyParam.IsModel = !isPrimitiveType(bodyParam.DataType) && !composite
+		bodyParam.IsPrimitiveType = isPrimitiveType(bodyParam.DataType) || composite
+	}
+
+	// Name an inline body following upstream: an array of a model takes the
+	// innermost item model name; an array of primitives or a map uses
+	// "requestBody"; everything else (primitives, free-form objects) uses "body".
+	baseName := "body"
+
+	switch {
+	case prop.IsArray:
+		inner := prop.Items
+		for inner != nil && inner.Items != nil {
+			inner = inner.Items
+		}
+
+		if inner != nil && inner.IsModel && !isPrimitiveType(inner.DataType) {
+			baseName = inner.DataType
+		} else {
+			baseName = "request_body"
+		}
+
+	case prop.IsMap:
+		baseName = "request_body"
+	}
+
+	bodyParam.BaseName = baseName
+	bodyParam.ParamName = p.toVarName(baseName)
+}
+
+// responses converts every response in status-code order and picks the
+// return type from them.
+func (p *Parser) responses(co *codegen.CodegenOperation, responses *openapi3.Responses) {
+	// Iterate status codes in sorted order. Go map iteration is randomised,
+	// which would otherwise shuffle the generated response list and make the
+	// chosen 2xx return type unstable across runs.
+	respMap := responses.Map()
+
+	codes := make([]string, 0, len(respMap))
+	for code := range respMap {
+		codes = append(codes, code)
+	}
+
+	sort.Strings(codes)
+
+	for _, code := range codes {
+		respRef := respMap[code]
+		if respRef == nil || respRef.Value == nil {
+			continue
+		}
+
+		resp := p.responseToCodegen(code, respRef.Value)
+		co.Responses = append(co.Responses, resp)
+
+		// The first (lowest) 2xx response with a body is the return type:
+		// 200 over 201 when both are present.
+		if co.ReturnType == "" && strings.HasPrefix(code, "2") && resp.DataType != "" {
+			setReturnType(co, resp)
+		}
+	}
+}
+
+// setReturnType copies a response's type onto the operation, container and
+// binary flags included.
+func setReturnType(co *codegen.CodegenOperation, resp *codegen.CodegenResponse) {
+	co.ReturnType = resp.DataType
+	co.ReturnBaseType = resp.BaseType
+	co.ReturnComposedModels = resp.ComposedModels
+	co.ReturnSimpleType = resp.SimpleType
+
+	co.ReturnTypeIsPrimitive = resp.PrimitiveType
+	if resp.IsArray {
+		co.IsArray = true
+		co.ReturnContainer = "array"
+	}
+
+	if resp.IsMap {
+		co.IsMap = true
+		co.ReturnContainer = "map"
+	}
+
+	if resp.IsBinary || resp.IsFile {
+		co.IsResponseBinary = true
+		co.IsResponseFile = resp.IsFile
+	}
 }

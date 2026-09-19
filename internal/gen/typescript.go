@@ -16,27 +16,35 @@ func applyTypeScriptAdditionalProperties(tsConfig *config.TypeScriptFetchConfig,
 	if v, ok := props["withPackageJson"].(bool); ok {
 		tsConfig.WithPackageJson = v
 	}
+
 	if v, ok := props["withInterfaces"].(bool); ok {
 		tsConfig.WithInterfaces = v
 	}
+
 	if v, ok := props["useSingleRequestParameter"].(bool); ok {
 		tsConfig.UseSingleRequestParameter = v
 	}
+
 	if v, ok := props["prefixParameterInterfaces"].(bool); ok {
 		tsConfig.PrefixParameterInterfaces = v
 	}
+
 	if v, ok := props["withoutRuntimeChecks"].(bool); ok {
 		tsConfig.WithoutRuntimeChecks = v
 	}
+
 	if v, ok := props["stringEnums"].(bool); ok {
 		tsConfig.StringEnums = v
 	}
+
 	if v, ok := props["importFileExtension"].(string); ok {
 		tsConfig.ImportFileExtension = v
 	}
+
 	if v, ok := props["fileNaming"].(string); ok {
 		tsConfig.FileNaming = v
 	}
+
 	if v, ok := props["validationAttributes"].(bool); ok {
 		tsConfig.GenerateValidationAttributes = v
 	}
@@ -52,11 +60,13 @@ func toTsImports(imports []string, gen *typescript.FetchGenerator) []map[string]
 		if className == "" || gen.IsPrimitive(className) {
 			continue
 		}
+
 		result = append(result, map[string]string{
 			"classname": className,
 			"filename":  gen.ToModelFilename(className),
 		})
 	}
+
 	return result
 }
 
@@ -68,6 +78,7 @@ func isPrimitiveTypeTS(t string) bool {
 		"any": true, "void": true, "null": true,
 		"Date": true, "Blob": true, "undefined": true,
 	}
+
 	return primitives[t]
 }
 
@@ -85,17 +96,21 @@ func modelUsesRuntimeJSONHelper(model *generator.CodegenModel, wantDatatype stri
 	callsHelper := func(p *generator.CodegenProperty) bool {
 		return p != nil && p.Datatype == wantDatatype && !p.IsPrimitiveType && !p.IsFreeFormObject
 	}
+
 	for _, v := range model.Vars {
 		if v == nil {
 			continue
 		}
+
 		if !v.IsArray && !v.IsMap && callsHelper(v) {
 			return true
 		}
+
 		if v.IsArray && v.Items != nil && !v.Items.IsContainer && callsHelper(v.Items) {
 			return true
 		}
 	}
+
 	return false
 }
 
@@ -138,9 +153,9 @@ func generateModelIndex(models []*generator.CodegenModel, gen *typescript.FetchG
 	return sb.String()
 }
 
-// generateApiIndex emits the per-folder barrel for the TypeScript apis
+// generateAPIIndex emits the per-folder barrel for the TypeScript apis
 // package.
-func generateApiIndex(ops map[string][]*generator.CodegenOperation, gen *typescript.FetchGenerator) string {
+func generateAPIIndex(ops map[string][]*generator.CodegenOperation, gen *typescript.FetchGenerator) string {
 	var sb strings.Builder
 	sb.WriteString("/* tslint:disable */\n")
 	sb.WriteString("/* eslint-disable */\n")

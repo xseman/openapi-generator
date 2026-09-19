@@ -10,15 +10,18 @@ import (
 
 func writeSpec(t *testing.T, name, content string) string {
 	t.Helper()
+
 	path := filepath.Join(t.TempDir(), name)
 	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
 		t.Fatal(err)
 	}
+
 	return path
 }
 
 func TestValidate(t *testing.T) {
-	const valid = `openapi: "3.0.0"
+	const (
+		valid = `openapi: "3.0.0"
 info: {title: t, version: "1"}
 paths:
   /pets:
@@ -35,7 +38,7 @@ components:
   schemas:
     Pet: {type: object}
 `
-	const unused = `openapi: "3.0.0"
+		unused = `openapi: "3.0.0"
 info: {title: t, version: "1"}
 paths: {}
 components:
@@ -43,9 +46,10 @@ components:
     Zebra: {type: object}
     Apple: {type: string}
 `
-	const noInfo = `openapi: "3.0.0"
+		noInfo = `openapi: "3.0.0"
 paths: {}
 `
+	)
 
 	t.Run("valid spec has no issues", func(t *testing.T) {
 		res := Validate(writeSpec(t, "valid.yaml", valid))
@@ -59,6 +63,7 @@ paths: {}
 		if len(res.Errors) != 0 {
 			t.Fatalf("unexpected errors: %v", res.Errors)
 		}
+
 		want := []string{"Unused model: Apple", "Unused model: Zebra"}
 		if !reflect.DeepEqual(res.Warnings, want) {
 			t.Fatalf("warnings = %v, want %v", res.Warnings, want)

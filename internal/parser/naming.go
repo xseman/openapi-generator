@@ -22,40 +22,52 @@ func toCamelCase(s string) string {
 	if len(words) == 0 {
 		return s
 	}
+
 	titleCaser := cases.Title(language.English)
-	result := strings.ToLower(words[0])
+
+	var b strings.Builder
+
+	b.WriteString(strings.ToLower(words[0]))
+
 	for _, word := range words[1:] {
-		result += titleCaser.String(strings.ToLower(word))
+		b.WriteString(titleCaser.String(strings.ToLower(word)))
 	}
-	return result
+
+	return b.String()
 }
 
 func toPascalCase(s string) string {
-	words := splitWords(s)
 	titleCaser := cases.Title(language.English)
-	result := ""
-	for _, word := range words {
-		result += titleCaser.String(strings.ToLower(word))
+
+	var b strings.Builder
+
+	for _, word := range splitWords(s) {
+		b.WriteString(titleCaser.String(strings.ToLower(word)))
 	}
-	return result
+
+	return b.String()
 }
 
 func toSnakeCase(s string) string {
-	words := splitWords(s)
-	result := ""
-	for i, word := range words {
+	var b strings.Builder
+
+	for i, word := range splitWords(s) {
 		if i > 0 {
-			result += "_"
+			b.WriteString("_")
 		}
-		result += strings.ToLower(word)
+
+		b.WriteString(strings.ToLower(word))
 	}
-	return result
+
+	return b.String()
 }
 
 // splitWords splits s on non-alphanumeric characters and camelCase boundaries.
 func splitWords(s string) []string {
-	var words []string
-	var current strings.Builder
+	var (
+		words   []string
+		current strings.Builder
+	)
 
 	for i, r := range s {
 		if !isAlphanumeric(r) {
@@ -63,6 +75,7 @@ func splitWords(s string) []string {
 				words = append(words, current.String())
 				current.Reset()
 			}
+
 			continue
 		}
 
@@ -97,6 +110,7 @@ func sanitizeTag(path string) string {
 	path = strings.ReplaceAll(path, "{", "")
 	path = strings.ReplaceAll(path, "}", "")
 	path = strings.ReplaceAll(path, "-", "_")
+
 	return toPascalCase(path)
 }
 
@@ -113,12 +127,15 @@ func toEnumVarName(value string) string {
 	// Spell out "+" so values such as "C+" survive the alphanumeric-only word split.
 	value = strings.ReplaceAll(value, "+", "_plus")
 
-	var b strings.Builder
-	var prev rune
+	var (
+		b    strings.Builder
+		prev rune
+	)
 	for i, r := range value {
 		if i > 0 && isUpperCase(r) && ((prev >= 'a' && prev <= 'z') || (prev >= '0' && prev <= '9')) {
 			b.WriteByte('_')
 		}
+
 		b.WriteRune(r)
 		prev = r
 	}
@@ -131,5 +148,6 @@ func toEnumVarName(value string) string {
 	if name[0] >= '0' && name[0] <= '9' {
 		name = "_" + name
 	}
+
 	return name
 }

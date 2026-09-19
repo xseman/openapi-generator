@@ -33,6 +33,7 @@ func TestSwagger2PropertyOrderPreservesDeclarationOrder(t *testing.T) {
 	}`)
 
 	p := NewParser()
+
 	p.SkipValidation = true
 	if err := p.LoadFromData(spec); err != nil {
 		t.Fatalf("LoadFromData: %v", err)
@@ -45,10 +46,12 @@ func TestSwagger2PropertyOrderPreservesDeclarationOrder(t *testing.T) {
 
 	widget := findModel(t, models, "Widget")
 	got := varNames(widget.Vars)
+
 	want := []string{"zebra", "apple", "mango"}
 	if len(got) != len(want) {
 		t.Fatalf("Widget.Vars = %v, want %v", got, want)
 	}
+
 	for i := range want {
 		if got[i] != want[i] {
 			t.Fatalf("Widget.Vars = %v, want %v (declaration order, not alphabetical)", got, want)

@@ -46,25 +46,31 @@ func (p *Parser) GetInfo() map[string]string {
 	if p.Doc == nil || p.Doc.Info == nil {
 		return nil
 	}
+
 	info := make(map[string]string)
 	info["title"] = p.Doc.Info.Title
 	info["description"] = p.Doc.Info.Description
+
 	info["version"] = p.Doc.Info.Version
 	if p.Doc.Info.TermsOfService != "" {
 		info["termsOfService"] = p.Doc.Info.TermsOfService
 	}
+
 	if p.Doc.Info.Contact != nil {
 		if p.Doc.Info.Contact.Email != "" {
 			info["infoEmail"] = p.Doc.Info.Contact.Email
 		}
+
 		if p.Doc.Info.Contact.URL != "" {
 			info["infoUrl"] = p.Doc.Info.Contact.URL
 		}
 	}
+
 	if p.Doc.Info.License != nil {
 		info["licenseName"] = p.Doc.Info.License.Name
 		info["licenseUrl"] = p.Doc.Info.License.URL
 	}
+
 	return info
 }
 
@@ -73,5 +79,6 @@ func (p *Parser) GetBasePath() string {
 	if p.Doc == nil || len(p.Doc.Servers) == 0 {
 		return ""
 	}
+
 	return p.Doc.Servers[0].URL
 }

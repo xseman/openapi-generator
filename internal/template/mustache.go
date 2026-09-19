@@ -67,6 +67,7 @@ func (e *Engine) LoadPartials() error {
 		if e.Verbose {
 			fmt.Printf("[TEMPLATE] Loaded partial: %s\n", name)
 		}
+
 		return nil
 	})
 }
@@ -84,6 +85,7 @@ func (e *Engine) RegisterDefaultLambdas() {
 		if err != nil {
 			return "", err
 		}
+
 		return strings.ToLower(rendered), nil
 	})
 
@@ -93,6 +95,7 @@ func (e *Engine) RegisterDefaultLambdas() {
 		if err != nil {
 			return "", err
 		}
+
 		return strings.ToUpper(rendered), nil
 	})
 
@@ -102,6 +105,7 @@ func (e *Engine) RegisterDefaultLambdas() {
 		if err != nil {
 			return "", err
 		}
+
 		return toCamelCase(rendered), nil
 	})
 
@@ -111,6 +115,7 @@ func (e *Engine) RegisterDefaultLambdas() {
 		if err != nil {
 			return "", err
 		}
+
 		return toPascalCase(rendered), nil
 	})
 
@@ -120,6 +125,7 @@ func (e *Engine) RegisterDefaultLambdas() {
 		if err != nil {
 			return "", err
 		}
+
 		return toSnakeCase(rendered), nil
 	})
 
@@ -131,6 +137,7 @@ func (e *Engine) RegisterDefaultLambdas() {
 		if err != nil {
 			return "", err
 		}
+
 		return indentWithPrefix(rendered, 1, " ", "* ", false), nil
 	})
 
@@ -141,6 +148,7 @@ func (e *Engine) RegisterDefaultLambdas() {
 		if err != nil {
 			return "", err
 		}
+
 		return indentWithPrefix(rendered, 5, " ", "* ", true), nil
 	})
 
@@ -150,6 +158,7 @@ func (e *Engine) RegisterDefaultLambdas() {
 		if err != nil {
 			return "", err
 		}
+
 		return indent(rendered, "    "), nil
 	})
 
@@ -159,6 +168,7 @@ func (e *Engine) RegisterDefaultLambdas() {
 		if err != nil {
 			return "", err
 		}
+
 		return indent(rendered, "        "), nil
 	})
 }
@@ -170,14 +180,17 @@ func (e *Engine) Render(templateName string, data any) (string, error) {
 		fmt.Printf("[TEMPLATE] Rendering template: %s\n", templateName)
 	}
 
-	var content []byte
-	var err error
+	var (
+		content []byte
+		err     error
+	)
 
 	if e.fsys != nil {
 		// Read from embedded filesystem. Paths in embed.FS must always use forward slashes
 		// per the Go specification, so we intentionally construct the path with "/" rather
 		// than using filepath.Join (which is OS-dependent).
 		templatePath := e.TemplateDir + "/" + templateName
+
 		content, err = fs.ReadFile(e.fsys, templatePath)
 		if err != nil {
 			return "", fmt.Errorf("failed to read embedded template %s: %w", templateName, err)
@@ -185,6 +198,7 @@ func (e *Engine) Render(templateName string, data any) (string, error) {
 	} else {
 		// Read from filesystem
 		templatePath := filepath.Join(e.TemplateDir, templateName)
+
 		content, err = os.ReadFile(templatePath)
 		if err != nil {
 			return "", fmt.Errorf("failed to read template %s: %w", templateName, err)
@@ -221,6 +235,7 @@ func (e *Engine) RenderToFile(templateName string, data any, outputPath string) 
 	if e.Verbose {
 		fmt.Printf("[TEMPLATE] Processing: %s -> %s\n", templateName, outputPath)
 	}
+
 	result, err := e.Render(templateName, data)
 	if err != nil {
 		return err
@@ -235,12 +250,12 @@ func (e *Engine) RenderToFile(templateName string, data any, outputPath string) 
 
 	// Create output directory if needed
 	dir := filepath.Dir(outputPath)
-	if err := os.MkdirAll(dir, 0755); err != nil {
+	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return fmt.Errorf("failed to create directory %s: %w", dir, err)
 	}
 
 	// Write file
-	if err := os.WriteFile(outputPath, []byte(result), 0600); err != nil {
+	if err := os.WriteFile(outputPath, []byte(result), 0o600); err != nil {
 		return fmt.Errorf("failed to write file %s: %w", outputPath, err)
 	}
 
@@ -268,12 +283,13 @@ func (e *Engine) mergeDataWithLambdas(data any) any {
 	for name, fn := range e.Lambdas {
 		lambdaMap[name] = fn
 	}
+
 	dataMap["lambda"] = lambdaMap
 
 	return dataMap
 }
 
-// partialProvider implements mustache.PartialProvider
+// partialProvider implements mustache.PartialProvider.
 type partialProvider struct {
 	partials map[string]string
 	Verbose  bool
@@ -284,8 +300,10 @@ func (p *partialProvider) Get(name string) (string, error) {
 		if p.Verbose {
 			fmt.Printf("[TEMPLATE]   -> Using partial: %s\n", name)
 		}
+
 		return partial, nil
 	}
+
 	return "", fmt.Errorf("partial not found: %s", name)
 }
 
@@ -296,41 +314,51 @@ func toCamelCase(s string) string {
 	if len(words) == 0 {
 		return s
 	}
-	result := strings.ToLower(words[0])
+
+	var b strings.Builder
+
+	b.WriteString(strings.ToLower(words[0]))
+
 	for _, word := range words[1:] {
-		if len(word) > 0 {
-			result += strings.ToUpper(word[:1]) + strings.ToLower(word[1:])
+		if word != "" {
+			b.WriteString(strings.ToUpper(word[:1]) + strings.ToLower(word[1:]))
 		}
 	}
-	return result
+
+	return b.String()
 }
 
 func toPascalCase(s string) string {
-	words := splitWords(s)
-	result := ""
-	for _, word := range words {
-		if len(word) > 0 {
-			result += strings.ToUpper(word[:1]) + strings.ToLower(word[1:])
+	var b strings.Builder
+
+	for _, word := range splitWords(s) {
+		if word != "" {
+			b.WriteString(strings.ToUpper(word[:1]) + strings.ToLower(word[1:]))
 		}
 	}
-	return result
+
+	return b.String()
 }
 
 func toSnakeCase(s string) string {
-	words := splitWords(s)
-	result := ""
-	for i, word := range words {
+	var b strings.Builder
+
+	for i, word := range splitWords(s) {
 		if i > 0 {
-			result += "_"
+			b.WriteString("_")
 		}
-		result += strings.ToLower(word)
+
+		b.WriteString(strings.ToLower(word))
 	}
-	return result
+
+	return b.String()
 }
 
 func splitWords(s string) []string {
-	var words []string
-	var current strings.Builder
+	var (
+		words   []string
+		current strings.Builder
+	)
 
 	for i, r := range s {
 		if !isAlphanumeric(r) {
@@ -338,6 +366,7 @@ func splitWords(s string) []string {
 				words = append(words, current.String())
 				current.Reset()
 			}
+
 			continue
 		}
 
@@ -364,13 +393,14 @@ func isUpperCase(r rune) bool {
 	return r >= 'A' && r <= 'Z'
 }
 
-func indent(s string, prefix string) string {
+func indent(s, prefix string) string {
 	lines := strings.Split(s, "\n")
 	for i, line := range lines {
 		if line != "" {
 			lines[i] = prefix + line
 		}
 	}
+
 	return strings.Join(lines, "\n")
 }
 
@@ -395,22 +425,13 @@ func normalizeTypeScript(s string) string {
 	out := make([]string, 0, len(raw))
 	for i, line := range raw {
 		if line != "" {
-			// Drop an empty JSDoc continuation line ("*") sitting directly before
-			// the comment close ("*/"); it is left behind when a description ends
-			// with a trailing newline.
-			if strings.TrimSpace(line) == "*" {
-				next := ""
-				for j := i + 1; j < len(raw); j++ {
-					if raw[j] != "" {
-						next = raw[j]
-						break
-					}
-				}
-				if strings.HasPrefix(strings.TrimLeft(next, " \t"), "*/") {
-					continue
-				}
+			// An empty JSDoc continuation line ("*") sitting directly before the
+			// comment close ("*/") is left behind when a description ends with a
+			// trailing newline: drop it.
+			if strings.TrimSpace(line) != "*" || !closesComment(raw, i+1) {
+				out = append(out, line)
 			}
-			out = append(out, line)
+
 			continue
 		}
 
@@ -418,6 +439,7 @@ func normalizeTypeScript(s string) string {
 		if len(out) == 0 {
 			continue
 		}
+
 		prev := out[len(out)-1]
 		// Drop a blank line right after an opening brace, but keep the "${"
 		// template-literal interpolation case intact.
@@ -432,15 +454,18 @@ func normalizeTypeScript(s string) string {
 		// further blank lines to the next real line. A blank run that reaches
 		// end-of-file is dropped as trailing whitespace.
 		next := ""
+
 		for j := i + 1; j < len(raw); j++ {
 			if raw[j] != "" {
 				next = raw[j]
 				break
 			}
 		}
+
 		if next == "" || strings.HasPrefix(strings.TrimLeft(next, " \t"), "}") {
 			continue
 		}
+
 		out = append(out, line)
 	}
 
@@ -458,16 +483,19 @@ func indentWithPrefix(s string, spaces int, spacer, prefix string, indentFirstLi
 	lines := strings.Split(s, "\n")
 	indentation := strings.Repeat(spacer, spaces)
 	blankLine := indentation + strings.TrimRight(prefix, " ")
+
 	for i, line := range lines {
 		if i == 0 && !indentFirstLine {
 			continue
 		}
+
 		if line == "" {
 			lines[i] = blankLine
 		} else {
 			lines[i] = indentation + prefix + line
 		}
 	}
+
 	return strings.Join(lines, "\n")
 }
 
@@ -536,6 +564,7 @@ func PreprocessOperationData(opMaps []map[string]any) []map[string]any {
 		addHasArrayFlag(op, "consumes", "hasConsumes")
 		addHasArrayFlag(op, "authMethods", "hasAuthMethods")
 	}
+
 	return opMaps
 }
 
@@ -550,6 +579,7 @@ func PreprocessModelData(modelMaps []map[string]any) []map[string]any {
 		addHasArrayFlag(model, "parentVars", "hasParentVars")
 		addHasArrayFlag(model, "imports", "hasImports")
 	}
+
 	return modelMaps
 }
 
@@ -569,4 +599,16 @@ func addHasArrayFlag(data map[string]any, arrayKey, flagKey string) {
 	} else {
 		data[flagKey] = false
 	}
+}
+
+// closesComment reports whether the first non-empty line of raw at or after
+// from is a JSDoc close ("*/").
+func closesComment(raw []string, from int) bool {
+	for _, l := range raw[from:] {
+		if l != "" {
+			return strings.HasPrefix(strings.TrimLeft(l, " \t"), "*/")
+		}
+	}
+
+	return false
 }

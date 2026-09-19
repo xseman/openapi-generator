@@ -13,6 +13,7 @@ import (
 // assert on bool.
 func parseAdditionalProperties(props []string) map[string]any {
 	result := make(map[string]any)
+
 	for _, prop := range props {
 		parts := strings.SplitN(prop, "=", 2)
 		if len(parts) == 2 {
@@ -29,6 +30,7 @@ func parseAdditionalProperties(props []string) map[string]any {
 			}
 		}
 	}
+
 	return result
 }
 
@@ -41,6 +43,7 @@ func extractHost(basePath string) string {
 			return parts[2]
 		}
 	}
+
 	return ""
 }
 
@@ -50,6 +53,7 @@ func copyMap(m map[string]any) map[string]any {
 	for k, v := range m {
 		result[k] = v
 	}
+
 	return result
 }
 
@@ -62,15 +66,18 @@ func sortedTags(opsByTag map[string][]*generator.CodegenOperation) []string {
 	for tag := range opsByTag {
 		tags = append(tags, tag)
 	}
+
 	sort.Strings(tags)
+
 	return tags
 }
 
-// collectApiImports gathers the deduplicated, sorted set of model imports
+// collectAPIImports gathers the deduplicated, sorted set of model imports
 // referenced by a group of operations, resolving each to its class and file
 // name and filtering out primitives.
-func collectApiImports(ops []*generator.CodegenOperation, gen generator.CodegenConfig) []map[string]string {
+func collectAPIImports(ops []*generator.CodegenOperation, gen generator.CodegenConfig) []map[string]string {
 	imports := make(map[string]bool)
+
 	for _, op := range ops {
 		for _, imp := range op.Imports {
 			imports[imp] = true
@@ -88,6 +95,7 @@ func collectApiImports(ops []*generator.CodegenOperation, gen generator.CodegenC
 		if className == "" || primitives[className] {
 			continue
 		}
+
 		result = append(result, map[string]string{
 			"import":    imp,
 			"classname": className,

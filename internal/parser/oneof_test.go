@@ -38,6 +38,7 @@ components:
 `)
 
 	p := NewParser()
+
 	p.SkipValidation = true
 	if err := p.LoadFromData(spec); err != nil {
 		t.Fatalf("LoadFromData: %v", err)
@@ -54,11 +55,13 @@ components:
 	}
 
 	var mapMember bool
+
 	for _, prop := range errs.OneOfPrimitives {
 		if prop.IsMap {
 			mapMember = true
 		}
 	}
+
 	if !mapMember {
 		t.Errorf("ValidationErrors.OneOfPrimitives = %v, want it to contain the inline map member", varNames(errs.OneOfPrimitives))
 	}
@@ -95,6 +98,7 @@ paths:
 `)
 
 	p := NewParser()
+
 	p.SkipValidation = true
 	if err := p.LoadFromData(spec); err != nil {
 		t.Fatalf("LoadFromData: %v", err)
@@ -107,6 +111,7 @@ paths:
 
 	want := map[string]bool{"Accept-Language": true, "limit": false}
 	seen := map[string]bool{}
+
 	for _, group := range ops {
 		for _, op := range group {
 			for _, param := range op.AllParams {
@@ -114,15 +119,18 @@ paths:
 				if !tracked {
 					continue
 				}
+
 				seen[param.BaseName] = true
 
 				enumVars, ok := param.AllowableValues["enumVars"].([]map[string]any)
 				if !ok {
 					t.Fatalf("param %q: AllowableValues[%q] = %#v, want []map[string]any", param.BaseName, "enumVars", param.AllowableValues["enumVars"])
 				}
+
 				if len(enumVars) != 2 {
 					t.Fatalf("param %q: got %d enumVars, want 2", param.BaseName, len(enumVars))
 				}
+
 				for _, enumVar := range enumVars {
 					if enumVar["isString"] != wantIsString {
 						t.Errorf("param %q: enumVar %v isString = %v, want %v", param.BaseName, enumVar["name"], enumVar["isString"], wantIsString)
@@ -131,6 +139,7 @@ paths:
 			}
 		}
 	}
+
 	for name := range want {
 		if !seen[name] {
 			t.Errorf("parameter %q not found in generated operations", name)

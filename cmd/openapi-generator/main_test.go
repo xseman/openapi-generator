@@ -56,6 +56,7 @@ func TestFormatValidationReport(t *testing.T) {
 			if got != tt.want {
 				t.Errorf("report = %q, want %q", got, tt.want)
 			}
+
 			if ok != tt.wantOK {
 				t.Errorf("ok = %v, want %v", ok, tt.wantOK)
 			}

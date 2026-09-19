@@ -20,45 +20,55 @@ func (r *renderer) writeIndexFiles(models []*generator.CodegenModel, operationsB
 
 	if len(models) > 0 {
 		var modelIndex string
+
 		switch {
 		case r.tsGen != nil:
 			modelIndex = generateModelIndex(models, r.tsGen)
 		case r.dartGen != nil:
 			modelIndex = generateDartModelIndex(models, r.dartGen)
 		}
+
 		indexFilename := "index" + indexExt
 		if r.dartGen != nil {
 			indexFilename = "models.dart"
 		}
+
 		modelIndexPath := filepath.Join(r.outputDir, r.modelPackage, indexFilename)
-		if err := os.MkdirAll(filepath.Dir(modelIndexPath), 0755); err != nil {
+		if err := os.MkdirAll(filepath.Dir(modelIndexPath), 0o755); err != nil {
 			return nil, fmt.Errorf("failed to create model index directory: %w", err)
 		}
-		if err := os.WriteFile(modelIndexPath, []byte(modelIndex), 0600); err != nil {
+
+		if err := os.WriteFile(modelIndexPath, []byte(modelIndex), 0o600); err != nil {
 			return nil, fmt.Errorf("failed to write model index: %w", err)
 		}
+
 		generatedFiles = append(generatedFiles, filepath.Join(r.modelPackage, indexFilename))
 	}
 
 	if len(operationsByTag) > 0 {
 		var apiIndex string
+
 		switch {
 		case r.tsGen != nil:
-			apiIndex = generateApiIndex(operationsByTag, r.tsGen)
+			apiIndex = generateAPIIndex(operationsByTag, r.tsGen)
 		case r.dartGen != nil:
-			apiIndex = generateDartApiIndex(operationsByTag, r.dartGen)
+			apiIndex = generateDartAPIIndex(operationsByTag, r.dartGen)
 		}
+
 		indexFilename := "index" + indexExt
 		if r.dartGen != nil {
 			indexFilename = "apis.dart"
 		}
+
 		apiIndexPath := filepath.Join(r.outputDir, r.apiPackage, indexFilename)
-		if err := os.MkdirAll(filepath.Dir(apiIndexPath), 0755); err != nil {
+		if err := os.MkdirAll(filepath.Dir(apiIndexPath), 0o755); err != nil {
 			return nil, fmt.Errorf("failed to create API index directory: %w", err)
 		}
-		if err := os.WriteFile(apiIndexPath, []byte(apiIndex), 0600); err != nil {
+
+		if err := os.WriteFile(apiIndexPath, []byte(apiIndex), 0o600); err != nil {
 			return nil, fmt.Errorf("failed to write API index: %w", err)
 		}
+
 		generatedFiles = append(generatedFiles, filepath.Join(r.apiPackage, indexFilename))
 	}
 
@@ -73,6 +83,7 @@ func resolveDiscriminatorFilenames(models []*generator.CodegenModel, cg generato
 		if model.Discriminator == nil {
 			continue
 		}
+
 		for _, mapped := range model.Discriminator.MappedModels {
 			mapped.ModelFilename = cg.ToModelFilename(mapped.ModelName)
 		}

@@ -151,9 +151,11 @@ func TestCopyMap(t *testing.T) {
 	// Mutating the copy must not affect the original.
 	copied["a"] = 999
 	copied["c"] = "new"
+
 	if original["a"] != 1 {
 		t.Errorf("original map was mutated via the copy: original[\"a\"] = %v, want 1", original["a"])
 	}
+
 	if _, exists := original["c"]; exists {
 		t.Errorf("original map gained a key added to the copy")
 	}

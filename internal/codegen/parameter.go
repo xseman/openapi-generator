@@ -124,7 +124,7 @@ type CodegenParameter struct {
 	MaxProperties *int `json:"maxProperties"`
 }
 
-// CodegenMediaType represents media type content
+// CodegenMediaType represents media type content.
 type CodegenMediaType struct {
 	Schema   *CodegenProperty `json:"schema"`
 	Encoding map[string]any   `json:"encoding"`

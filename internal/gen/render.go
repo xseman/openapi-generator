@@ -25,32 +25,31 @@ func newTemplateEngine(generatorName, templateDir string, verbose bool) (*templa
 		tmplDir = findTemplateDir(generatorName)
 	}
 
-	var engine *template.Engine
+	// Embedded templates, unless a directory was given or found.
+	engine := template.NewEngineFromFS(templates.FS, generatorName)
+	load, source := engine.LoadPartialsFromFS, "embedded templates"
+
 	if tmplDir != "" {
-		// Use filesystem templates
-		if verbose {
-			fmt.Printf("Using templates from: %s\n", tmplDir)
-		}
 		engine = template.NewEngine(tmplDir)
-		engine.Verbose = verbose
-		if err := engine.LoadPartials(); err != nil {
-			return nil, fmt.Errorf("failed to load template partials: %w", err)
-		}
-	} else {
-		// Fall back to embedded templates
-		if verbose {
-			fmt.Println("Using embedded templates")
-		}
-		engine = template.NewEngineFromFS(templates.FS, generatorName)
-		engine.Verbose = verbose
-		if err := engine.LoadPartialsFromFS(); err != nil {
-			return nil, fmt.Errorf("failed to load embedded template partials: %w", err)
-		}
+		load, source = engine.LoadPartials, "templates from: "+tmplDir
+	}
+
+	engine.Verbose = verbose
+	if verbose {
+		fmt.Println("Using " + source)
+	}
+
+	if err := load(); err != nil {
+		return nil, fmt.Errorf("failed to load template partials: %w", err)
 	}
 
 	engine.RegisterDefaultLambdas()
+
 	return engine, nil
 }
+
+// systemTemplateDir is where a distribution package would put templates.
+const systemTemplateDir = "/usr/share/openapi-generator/templates"
 
 // findTemplateDir searches well-known locations for a filesystem template
 // directory for generatorName, returning "" if none exist (callers then
@@ -60,7 +59,7 @@ func findTemplateDir(generatorName string) string {
 		filepath.Join(".", "templates", generatorName),
 		filepath.Join(".", generatorName),
 		filepath.Join(os.Getenv("HOME"), ".openapi-generator", "templates", generatorName),
-		filepath.Join("/usr/share/openapi-generator/templates", generatorName),
+		filepath.Join(systemTemplateDir, generatorName),
 	}
 
 	if exe, err := os.Executable(); err == nil {
@@ -130,6 +129,7 @@ func (r *renderer) renderSupportingFiles(baseData map[string]any, spec *specData
 	}
 
 	var generatedFiles []string
+
 	for _, sf := range r.cg.GetSupportingFiles() {
 		data := copyMap(baseData)
 		data["models"] = modelMaps
@@ -163,6 +163,7 @@ func (r *renderer) renderModels(baseData map[string]any, models []*generator.Cod
 	}
 
 	var generatedFiles []string
+
 	modelTemplates := r.cg.GetModelTemplateFiles()
 	for i, model := range models {
 		for tmplFile, ext := range modelTemplates {
@@ -176,6 +177,7 @@ func (r *renderer) renderModels(baseData map[string]any, models []*generator.Cod
 			// A member model can appear both directly and inside an array member;
 			// merge the two lists so each model is imported exactly once.
 			oneOfImportNames := make([]string, 0, len(model.OneOfModels)+len(model.OneOfArrays))
+
 			seenOneOf := make(map[string]bool)
 			for _, n := range append(append([]string{}, model.OneOfModels...), model.OneOfArrays...) {
 				if !seenOneOf[n] {
@@ -183,10 +185,12 @@ func (r *renderer) renderModels(baseData map[string]any, models []*generator.Cod
 					oneOfImportNames = append(oneOfImportNames, n)
 				}
 			}
+
 			sort.Strings(oneOfImportNames)
 			// The mustache engine has no -first/-last support, so the templates
 			// gate one-time open/close blocks on these explicit flags instead.
 			data["hasOneOfModels"] = len(model.OneOfModels) > 0
+
 			data["hasOneOfArrays"] = len(model.OneOfArrays) > 0
 			if r.tsGen != nil {
 				data["tsImports"] = toTsImports(model.Imports, r.tsGen)
@@ -217,29 +221,9 @@ func (r *renderer) renderModels(baseData map[string]any, models []*generator.Cod
 				}
 			}
 
-			// For oneOf, create a joined string since mustache doesn't support -last
-			if oneOf, ok := modelMap["oneOf"]; ok {
-				if oneOfArray, isArray := oneOf.([]any); isArray && len(oneOfArray) > 0 {
-					parts := make([]string, 0, len(oneOfArray))
-					for _, item := range oneOfArray {
-						itemStr := fmt.Sprintf("%v", item)
-						// Don't convert primitive types or parameterized/composite
-						// declarations (Array<Foo>, A | B) - use them as-is
-						if isPrimitiveTypeTS(itemStr) || strings.ContainsAny(itemStr, "<|& ") {
-							parts = append(parts, itemStr)
-						} else {
-							typeName := r.cg.ToModelName(itemStr)
-							if typeName != "" {
-								parts = append(parts, typeName)
-							}
-						}
-					}
-					if len(parts) > 0 {
-						data["oneOfJoined"] = strings.Join(parts, " | ")
-					} else {
-						data["oneOfJoined"] = "any"
-					}
-				}
+			// mustache has no -last, so oneOf members arrive pre-joined.
+			if joined, ok := r.oneOfJoined(modelMap["oneOf"]); ok {
+				data["oneOfJoined"] = joined
 			}
 
 			outputPath := filepath.Join(r.outputDir, r.modelPackage, r.cg.ToModelFilename(model.Classname)+ext)
@@ -259,6 +243,36 @@ func (r *renderer) renderModels(baseData map[string]any, models []*generator.Cod
 	return generatedFiles, nil
 }
 
+// oneOfJoined renders a model's oneOf members as a TypeScript union, "any"
+// when none survives. ok is false for a model without oneOf members, which
+// then gets no oneOfJoined at all.
+func (r *renderer) oneOfJoined(oneOf any) (string, bool) {
+	members, ok := oneOf.([]any)
+	if !ok || len(members) == 0 {
+		return "", false
+	}
+
+	parts := make([]string, 0, len(members))
+	for _, item := range members {
+		s := fmt.Sprintf("%v", item)
+		// Primitives and parameterized or composite declarations (Array<Foo>,
+		// A | B) stay as they are; everything else is a model name.
+		if !isPrimitiveTypeTS(s) && !strings.ContainsAny(s, "<|& ") {
+			s = r.cg.ToModelName(s)
+		}
+
+		if s != "" {
+			parts = append(parts, s)
+		}
+	}
+
+	if len(parts) == 0 {
+		return "any", true
+	}
+
+	return strings.Join(parts, " | "), true
+}
+
 // renderAPIs renders every API template for every tag, returning the
 // output-relative paths written.
 func (r *renderer) renderAPIs(baseData map[string]any, operationsByTag map[string][]*generator.CodegenOperation) ([]string, error) {
@@ -267,7 +281,9 @@ func (r *renderer) renderAPIs(baseData map[string]any, operationsByTag map[strin
 	}
 
 	var generatedFiles []string
+
 	apiTemplates := r.cg.GetApiTemplateFiles()
+
 	for _, tag := range sortedTags(operationsByTag) {
 		ops := operationsByTag[tag]
 		apiClassname := r.cg.ToApiName(tag)
@@ -286,12 +302,13 @@ func (r *renderer) renderAPIs(baseData map[string]any, operationsByTag map[strin
 			}
 			data["operation"] = opMaps
 
-			imports := collectApiImports(ops, r.cg)
+			imports := collectAPIImports(ops, r.cg)
 			data["imports"] = imports
 			data["hasImports"] = len(imports) > 0
 
 			// Check if any operation has enum parameters
 			hasEnums := false
+
 			for _, op := range ops {
 				for _, param := range op.AllParams {
 					if param.IsEnum {
@@ -299,10 +316,12 @@ func (r *renderer) renderAPIs(baseData map[string]any, operationsByTag map[strin
 						break
 					}
 				}
+
 				if hasEnums {
 					break
 				}
 			}
+
 			data["hasEnums"] = hasEnums
 
 			outputPath := filepath.Join(r.outputDir, r.apiPackage, r.cg.ToApiFilename(apiClassname)+ext)

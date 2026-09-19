@@ -15,6 +15,7 @@ func convertExtensions(ext map[string]any) map[string]any {
 	if ext == nil {
 		return make(map[string]any)
 	}
+
 	return ext
 }
 
@@ -24,6 +25,7 @@ func intPtr(i int) *int {
 	if i == 0 {
 		return nil
 	}
+
 	return &i
 }
 
@@ -33,6 +35,8 @@ func uint64ToIntPtr(v *uint64) *int {
 	if v == nil {
 		return nil
 	}
+
 	i := int(*v)
+
 	return &i
 }

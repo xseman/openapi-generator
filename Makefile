@@ -1,5 +1,8 @@
 .PHONY: help test cover lint build clean
 
+GOFUMPT ?= go run mvdan.cc/gofumpt@v0.12.0
+GOLANGCI ?= go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.13.0
+
 OUTPUT_DIR ?= bin
 VERSION ?= $(shell jq -r '."."' .github/.release-manifest.json 2>/dev/null || echo "dev")
 
@@ -11,9 +14,10 @@ help:
 	@echo "Available targets:"
 	@grep -E '^## ' $(MAKEFILE_LIST) | sed 's/^## /  /'
 
-## test: Run all tests
+## test: go vet, then every test with the race detector (what CI runs)
 test:
-	go test -v -race ./...
+	go vet ./...
+	go test -race ./...
 
 ## cover: Run tests with coverage
 cover:
@@ -25,14 +29,13 @@ cover-html: cover
 	go tool cover -html=coverage.out -o coverage.html
 	@echo "Coverage report generated: coverage.html"
 
-## lint: Run linter
+## lint: golangci-lint with .golangci.yml, the style gate CI runs; must be clean
 lint:
-	go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.12.2 run ./...
+	$(GOLANGCI) run
 
-## fmt: Format code
+## fmt: gofumpt everything
 fmt:
-	go fmt ./...
-	gofumpt -l -w .
+	$(GOFUMPT) -w .
 
 ## vet: Run go vet
 vet:

@@ -11,7 +11,7 @@ import (
 	"github.com/xseman/openapi-generator/internal/generator"
 )
 
-// TypeMapping maps OpenAPI types to TypeScript types
+// TypeMapping maps OpenAPI types to TypeScript types.
 var TypeMapping = map[string]string{
 	"Set":       "Set",
 	"set":       "Set",
@@ -44,7 +44,7 @@ var TypeMapping = map[string]string{
 	"AnyType":   "any",
 }
 
-// ReservedWords is the set of TypeScript reserved words
+// ReservedWords is the set of TypeScript reserved words.
 var ReservedWords = map[string]bool{
 	// Local variables used in API methods
 	"varLocalPath": true, "queryParameters": true, "headerParams": true,
@@ -166,7 +166,7 @@ type BaseGenerator struct {
 	AllowUnicodeIdentifiers bool
 }
 
-// NewBaseGenerator creates a new TypeScript base generator
+// NewBaseGenerator creates a new TypeScript base generator.
 func NewBaseGenerator() *BaseGenerator {
 	g := &BaseGenerator{
 		TypeMapping:                copyMap(TypeMapping),
@@ -185,53 +185,55 @@ func NewBaseGenerator() *BaseGenerator {
 		ApiNameSuffix:              "Api",
 		ModelPropertyNaming:        config.PropertyNamingCamelCase,
 	}
+
 	return g
 }
 
-// GetTypeMapping returns the type mapping
+// GetTypeMapping returns the type mapping.
 func (g *BaseGenerator) GetTypeMapping() map[string]string {
 	return g.TypeMapping
 }
 
-// GetReservedWords returns the reserved words
+// GetReservedWords returns the reserved words.
 func (g *BaseGenerator) GetReservedWords() map[string]bool {
 	return g.ReservedWords
 }
 
-// GetLanguageSpecificPrimitives returns primitive types
+// GetLanguageSpecificPrimitives returns primitive types.
 func (g *BaseGenerator) GetLanguageSpecificPrimitives() map[string]bool {
 	return g.LanguageSpecificPrimitives
 }
 
-// GetImportMapping returns the import mapping
+// GetImportMapping returns the import mapping.
 func (g *BaseGenerator) GetImportMapping() map[string]string {
 	return g.ImportMapping
 }
 
-// GetAdditionalProperties returns additional properties for templates
+// GetAdditionalProperties returns additional properties for templates.
 func (g *BaseGenerator) GetAdditionalProperties() map[string]any {
 	return g.AdditionalProperties
 }
 
-// IsReservedWord checks if a word is reserved
+// IsReservedWord checks if a word is reserved.
 func (g *BaseGenerator) IsReservedWord(word string) bool {
 	return g.ReservedWords[strings.ToLower(word)]
 }
 
-// IsPrimitive checks if a type is a language primitive
+// IsPrimitive checks if a type is a language primitive.
 func (g *BaseGenerator) IsPrimitive(typeName string) bool {
 	return g.LanguageSpecificPrimitives[typeName]
 }
 
-// EscapeReservedWord escapes a reserved word
+// EscapeReservedWord escapes a reserved word.
 func (g *BaseGenerator) EscapeReservedWord(name string) string {
 	if g.IsReservedWord(name) {
 		return "_" + name
 	}
+
 	return name
 }
 
-// GetSchemaType returns the TypeScript type for an OpenAPI schema type
+// GetSchemaType returns the TypeScript type for an OpenAPI schema type.
 func (g *BaseGenerator) GetSchemaType(schemaType, format string) string {
 	// Check format-specific mappings first
 	if format != "" {
@@ -239,6 +241,7 @@ func (g *BaseGenerator) GetSchemaType(schemaType, format string) string {
 		if mapped, ok := g.TypeMapping[key]; ok {
 			return mapped
 		}
+
 		if mapped, ok := g.TypeMapping[format]; ok {
 			return mapped
 		}
@@ -252,12 +255,12 @@ func (g *BaseGenerator) GetSchemaType(schemaType, format string) string {
 	return schemaType
 }
 
-// GetTypeDeclaration returns the type declaration for a schema
+// GetTypeDeclaration returns the type declaration for a schema.
 func (g *BaseGenerator) GetTypeDeclaration(schemaType, format string) string {
 	return g.GetSchemaType(schemaType, format)
 }
 
-// ToModelName converts a schema name to a TypeScript model name
+// ToModelName converts a schema name to a TypeScript model name.
 func (g *BaseGenerator) ToModelName(name string) string {
 	// Check model name mapping
 	if mapped, ok := g.ModelNameMapping[name]; ok {
@@ -269,19 +272,20 @@ func (g *BaseGenerator) ToModelName(name string) string {
 	if g.ModelNamePrefix != "" {
 		result = g.ModelNamePrefix + result
 	}
+
 	if g.ModelNameSuffix != "" {
-		result = result + g.ModelNameSuffix
+		result += g.ModelNameSuffix
 	}
 
 	return g.toTypescriptTypeName(result, "Model")
 }
 
-// ToApiName converts a tag to an API class name
+// ToApiName converts a tag to an API class name.
 func (g *BaseGenerator) ToApiName(name string) string {
 	return Camelize(SanitizeName(name), false) + g.ApiNameSuffix
 }
 
-// ToVarName converts a property name to a variable name
+// ToVarName converts a property name to a variable name.
 func (g *BaseGenerator) ToVarName(name string) string {
 	// Translate a leading @ (e.g. JSON-LD "@type") to at_ so it stays distinct
 	// from a sibling property of the same name, matching upstream openapi-generator.
@@ -293,6 +297,7 @@ func (g *BaseGenerator) ToVarName(name string) string {
 
 	// Apply model property naming convention
 	var result string
+
 	switch g.ModelPropertyNaming {
 	case config.PropertyNamingOriginal:
 		result = name
@@ -315,10 +320,11 @@ func (g *BaseGenerator) ToVarName(name string) string {
 	return toSafeIdentifier(result)
 }
 
-// ToParamName converts a parameter name
+// ToParamName converts a parameter name.
 func (g *BaseGenerator) ToParamName(name string) string {
 	name = sanitizeIdentifierName(name)
 	name = Camelize(name, true)
+
 	return toSafeIdentifier(name)
 }
 
@@ -326,18 +332,19 @@ func (g *BaseGenerator) ToParamName(name string) string {
 // keyword or that starts with a digit, mirroring upstream openapi-generator's
 // AbstractTypeScriptClientCodegen#toSafeIdentifier.
 func toSafeIdentifier(name string) string {
-	if tsReservedKeywords[strings.ToLower(name)] || (len(name) > 0 && unicode.IsDigit(rune(name[0]))) {
+	if tsReservedKeywords[strings.ToLower(name)] || (name != "" && unicode.IsDigit(rune(name[0]))) {
 		return "_" + name
 	}
+
 	return name
 }
 
-// SanitizeOperationId sanitizes an operation ID
+// SanitizeOperationId sanitizes an operation ID.
 func (g *BaseGenerator) SanitizeOperationId(operationId string) string {
 	return SanitizeName(operationId)
 }
 
-// toTypescriptTypeName converts a name to a valid TypeScript type name
+// toTypescriptTypeName converts a name to a valid TypeScript type name.
 func (g *BaseGenerator) toTypescriptTypeName(name, safePrefix string) string {
 	// Sanitize name, but keep | and space for union types. Non-word characters
 	// (e.g. the dots in a Kubernetes-style "io.k8s...NamedRuleWithOperations"
@@ -354,7 +361,7 @@ func (g *BaseGenerator) toTypescriptTypeName(name, safePrefix string) string {
 	}
 
 	// Handle names starting with a digit
-	if len(name) > 0 && unicode.IsDigit(rune(name[0])) {
+	if name != "" && unicode.IsDigit(rune(name[0])) {
 		return safePrefix + name
 	}
 
@@ -366,20 +373,20 @@ func (g *BaseGenerator) toTypescriptTypeName(name, safePrefix string) string {
 	return name
 }
 
-// ToModelFilename returns the model file name
+// ToModelFilename returns the model file name.
 func (g *BaseGenerator) ToModelFilename(name string) string {
 	// name is already the classname (e.g., "Pet"), just return it
 	return name
 }
 
-// ToApiFilename returns the API file name
+// ToApiFilename returns the API file name.
 func (g *BaseGenerator) ToApiFilename(name string) string {
 	// name is already the API classname (e.g., "PetsApi"), just return it
 	return name
 }
 
-// FromModel converts an OpenAPI schema to a CodegenModel
-func (g *BaseGenerator) FromModel(name string, schema any) *codegen.CodegenModel {
+// FromModel converts an OpenAPI schema to a CodegenModel.
+func (g *BaseGenerator) FromModel(name string, _ any) *codegen.CodegenModel {
 	// This is a placeholder - actual implementation requires schema parsing
 	cm := &codegen.CodegenModel{
 		Name:          g.EscapeReservedWord(name),
@@ -388,79 +395,82 @@ func (g *BaseGenerator) FromModel(name string, schema any) *codegen.CodegenModel
 		ClassVarName:  g.ToVarName(name),
 		ClassFilename: g.ToModelFilename(name),
 	}
+
 	return cm
 }
 
-// FromOperation converts an OpenAPI operation to a CodegenOperation
-func (g *BaseGenerator) FromOperation(path, httpMethod string, operation any) *codegen.CodegenOperation {
+// FromOperation converts an OpenAPI operation to a CodegenOperation.
+func (g *BaseGenerator) FromOperation(path, httpMethod string, _ any) *codegen.CodegenOperation {
 	// This is a placeholder - actual implementation requires operation parsing
 	co := &codegen.CodegenOperation{
 		Path:       path,
 		HttpMethod: strings.ToUpper(httpMethod),
 	}
+
 	return co
 }
 
-// FromProperty converts an OpenAPI property to a CodegenProperty
-func (g *BaseGenerator) FromProperty(name string, schema any, required bool) *codegen.CodegenProperty {
+// FromProperty converts an OpenAPI property to a CodegenProperty.
+func (g *BaseGenerator) FromProperty(name string, _ any, required bool) *codegen.CodegenProperty {
 	cp := &codegen.CodegenProperty{
 		Name:     g.ToVarName(name),
 		BaseName: name,
 		Required: required,
 	}
+
 	return cp
 }
 
-// FromParameter converts an OpenAPI parameter to a CodegenParameter
-func (g *BaseGenerator) FromParameter(parameter any) *codegen.CodegenParameter {
+// FromParameter converts an OpenAPI parameter to a CodegenParameter.
+func (g *BaseGenerator) FromParameter(_ any) *codegen.CodegenParameter {
 	return &codegen.CodegenParameter{}
 }
 
-// FromResponse converts an OpenAPI response to a CodegenResponse
-func (g *BaseGenerator) FromResponse(code string, response any) *codegen.CodegenResponse {
+// FromResponse converts an OpenAPI response to a CodegenResponse.
+func (g *BaseGenerator) FromResponse(code string, _ any) *codegen.CodegenResponse {
 	return &codegen.CodegenResponse{
 		Code: code,
 	}
 }
 
-// FromSecurityScheme converts security scheme to CodegenSecurity
-func (g *BaseGenerator) FromSecurityScheme(name string, scheme any) *codegen.CodegenSecurity {
+// FromSecurityScheme converts security scheme to CodegenSecurity.
+func (g *BaseGenerator) FromSecurityScheme(name string, _ any) *codegen.CodegenSecurity {
 	return &codegen.CodegenSecurity{
 		Name: name,
 	}
 }
 
-// PostProcessModels post-processes models
+// PostProcessModels post-processes models.
 func (g *BaseGenerator) PostProcessModels(models []*codegen.CodegenModel) []*codegen.CodegenModel {
 	return models
 }
 
-// PostProcessOperations post-processes operations
+// PostProcessOperations post-processes operations.
 func (g *BaseGenerator) PostProcessOperations(operations []*codegen.CodegenOperation) []*codegen.CodegenOperation {
 	return operations
 }
 
-// GetSupportingFiles returns supporting files
+// GetSupportingFiles returns supporting files.
 func (g *BaseGenerator) GetSupportingFiles() []generator.SupportingFile {
 	return g.SupportingFiles
 }
 
-// GetApiTemplateFiles returns API template files
+// GetApiTemplateFiles returns API template files.
 func (g *BaseGenerator) GetApiTemplateFiles() map[string]string {
 	return g.ApiTemplateFiles
 }
 
-// GetModelTemplateFiles returns model template files
+// GetModelTemplateFiles returns model template files.
 func (g *BaseGenerator) GetModelTemplateFiles() map[string]string {
 	return g.ModelTemplateFiles
 }
 
-// GetConfig returns the generator config
+// GetConfig returns the generator config.
 func (g *BaseGenerator) GetConfig() *config.GeneratorConfig {
 	return g.Config
 }
 
-// SetConfig sets the generator config
+// SetConfig sets the generator config.
 func (g *BaseGenerator) SetConfig(cfg *config.GeneratorConfig) {
 	g.Config = cfg
 }
@@ -472,6 +482,7 @@ func copyMap(m map[string]string) map[string]string {
 	for k, v := range m {
 		result[k] = v
 	}
+
 	return result
 }
 
@@ -481,6 +492,7 @@ func copyMapBool(m map[string]bool) map[string]bool {
 	for k, v := range m {
 		result[k] = v
 	}
+
 	return result
 }
 
@@ -503,6 +515,7 @@ func sanitizeSeparators(name string) string {
 	name = strings.ReplaceAll(name, " ", "_")
 	name = strings.ReplaceAll(name, "/", "_")
 	name = strings.ReplaceAll(name, `\`, "_")
+
 	return name
 }
 
@@ -521,9 +534,11 @@ func SanitizeName(name string) string {
 	if name == "+1" {
 		return "plus1"
 	}
+
 	if name == "-1" {
 		return "minus1"
 	}
+
 	if name == "$" {
 		return "value"
 	}
@@ -548,9 +563,11 @@ func sanitizeIdentifierName(name string) string {
 	if name == "+1" {
 		return "plus1"
 	}
+
 	if name == "-1" {
 		return "minus1"
 	}
+
 	if name == "$" {
 		return "value"
 	}
@@ -559,6 +576,7 @@ func sanitizeIdentifierName(name string) string {
 	if name == "_" {
 		name = "_u"
 	}
+
 	return name
 }
 
@@ -576,15 +594,17 @@ var nonWordDollarPattern = regexp.MustCompile(`[^\w$]`)
 // corpus the size of the Kubernetes spec.
 var typeNameSeparatorPattern = regexp.MustCompile(`[^\w| ]`)
 
-// Camelize converts a string to camelCase or PascalCase
+// Camelize converts a string to camelCase or PascalCase.
 func Camelize(s string, lowercaseFirst bool) string {
 	if s == "" {
 		return s
 	}
 
 	// Split on non-alphanumeric characters and camelCase boundaries
-	var words []string
-	var current strings.Builder
+	var (
+		words   []string
+		current strings.Builder
+	)
 
 	for i, r := range s {
 		if (r < 'a' || r > 'z') && (r < 'A' || r > 'Z') && (r < '0' || r > '9') && r != '$' {
@@ -598,6 +618,7 @@ func Camelize(s string, lowercaseFirst bool) string {
 				words = append(words, current.String())
 				current.Reset()
 			}
+
 			continue
 		}
 
@@ -620,6 +641,7 @@ func Camelize(s string, lowercaseFirst bool) string {
 		if word == "" {
 			continue
 		}
+
 		if i == 0 && lowercaseFirst {
 			result.WriteString(strings.ToLower(word[:1]) + word[1:])
 		} else {
@@ -630,15 +652,16 @@ func Camelize(s string, lowercaseFirst bool) string {
 	return result.String()
 }
 
-// Underscore converts a string to snake_case
+// Underscore converts a string to snake_case.
 func Underscore(s string) string {
 	// Insert underscore before uppercase letters
 	re := regexp.MustCompile(`([a-z])([A-Z])`)
 	s = re.ReplaceAllString(s, "${1}_${2}")
+
 	return strings.ToLower(s)
 }
 
-// Dashize converts a string to kebab-case
+// Dashize converts a string to kebab-case.
 func Dashize(s string) string {
 	return strings.ReplaceAll(Underscore(s), "_", "-")
 }

@@ -152,6 +152,7 @@ func NewBaseGenerator() *BaseGenerator {
 		ApiNameSuffix:              "Api",
 		ModelPropertyNaming:        config.PropertyNamingCamelCase,
 	}
+
 	return g
 }
 
@@ -188,6 +189,7 @@ func (g *BaseGenerator) EscapeReservedWord(name string) string {
 	if g.IsReservedWord(name) {
 		return name + "_"
 	}
+
 	return name
 }
 
@@ -198,13 +200,16 @@ func (g *BaseGenerator) GetSchemaType(schemaType, format string) string {
 		if mapped, ok := g.TypeMapping[key]; ok {
 			return mapped
 		}
+
 		if mapped, ok := g.TypeMapping[format]; ok {
 			return mapped
 		}
 	}
+
 	if mapped, ok := g.TypeMapping[schemaType]; ok {
 		return mapped
 	}
+
 	return schemaType
 }
 
@@ -218,13 +223,16 @@ func (g *BaseGenerator) ToModelName(name string) string {
 	if mapped, ok := g.ModelNameMapping[name]; ok {
 		return mapped
 	}
+
 	result := name
 	if g.ModelNamePrefix != "" {
 		result = g.ModelNamePrefix + result
 	}
+
 	if g.ModelNameSuffix != "" {
-		result = result + g.ModelNameSuffix
+		result += g.ModelNameSuffix
 	}
+
 	return g.toDartTypeName(result, "Model")
 }
 
@@ -249,6 +257,7 @@ func (g *BaseGenerator) ToVarName(name string) string {
 	}
 
 	var converted string
+
 	switch g.ModelPropertyNaming {
 	case config.PropertyNamingOriginal:
 		converted = name
@@ -265,9 +274,11 @@ func (g *BaseGenerator) ToVarName(name string) string {
 	if converted == "" {
 		return "value"
 	}
+
 	if unicode.IsDigit(rune(converted[0])) {
 		converted = "n" + converted
 	}
+
 	return g.EscapeReservedWord(converted)
 }
 
@@ -289,12 +300,15 @@ func (g *BaseGenerator) toDartTypeName(name, safePrefix string) string {
 	if g.IsReservedWord(name) {
 		return safePrefix + name
 	}
-	if len(name) > 0 && unicode.IsDigit(rune(name[0])) {
+
+	if name != "" && unicode.IsDigit(rune(name[0])) {
 		return safePrefix + name
 	}
+
 	if g.IsPrimitive(name) {
 		return safePrefix + name
 	}
+
 	return name
 }
 
@@ -309,7 +323,7 @@ func (g *BaseGenerator) ToApiFilename(name string) string {
 }
 
 // FromModel converts an OpenAPI schema to a CodegenModel (placeholder).
-func (g *BaseGenerator) FromModel(name string, schema any) *codegen.CodegenModel {
+func (g *BaseGenerator) FromModel(name string, _ any) *codegen.CodegenModel {
 	cm := &codegen.CodegenModel{
 		Name:          g.EscapeReservedWord(name),
 		SchemaName:    name,
@@ -317,11 +331,12 @@ func (g *BaseGenerator) FromModel(name string, schema any) *codegen.CodegenModel
 		ClassVarName:  g.ToVarName(name),
 		ClassFilename: g.ToModelFilename(name),
 	}
+
 	return cm
 }
 
 // FromOperation converts an OpenAPI operation to a CodegenOperation (placeholder).
-func (g *BaseGenerator) FromOperation(path, httpMethod string, operation any) *codegen.CodegenOperation {
+func (g *BaseGenerator) FromOperation(path, httpMethod string, _ any) *codegen.CodegenOperation {
 	return &codegen.CodegenOperation{
 		Path:       path,
 		HttpMethod: strings.ToUpper(httpMethod),
@@ -329,7 +344,7 @@ func (g *BaseGenerator) FromOperation(path, httpMethod string, operation any) *c
 }
 
 // FromProperty converts an OpenAPI property to a CodegenProperty (placeholder).
-func (g *BaseGenerator) FromProperty(name string, schema any, required bool) *codegen.CodegenProperty {
+func (g *BaseGenerator) FromProperty(name string, _ any, required bool) *codegen.CodegenProperty {
 	return &codegen.CodegenProperty{
 		Name:     g.ToVarName(name),
 		BaseName: name,
@@ -338,17 +353,17 @@ func (g *BaseGenerator) FromProperty(name string, schema any, required bool) *co
 }
 
 // FromParameter converts an OpenAPI parameter to a CodegenParameter (placeholder).
-func (g *BaseGenerator) FromParameter(parameter any) *codegen.CodegenParameter {
+func (g *BaseGenerator) FromParameter(_ any) *codegen.CodegenParameter {
 	return &codegen.CodegenParameter{}
 }
 
 // FromResponse converts an OpenAPI response to a CodegenResponse (placeholder).
-func (g *BaseGenerator) FromResponse(code string, response any) *codegen.CodegenResponse {
+func (g *BaseGenerator) FromResponse(code string, _ any) *codegen.CodegenResponse {
 	return &codegen.CodegenResponse{Code: code}
 }
 
 // FromSecurityScheme converts a security scheme to CodegenSecurity (placeholder).
-func (g *BaseGenerator) FromSecurityScheme(name string, scheme any) *codegen.CodegenSecurity {
+func (g *BaseGenerator) FromSecurityScheme(name string, _ any) *codegen.CodegenSecurity {
 	return &codegen.CodegenSecurity{Name: name}
 }
 
@@ -384,6 +399,7 @@ func copyMap(m map[string]string) map[string]string {
 	for k, v := range m {
 		r[k] = v
 	}
+
 	return r
 }
 
@@ -392,6 +408,7 @@ func copyMapBool(m map[string]bool) map[string]bool {
 	for k, v := range m {
 		r[k] = v
 	}
+
 	return r
 }
 
@@ -400,10 +417,12 @@ func SanitizeName(name string) string {
 	if name == "+1" {
 		return "plus1"
 	}
+
 	if name == "-1" {
 		return "minus1"
 	}
-	return regexp.MustCompile(`[^\w]`).ReplaceAllString(name, "_")
+
+	return regexp.MustCompile(`\W`).ReplaceAllString(name, "_")
 }
 
 // Camelize converts a string to camelCase or PascalCase.
@@ -416,8 +435,11 @@ func Camelize(s string, lowercaseFirst bool) string {
 		return s
 	}
 
-	var words []string
-	var current strings.Builder
+	var (
+		words   []string
+		current strings.Builder
+	)
+
 	for i, r := range s {
 		isAlphaNum := (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9')
 		if !isAlphaNum {
@@ -425,39 +447,47 @@ func Camelize(s string, lowercaseFirst bool) string {
 				words = append(words, current.String())
 				current.Reset()
 			}
+
 			continue
 		}
+
 		if i > 0 && r >= 'A' && r <= 'Z' && current.Len() > 0 {
 			words = append(words, current.String())
 			current.Reset()
 		}
+
 		current.WriteRune(r)
 	}
+
 	if current.Len() > 0 {
 		words = append(words, current.String())
 	}
 
 	var out strings.Builder
+
 	for i, w := range words {
 		if w == "" {
 			continue
 		}
+
 		if i == 0 && lowercaseFirst {
 			out.WriteString(strings.ToLower(w[:1]) + w[1:])
 		} else {
 			out.WriteString(strings.ToUpper(w[:1]) + strings.ToLower(w[1:]))
 		}
 	}
+
 	return out.String()
 }
 
 // Underscore converts a string to snake_case.
 func Underscore(s string) string {
 	// Replace non-alphanumeric with underscore first
-	s = regexp.MustCompile(`[^\w]`).ReplaceAllString(s, "_")
+	s = regexp.MustCompile(`\W`).ReplaceAllString(s, "_")
 	// Insert underscore before uppercase letters preceded by lowercase or digit
 	s = regexp.MustCompile(`([a-z0-9])([A-Z])`).ReplaceAllString(s, "${1}_${2}")
 	// Collapse runs of underscores
 	s = regexp.MustCompile(`_+`).ReplaceAllString(s, "_")
+
 	return strings.ToLower(strings.Trim(s, "_"))
 }

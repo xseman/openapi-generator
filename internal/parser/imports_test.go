@@ -38,6 +38,7 @@ components:
 `)
 
 	p := NewParser()
+
 	p.SkipValidation = true
 	if err := p.LoadFromData(spec); err != nil {
 		t.Fatalf("LoadFromData: %v", err)
@@ -54,12 +55,14 @@ components:
 	}
 
 	found := false
+
 	for _, imp := range mapOfArrays.Imports {
 		if imp == "Cell" {
 			found = true
 			break
 		}
 	}
+
 	if !found {
 		t.Fatalf("MapOfArrays.Imports = %v, want it to contain %q", mapOfArrays.Imports, "Cell")
 	}
