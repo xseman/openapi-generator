@@ -41,7 +41,7 @@ vet:
 ## build: Build the binary
 build:
 	@mkdir -p $(OUTPUT_DIR)
-	@CGO_ENABLED=0 go build -ldflags="-s -w -X main.version=$(VERSION)" -o $(OUTPUT_DIR)/openapi-generator ./cmd/openapi-generator
+	@CGO_ENABLED=0 go build -ldflags="-s -w -X github.com/xseman/openapi-generator/internal/update.Version=$(VERSION)" -o $(OUTPUT_DIR)/openapi-generator ./cmd/openapi-generator
 
 ## install: Install the binary
 install:

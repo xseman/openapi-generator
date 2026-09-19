@@ -11,12 +11,8 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/xseman/openapi-generator/internal/gen"
+	"github.com/xseman/openapi-generator/internal/update"
 	"gopkg.in/yaml.v3"
-)
-
-var (
-	// version is set at build time using -ldflags="-X main.version=x.y.z"
-	version = "dev"
 )
 
 func main() {
@@ -34,7 +30,7 @@ It generates TypeScript Fetch API clients from OpenAPI 3.x specifications.
 
 This tool is compatible with the Java-based openapi-generator and uses
 the same Mustache templates for code generation.`,
-	Version: version,
+	Version: update.Version,
 }
 
 var generateCmd = &cobra.Command{
@@ -81,6 +77,7 @@ func init() {
 	rootCmd.AddCommand(listCmd)
 	rootCmd.AddCommand(configHelpCmd)
 	rootCmd.AddCommand(versionCmd)
+	rootCmd.AddCommand(updateCmd)
 
 	// Generate command flags
 	generateCmd.Flags().StringVarP(&inputSpec, "input-spec", "i", "", "OpenAPI spec file")
@@ -135,8 +132,49 @@ var versionCmd = &cobra.Command{
 	Use:   "version",
 	Short: "Print version information",
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Printf("openapi-generator %s\n", version)
+		fmt.Printf("openapi-generator %s\n", update.Version)
 	},
+}
+
+var updateCmd = &cobra.Command{
+	Use:   "update",
+	Short: "Install the latest release over this binary",
+	Long: `Check GitHub for a newer release and replace this executable with it.
+The download is verified against the release's CHECKSUMS.txt before anything
+is replaced; the new binary runs from the next start.`,
+	SilenceUsage: true,
+	RunE:         runUpdate,
+}
+
+// runUpdate replaces this binary with the latest release. A build without a
+// version (a local go build) installs the latest release as well: it is the
+// way back from a working copy to a released openapi-generator.
+func runUpdate(cmd *cobra.Command, _ []string) error {
+	rel, err := update.Check(cmd.Context())
+	if err != nil {
+		return err
+	}
+
+	if !rel.Newer() && update.Version != update.Dev {
+		fmt.Printf("openapi-generator %s is the latest release\n", update.Version)
+		return nil
+	}
+
+	fmt.Printf("openapi-generator %s → %s\n", update.Version, rel.Version)
+
+	progress := func(done, total int64) {
+		if total > 0 {
+			fmt.Fprintf(os.Stderr, "\r%3d%%", done*100/total)
+		}
+	}
+	if err := update.Install(cmd.Context(), rel, progress); err != nil {
+		return err
+	}
+
+	fmt.Fprintln(os.Stderr)
+	fmt.Printf("installed openapi-generator %s, it runs from the next start\n", rel.Version)
+
+	return nil
 }
 
 // runValidate validates the spec given via --input-spec and prints a
@@ -296,6 +334,6 @@ func runGenerate(cmd *cobra.Command, args []string) error {
 		AdditionalProperties: additionalProperties,
 		SkipValidation:       skipValidation,
 		Verbose:              verbose,
-		Version:              version,
+		Version:              update.Version,
 	})
 }
