@@ -99,31 +99,16 @@ openapi-generator validate -i openapi.yaml --recommend
 
 ### Building and Testing
 
-```bash
-# Build the binary
-make build
-
-# Run tests
-make test
-
-# Run tests with coverage
-make cover
-
-# Format code
-make fmt
-
-# Run linter
-make lint
-
-# Run all quality checks
-make quality
-
-# Clean build artifacts
-make clean
-
-# Show all available targets
-make help
+```sh
+make build              # bin/openapi-generator
+make test               # go vet + go test -race ./...
+make lint               # golangci-lint, config in .golangci.yml
+make fmt                # gofumpt
+make cover              # coverage report
 ```
+
+`CLAUDE.md` maps the packages and states the conventions, for people and
+agents alike.
 
 ### Manual Testing
 
