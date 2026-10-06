@@ -74,5 +74,11 @@ generate:
 		-g typescript-fetch \
 		-o generated
 
+## samples-dart-fetch: Regenerate the dart-fetch petstore sample
+samples-dart-fetch: build
+	@echo "Generating dart-fetch petstore sample..."
+	@rm -rf samples/dart-fetch/petstore-expanded
+	$(OUTPUT_DIR)/openapi-generator generate -c samples/dart-fetch/config.yaml
+
 ## all: Run tests, lint, and build
 all: test lint build
