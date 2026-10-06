@@ -16,10 +16,11 @@ components:
   schemas:
     Status:
       type: string
-      enum: [active, "weird value!"]
+      nullable: true
+      enum: [active, "weird value!", null]
     Priority:
       type: integer
-      enum: [0, 99]
+      enum: [0, 99, -1]
 `)
 
 	p := NewParser()
@@ -40,7 +41,7 @@ components:
 		isString bool
 	}{
 		{"Status", []string{"Active", "WeirdValue"}, true},
-		{"Priority", []string{"_0", "_99"}, false},
+		{"Priority", []string{"_0", "_99", "Minus1"}, false},
 	} {
 		vars, _ := findModel(t, models, tt.model).AllowableValues["enumVars"].([]map[string]any)
 		if len(vars) != len(tt.want) {

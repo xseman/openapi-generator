@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"strconv"
 	"strings"
 
 	"golang.org/x/text/cases"
@@ -124,8 +125,12 @@ func sanitizeTag(path string) string {
 // single words (the camelCase splitter would otherwise fragment them into individual
 // letters, e.g. ODPOCTAR -> O,D,P,... -> ODPOCTAR), then each word is Title-cased.
 func toEnumVarName(value string) string {
-	// Spell out "+" so values such as "C+" survive the alphanumeric-only word split.
+	// Spell out "+" so values such as "C+" survive the alphanumeric-only word split,
+	// and a negative number's sign so -1 does not collide with 1.
 	value = strings.ReplaceAll(value, "+", "_plus")
+	if n, err := strconv.ParseFloat(value, 64); err == nil && n < 0 {
+		value = "minus" + strings.TrimPrefix(value, "-")
+	}
 
 	var (
 		b    strings.Builder

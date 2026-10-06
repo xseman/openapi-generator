@@ -150,6 +150,8 @@ func TestToEnumVarName(t *testing.T) {
 		{"ODPOCTAR", "Odpoctar"},
 		{"already", "Already"},
 		{"123abc", "_123Abc"},
+		{"1", "_1"},
+		{"-1", "Minus1"},
 		{"", "Empty"},
 	}
 	for _, tt := range tests {

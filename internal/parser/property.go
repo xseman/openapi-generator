@@ -510,6 +510,11 @@ func isObjectSchema(schema *openapi3.Schema) bool {
 func enumVars(values []any, isString bool) []map[string]any {
 	vars := make([]map[string]any, 0, len(values))
 	for _, v := range values {
+		// null is no member: a nullable enum lists it, the property carries it.
+		if v == nil {
+			continue
+		}
+
 		// Escape single quotes for TypeScript string literals
 		valueStr := fmt.Sprintf("%v", v)
 		vars = append(vars, map[string]any{
