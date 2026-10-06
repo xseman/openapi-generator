@@ -23,6 +23,8 @@ components:
       enum: [0, 99, -1]
     Untyped:
       enum: [placed, 'a\b']
+    UntypedNumbers:
+      enum: [1, 2]
 `)
 
 	p := NewParser()
@@ -45,6 +47,7 @@ components:
 		{"Status", []string{"Active", "WeirdValue", "Active2"}, true},
 		{"Priority", []string{"_0", "_99", "Minus1"}, false},
 		{"Untyped", []string{"Placed", "AB"}, true}, // no type: quoted, as upstream
+		{"UntypedNumbers", []string{"_1", "_2"}, false}, // ...unless all are numbers
 	} {
 		vars, _ := findModel(t, models, tt.model).AllowableValues["enumVars"].([]map[string]any)
 		if len(vars) != len(tt.want) {

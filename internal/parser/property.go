@@ -3,6 +3,7 @@ package parser
 import (
 	"fmt"
 	"maps"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -220,7 +221,7 @@ func (p *Parser) schemaToProperty(name string, schema *openapi3.Schema, required
 	if len(schema.Enum) > 0 {
 		prop.IsEnum = true
 		prop.IsInnerEnum = true
-		vars := enumVars(schema.Enum, schemaType != "integer" && schemaType != "number" && schemaType != "boolean")
+		vars := enumVars(schema.Enum, enumIsString(schema))
 		prop.AllowableValues = map[string]any{
 			"values":   schema.Enum,
 			"enumVars": vars,
@@ -229,7 +230,7 @@ func (p *Parser) schemaToProperty(name string, schema *openapi3.Schema, required
 		// members apart by such a tag (`kind: {enum: [known]}`). A list, as the
 		// template's mustache has no -first/-last to spot it.
 		if len(vars) == 1 {
-			prop.AllowableValues["singleValue"] = []map[string]any{{"value": vars[0]["value"]}}
+			prop.AllowableValues["singleValue"] = []map[string]any{{"value": vars[0]["value"], "isString": vars[0]["isString"]}}
 		}
 
 		prop.EnumName = p.toEnumName(name)
@@ -503,8 +504,7 @@ func isObjectSchema(schema *openapi3.Schema) bool {
 }
 
 // enumVars builds the allowableValues.enumVars the enum templates iterate.
-// isString records whether each value must be quoted as a string literal: all
-// but numbers and booleans, an untyped enum included, as upstream. It is
+// isString records whether each value must be quoted as a string literal. It is
 // stored on the enumVar itself rather than relying on Mustache context fallback
 // to the enclosing property: an array-of-enum parameter is not itself a string,
 // so the values of its inherited enumVars would otherwise render unquoted.
@@ -572,4 +572,18 @@ func notEnumComparison(prop *codegen.CodegenProperty, schema *openapi3.Schema, s
 	}
 
 	return strings.Join(comparisons, " || ")
+}
+
+// enumIsString reports whether an enum's values are string literals: all but a
+// number or boolean enum's, and an untyped enum's unless all are numbers, as upstream.
+func enumIsString(schema *openapi3.Schema) bool {
+	if schema.Type == nil || len(schema.Type.Slice()) == 0 {
+		return slices.ContainsFunc(schema.Enum, func(v any) bool {
+			_, isNumber := v.(float64)
+
+			return v != nil && !isNumber
+		})
+	}
+
+	return !schema.Type.Is("integer") && !schema.Type.Is("number") && !schema.Type.Is("boolean")
 }
