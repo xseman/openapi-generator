@@ -112,6 +112,11 @@ type CodegenParameter struct {
 	// Content (for complex parameters)
 	Content map[string]*CodegenMediaType `json:"content"`
 
+	// HasReadOnly and ReadOnlyVars mirror the model a parameter is typed as, so a
+	// request body leaves the server-assigned properties out (Omit<Model, ...>).
+	HasReadOnly  bool               `json:"hasReadOnly"`
+	ReadOnlyVars []*CodegenProperty `json:"readOnlyVars"`
+
 	// JsonHeaderUsesModelSerializer marks a header whose JSON content is a model,
 	// serialized with its ToJSON (upstream's TypeScript-fetch extension).
 	JsonHeaderUsesModelSerializer bool `json:"jsonHeaderUsesModelSerializer"`

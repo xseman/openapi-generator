@@ -79,6 +79,23 @@ func assembleSpec(cg generator.CodegenConfig, opts Options) (*specData, error) {
 		operationsByTag[tag] = cg.PostProcessOperations(ops)
 	}
 
+	// A parameter typed as a model carries that model's read-only properties, so
+	// a request body need not, and cannot usefully, send them.
+	byName := make(map[string]*generator.CodegenModel, len(models))
+	for _, m := range models {
+		byName[m.Classname] = m
+	}
+
+	for _, ops := range operationsByTag {
+		for _, op := range ops {
+			for _, param := range op.AllParams {
+				if m := byName[param.DataType]; m != nil {
+					param.HasReadOnly, param.ReadOnlyVars = m.HasReadOnly, m.ReadOnlyVars
+				}
+			}
+		}
+	}
+
 	return &specData{
 		models:          models,
 		operationsByTag: operationsByTag,

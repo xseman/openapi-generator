@@ -386,6 +386,11 @@ func (p *Parser) requireInheritedProperties(model *codegen.CodegenModel, schema 
 			model.RequiredVars = append(model.RequiredVars, prop)
 			model.HasVars, model.HasRequired = true, true
 
+			if prop.IsReadOnly {
+				model.ReadOnlyVars = append(model.ReadOnlyVars, prop)
+				model.HasReadOnly = true
+			}
+
 			break
 		}
 	}

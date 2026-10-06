@@ -49,4 +49,9 @@ components:
 	if len(got) != 2 || got[0] != "own" || got[1] != "uuid" {
 		t.Errorf("Child required vars = %v, want [own uuid]", got)
 	}
+
+	// Still read-only: a request body leaves it out rather than demand it.
+	if ro := findModel(t, models, "Child").ReadOnlyVars; len(ro) != 1 || ro[0].BaseName != "uuid" {
+		t.Errorf("Child read-only vars = %v, want [uuid]", ro)
+	}
 }
