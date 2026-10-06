@@ -532,7 +532,7 @@ func notEnumComparison(prop *codegen.CodegenProperty, schema *openapi3.Schema, s
 	}
 
 	names := []string{prop.Name}
-	if prop.HasSanitizedName && prop.Name != prop.BaseName {
+	if prop.HasSanitizedName {
 		names = append(names, prop.BaseName)
 	}
 

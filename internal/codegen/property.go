@@ -62,9 +62,9 @@ type CodegenProperty struct {
 	IsFile           bool `json:"isFile"`
 	IsBoolean        bool `json:"isBoolean"`
 	IsDate           bool `json:"isDate"`
-	IsDateType       bool `json:"isDateType"` // Computed: same as IsDate (for template compatibility)
+	IsDateType       bool `json:"isDateType"` // IsDate typed as a JS Date (not mapped to string)
 	IsDateTime       bool `json:"isDateTime"`
-	IsDateTimeType   bool `json:"isDateTimeType"` // Computed: same as IsDateTime (for template compatibility)
+	IsDateTimeType   bool `json:"isDateTimeType"` // IsDateTime typed as a JS Date (not mapped to string)
 	IsUuid           bool `json:"isUuid"`
 	IsUri            bool `json:"isUri"`
 	IsEmail          bool `json:"isEmail"`
