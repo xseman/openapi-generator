@@ -58,9 +58,9 @@ func (p *Parser) parameterToCodegen(param *openapi3.Parameter) *codegen.CodegenP
 		cp.IsDouble = prop.IsDouble
 		cp.IsBoolean = prop.IsBoolean
 		cp.IsDate = prop.IsDate
-		cp.IsDateType = prop.IsDate
+		cp.IsDateType = prop.IsDateType
 		cp.IsDateTime = prop.IsDateTime
-		cp.IsDateTimeType = prop.IsDateTime
+		cp.IsDateTimeType = prop.IsDateTimeType
 		cp.IsEnum = prop.IsEnum
 		cp.IsPrimitiveType = prop.IsPrimitiveType
 		cp.IsModel = prop.IsModel

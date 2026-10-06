@@ -213,6 +213,7 @@ func (r *renderer) renderModels(baseData map[string]any, models []*generator.Cod
 			if r.tsGen != nil {
 				data["usesAnyJSON"] = modelUsesRuntimeJSONHelper(model, "any")
 				data["usesBlobJSON"] = isNotBlobModel && modelUsesRuntimeJSONHelper(model, "Blob")
+				data["usesDateHelpers"] = modelUsesDateHelpers(model)
 			}
 			// Add model-level properties at top level for template access
 			for k, v := range modelMap {

@@ -232,9 +232,13 @@ export class {{classname}} extends runtime.BaseAPI {
 {{^isArray}}
         if (requestParameters["{{paramName}}"] != null) {
 {{#isDateTimeType}}
-            formParams.append("{{baseName}}", (requestParameters["{{paramName}}"] as any).toISOString());
+            formParams.append("{{baseName}}", runtime.serializeDateTime(requestParameters["{{paramName}}"] as any));
 {{/isDateTimeType}}
 {{^isDateTimeType}}
+{{#isDateType}}
+            formParams.append("{{baseName}}", runtime.serializeDate(requestParameters["{{paramName}}"] as any));
+{{/isDateType}}
+{{^isDateType}}
 {{#isFile}}
             formParams.append("{{baseName}}", requestParameters["{{paramName}}"] as any);
 {{/isFile}}
@@ -260,6 +264,7 @@ export class {{classname}} extends runtime.BaseAPI {
 {{/isEnumRef}}
 {{/isPrimitiveType}}
 {{/isFile}}
+{{/isDateType}}
 {{/isDateTimeType}}
         }
 {{/isArray}}
@@ -271,7 +276,7 @@ export class {{classname}} extends runtime.BaseAPI {
 {{#pathParams}}
 {{#isDateTimeType}}
         if (requestParameters["{{paramName}}"] instanceof Date) {
-            urlPath = urlPath.replace(`{${"{{baseName}}"}}`, encodeURIComponent(requestParameters["{{paramName}}"].toISOString()));
+            urlPath = urlPath.replace(`{${"{{baseName}}"}}`, encodeURIComponent(runtime.serializeDateTime(requestParameters["{{paramName}}"])));
         } else {
             urlPath = urlPath.replace(`{${"{{baseName}}"}}`, encodeURIComponent(String(requestParameters["{{paramName}}"])));
         }
@@ -279,7 +284,7 @@ export class {{classname}} extends runtime.BaseAPI {
 {{^isDateTimeType}}
 {{#isDateType}}
         if (requestParameters["{{paramName}}"] instanceof Date) {
-            urlPath = urlPath.replace(`{${"{{baseName}}"}}`, encodeURIComponent(requestParameters["{{paramName}}"].toISOString().substring(0,10)));
+            urlPath = urlPath.replace(`{${"{{baseName}}"}}`, encodeURIComponent(runtime.serializeDate(requestParameters["{{paramName}}"])));
         } else {
             urlPath = urlPath.replace(`{${"{{baseName}}"}}`, encodeURIComponent(String(requestParameters["{{paramName}}"])));
         }

@@ -114,6 +114,19 @@ func modelUsesRuntimeJSONHelper(model *generator.CodegenModel, wantDatatype stri
 	return false
 }
 
+// modelUsesDateHelpers reports whether modelGeneric.mustache calls the
+// runtime's parseDate/serializeDate helpers for any var, mirroring upstream's
+// x-hasDateVars so a model without dates does not import them.
+func modelUsesDateHelpers(model *generator.CodegenModel) bool {
+	for _, v := range model.Vars {
+		if v != nil && v.IsPrimitiveType && !v.IsArray && (v.IsDateType || v.IsDateTimeType) {
+			return true
+		}
+	}
+
+	return false
+}
+
 // generateModelIndex emits the per-folder barrel for the TypeScript models
 // package.
 func generateModelIndex(models []*generator.CodegenModel, gen *typescript.FetchGenerator) string {

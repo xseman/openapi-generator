@@ -489,12 +489,11 @@ func (p *Parser) schemaToProperty(name string, schema *openapi3.Schema, required
 	// Set lowercase datatype alias for templates
 	prop.Datatype = prop.DataType
 
-	// IsDateType/IsDateTimeType mirror IsDate/IsDateTime. The typescript-fetch model
-	// template keys date (de)serialization (new Date(...) / .toISOString()) off the
-	// *Type variants, so without this the generated FromJSON/ToJSON pass date fields
-	// through as raw ISO strings while still typing them as Date.
-	prop.IsDateType = prop.IsDate
-	prop.IsDateTimeType = prop.IsDateTime
+	// IsDateType/IsDateTimeType mark a date typed as a JS Date. The typescript-fetch
+	// templates key date (de)serialization (parseDate / serializeDate) off them, so a
+	// date mapped to string (withoutRuntimeChecks) passes through untouched, as upstream.
+	prop.IsDateType = prop.IsDate && prop.DataType == "Date"
+	prop.IsDateTimeType = prop.IsDateTime && prop.DataType == "Date"
 
 	return prop
 }
