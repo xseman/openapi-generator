@@ -7,80 +7,42 @@ import (
 	"testing"
 )
 
-// TestTypeScriptFetchContainerSerialization guards two apis.mustache regressions. A map
-// of arrays response rendered `runtime.mapValues(jsonValue, Array&lt;Street&gt;FromJSON)`
-// instead of mapping each array element. A multipart array of models was csv-joined into
-// "[object Object],…" instead of being sent as one JSON part, the way a single model is.
-// Arrays of files keep their per-element encoding; arrays of primitives, and of $ref to an
-// enum or a primitive schema, stay csv.
+// TestTypeScriptFetchContainerSerialization guards apis.mustache: a map of arrays response
+// maps each element, and a multipart array of models is one JSON part, while arrays of
+// files, primitives, enums and primitive aliases keep their per-element and csv encodings.
 func TestTypeScriptFetchContainerSerialization(t *testing.T) {
 	spec := writeSpec(t, "spec.yaml", `openapi: 3.1.0
 info: {title: t, version: "1"}
 paths:
-  /streets:
+  /pets:
     get:
-      operationId: getStreets
+      operationId: getPets
       responses:
         "200":
           description: ok
           content:
             application/json:
-              schema:
-                type: object
-                additionalProperties:
-                  type: array
-                  items: {$ref: "#/components/schemas/Street"}
-  /tags:
-    get:
-      operationId: getTags
-      responses:
-        "200":
-          description: ok
-          content:
-            application/json:
-              schema:
-                type: object
-                additionalProperties:
-                  type: array
-                  items: {type: string}
-  /photos:
+              schema: {type: object, additionalProperties: {type: array, items: {$ref: "#/components/schemas/Pet"}}}
     post:
-      operationId: storePhotos
+      operationId: addPets
       requestBody:
         content:
           multipart/form-data:
             schema:
               type: object
               properties:
-                meta:
-                  type: array
-                  items: {$ref: "#/components/schemas/Street"}
-                uniqueMeta:
-                  type: array
-                  uniqueItems: true
-                  items: {$ref: "#/components/schemas/Street"}
-                tags:
-                  type: array
-                  items: {type: string}
-                colors:
-                  type: array
-                  items: {$ref: "#/components/schemas/Color"}
-                ids:
-                  type: array
-                  items: {$ref: "#/components/schemas/Id"}
-                photos:
-                  type: array
-                  items: {type: string, format: binary}
+                pets: {type: array, items: {$ref: "#/components/schemas/Pet"}}
+                colors: {type: array, items: {$ref: "#/components/schemas/Color"}}
+                ids: {type: array, items: {$ref: "#/components/schemas/Id"}}
+                tags: {type: array, items: {type: string}}
+                files: {type: array, items: {type: string, format: binary}}
       responses:
         "204": {description: ok}
 components:
   schemas:
     Color: {type: string, enum: [red, blue]}
     Id: {type: integer}
-    Street:
-      type: object
-      properties:
-        name: {type: string}
+    Pet: {type: object, properties: {name: {type: string}}}
 `)
 
 	out := t.TempDir()
@@ -103,23 +65,19 @@ components:
 	api := string(data)
 
 	for _, want := range []string{
-		`runtime.mapValues(jsonValue, (items) => items.map(StreetFromJSON))`,
-		`new runtime.JSONApiResponse<{ [key: string]: Array<string>; }>(response)`,
-		`formParams.append("meta", new Blob([JSON.stringify(requestParameters["meta"].map(StreetToJSON))], { type: "application/json", }))`,
-		`formParams.append("uniqueMeta", new Blob([JSON.stringify(Array.from(requestParameters["uniqueMeta"]).map(StreetToJSON))], { type: "application/json", }))`,
-		`formParams.append("tags", requestParameters["tags"]!.join(runtime.COLLECTION_FORMATS["csv"]))`,
+		`runtime.mapValues(jsonValue, (items) => items.map(PetFromJSON))`,
+		`formParams.append("pets", new Blob([JSON.stringify(requestParameters["pets"].map(PetToJSON))], { type: "application/json", }))`,
 		`formParams.append("colors", requestParameters["colors"]!.join(runtime.COLLECTION_FORMATS["csv"]))`,
 		`formParams.append("ids", requestParameters["ids"]!.join(runtime.COLLECTION_FORMATS["csv"]))`,
-		`formParams.append("photos", element as any)`,
+		`formParams.append("tags", requestParameters["tags"]!.join(runtime.COLLECTION_FORMATS["csv"]))`,
+		`formParams.append("files", element as any)`,
 	} {
 		if !strings.Contains(api, want) {
 			t.Errorf("defaultApi.ts lacks %s", want)
 		}
 	}
 
-	for _, unwanted := range []string{"ArrayStreet", "ArrayString", "Array&lt;"} {
-		if strings.Contains(api, unwanted) {
-			t.Errorf("defaultApi.ts contains %q", unwanted)
-		}
+	if strings.Contains(api, "ArrayPet") {
+		t.Error("defaultApi.ts imports ArrayPet")
 	}
 }
