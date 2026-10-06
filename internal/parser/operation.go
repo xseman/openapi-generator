@@ -560,6 +560,7 @@ func (p *Parser) responses(co *codegen.CodegenOperation, responses *openapi3.Res
 func setReturnType(co *codegen.CodegenOperation, resp *codegen.CodegenResponse) {
 	co.ReturnType = resp.DataType
 	co.ReturnBaseType = resp.BaseType
+	co.ReturnProperty = resp.ReturnProperty
 	co.ReturnComposedModels = resp.ComposedModels
 	co.ReturnSimpleType = resp.SimpleType
 

@@ -382,7 +382,7 @@ export class {{classname}} extends runtime.BaseAPI {
 {{/isArray}}
 {{^isArray}}
 {{#isMap}}
-        return new runtime.JSONApiResponse(response{{^withoutRuntimeChecks}}, (jsonValue) => runtime.mapValues(jsonValue, {{returnBaseType}}FromJSON){{/withoutRuntimeChecks}});
+        return new runtime.JSONApiResponse(response{{^withoutRuntimeChecks}}, (jsonValue) => runtime.mapValues(jsonValue, {{#returnProperty.items.isArray}}(items) => items.map({{returnProperty.items.baseType}}FromJSON){{/returnProperty.items.isArray}}{{^returnProperty.items.isArray}}{{returnBaseType}}FromJSON{{/returnProperty.items.isArray}}){{/withoutRuntimeChecks}});
 {{/isMap}}
 {{^isMap}}
         return new runtime.JSONApiResponse(response{{^withoutRuntimeChecks}}, (jsonValue) => {{returnBaseType}}FromJSON(jsonValue){{/withoutRuntimeChecks}});
