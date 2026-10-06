@@ -13,9 +13,10 @@ import '{{filename}}.dart';
 enum {{classname}} {
 {{#allowableValues}}
 {{#enumVars}}
-    {{name}}('{{{value}}}'){{^-last}},{{/-last}}{{#-last}};{{/-last}}
+    {{name}}('{{{value}}}'),
 {{/enumVars}}
 {{/allowableValues}}
+    ; // mustache here has no -last: a trailing comma, then the end of the values
 
     const {{classname}}(this.value);
 
