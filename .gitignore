@@ -23,3 +23,6 @@ coverage.md
 # Go workspace files
 go.work
 go.work.sum
+
+# Local build of the CLI (make build puts it in bin/, `go build` drops it here)
+/openapi-generator
