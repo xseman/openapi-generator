@@ -481,7 +481,7 @@ export class {{classname}} extends runtime.BaseAPI {
 export enum {{operationIdCamelCase}}{{enumName}} {
 {{#allowableValues}}
     {{#enumVars}}
-    {{{name}}} = {{#isString}}'{{{value}}}'{{/isString}}{{#isNull}}{{{value}}}{{/isNull}}{{^isString}}{{^isNull}}{{{value}}}{{/isNull}}{{/isString}}{{^-last}},{{/-last}}
+    {{{name}}} = {{#isString}}'{{{value}}}'{{/isString}}{{^isString}}{{{value}}}{{/isString}}{{^-last}},{{/-last}}
     {{/enumVars}}
 {{/allowableValues}}
 }
@@ -493,7 +493,7 @@ export enum {{operationIdCamelCase}}{{enumName}} {
 export const {{operationIdCamelCase}}{{enumName}} = {
 {{#allowableValues}}
     {{#enumVars}}
-    {{{name}}}: {{#isString}}'{{{value}}}'{{/isString}}{{#isNull}}{{{value}}}{{/isNull}}{{^isString}}{{^isNull}}{{{value}}}{{/isNull}}{{/isString}}{{^-last}},{{/-last}}
+    {{{name}}}: {{#isString}}'{{{value}}}'{{/isString}}{{^isString}}{{{value}}}{{/isString}}{{^-last}},{{/-last}}
     {{/enumVars}}
 {{/allowableValues}}
 } as const;

@@ -12,7 +12,7 @@ export enum {{classname}} {
      * {{enumDescription}}
      */
     {{/enumDescription}}
-    {{{name}}} = {{#isString}}'{{{value}}}'{{/isString}}{{#isNull}}{{{value}}}{{/isNull}}{{^isString}}{{^isNull}}{{{value}}}{{/isNull}}{{/isString}}{{^-last}},{{/-last}}
+    {{{name}}} = {{#isString}}'{{{value}}}'{{/isString}}{{^isString}}{{{value}}}{{/isString}}{{^-last}},{{/-last}}
 {{/enumVars}}
 {{/allowableValues}}
 }
@@ -29,7 +29,7 @@ export const {{classname}} = {
      * {{enumDescription}}
      */
     {{/enumDescription}}
-    {{{name}}}: {{#isString}}'{{{value}}}'{{/isString}}{{#isNull}}{{{value}}}{{/isNull}}{{^isString}}{{^isNull}}{{{value}}}{{/isNull}}{{/isString}}{{^-last}},{{/-last}}
+    {{{name}}}: {{#isString}}'{{{value}}}'{{/isString}}{{^isString}}{{{value}}}{{/isString}}{{^-last}},{{/-last}}
 {{/enumVars}}
 {{/allowableValues}}
 } as const;
