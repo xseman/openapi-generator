@@ -68,6 +68,7 @@ func (p *Parser) responseToCodegen(code string, resp *openapi3.Response) *codege
 
 			cr.DataType = prop.DataType
 			cr.BaseType = prop.BaseType
+			cr.ReturnProperty = prop
 			cr.IsArray = prop.IsArray
 			cr.IsMap = prop.IsMap
 			cr.IsModel = prop.IsModel
@@ -85,9 +86,15 @@ func (p *Parser) responseToCodegen(code string, resp *openapi3.Response) *codege
 			// FromJSON mapper. For array/map responses the relevant question is whether the
 			// element type is primitive: a primitive element (e.g. Array<number>) needs no
 			// mapper and must not reference an undefined numberFromJSON helper. SimpleType
-			// is reserved for scalar primitives only.
+			// is reserved for scalar primitives only. A map of arrays
+			// ({ [key: string]: Array<X>; }) maps each value element by element, so
+			// what counts there is whether X is a model.
 			basePrimitive := prop.IsPrimitiveType
-			if (prop.IsArray || prop.IsMap) && prop.Items != nil {
+
+			switch {
+			case prop.IsMap && prop.Items != nil && prop.Items.IsArray:
+				basePrimitive = prop.Items.Items == nil || !prop.Items.Items.IsModel
+			case (prop.IsArray || prop.IsMap) && prop.Items != nil:
 				basePrimitive = prop.Items.IsPrimitiveType
 			}
 

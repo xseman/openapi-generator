@@ -92,13 +92,19 @@ func (p *Parser) collectOperationImports(op *codegen.CodegenOperation) []string 
 		}
 	}
 
+	// A map of arrays has the base type "Array<X>"; the model to import is X.
+	returnBaseType := op.ReturnBaseType
+	if rp := op.ReturnProperty; rp != nil && rp.IsMap && rp.Items != nil && rp.Items.IsArray {
+		returnBaseType = rp.Items.BaseType
+	}
+
 	// From return type - also check that ReturnBaseType is not primitive. A
 	// composite (union/intersection) return type imports its member models
 	// instead of the joined string, which is not an importable identifier;
 	// such returns carry ReturnTypeIsPrimitive so no FromJSON import is needed.
 	if op.ReturnType != "" && !op.ReturnTypeIsPrimitive &&
-		!isPrimitiveType(op.ReturnType) && !isPrimitiveType(op.ReturnBaseType) && !isCompositeType(op.ReturnBaseType) {
-		imports[op.ReturnBaseType] = true
+		!isPrimitiveType(op.ReturnType) && !isPrimitiveType(returnBaseType) && !isCompositeType(returnBaseType) {
+		imports[returnBaseType] = true
 	}
 
 	for _, m := range op.ReturnComposedModels {
