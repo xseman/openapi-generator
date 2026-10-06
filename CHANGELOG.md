@@ -1,5 +1,51 @@
 # Changelog
 
+## [0.3.0](https://github.com/xseman/openapi-generator/compare/v0.2.1...v0.3.0) (2026-10-06)
+
+
+### Features
+
+* **typescript-fetch:** name downloaded files from Content-Disposition ([673753c](https://github.com/xseman/openapi-generator/commit/673753c01baa42f6fbfeedd40595c96792c88938))
+
+
+### Bug Fixes
+
+* **dart-fetch:** end enum values with a semicolon ([3d3574e](https://github.com/xseman/openapi-generator/commit/3d3574e2f226c3538e6781319f163c0320c11836))
+* **parser:** drop null from enum members, name negative numbers apart ([a8c41cd](https://github.com/xseman/openapi-generator/commit/a8c41cdc14e393005d2974cd4d7f44f68f204612))
+* **parser:** keep an untyped all-number enum numeric ([20ab9d9](https://github.com/xseman/openapi-generator/commit/20ab9d9eae36a963da1dfd1d30b79c885d64786e))
+* **parser:** quote the values of untyped enums, escape backslashes ([849e77e](https://github.com/xseman/openapi-generator/commit/849e77e440ed89d38f05084cf3446ddab9b599e2))
+* **parser:** suffix enum members whose values name alike ([1149242](https://github.com/xseman/openapi-generator/commit/114924227e9fe4fdeccec3a4863494af79718d61))
+* **typescript-fetch:** enforce not enum and single-value tags in type guards ([0a1f5cb](https://github.com/xseman/openapi-generator/commit/0a1f5cb016c22bb7ee46d78250bcabbe84e4331e))
+* **typescript-fetch:** explode object query parameters ([ff63bf3](https://github.com/xseman/openapi-generator/commit/ff63bf3f78e7ac1e5f4425c9a40b5e170264619b))
+* **typescript-fetch:** keep null in a oneOf with one nullable member ([35ad535](https://github.com/xseman/openapi-generator/commit/35ad53516b6284619f180ed0f652da23c4d532ca))
+* **typescript-fetch:** leave read-only properties out of request bodies ([5b29e37](https://github.com/xseman/openapi-generator/commit/5b29e379ced56e5d72b4c341e686aeddb7ff6c9b))
+* **typescript-fetch:** map each element of a map-of-arrays response ([2604b17](https://github.com/xseman/openapi-generator/commit/2604b178494629908bad3451c070d4441fe04436))
+* **typescript-fetch:** parse and serialize dates through runtime helpers ([c79a037](https://github.com/xseman/openapi-generator/commit/c79a037b453839d1f98e96b69602db696018ebd4))
+* **typescript-fetch:** render the members of top-level enum schemas ([f935f62](https://github.com/xseman/openapi-generator/commit/f935f62ea01078dec901c52fb4b98fc543d45d9a))
+* **typescript-fetch:** require inherited properties a model lists as required ([0c62eac](https://github.com/xseman/openapi-generator/commit/0c62eaca19815b84c10adf8bed5d60aceed73eef))
+* **typescript-fetch:** send a multipart array of models as one JSON part ([532dd4a](https://github.com/xseman/openapi-generator/commit/532dd4af288f3f133bbb960e33eee5d44591a674))
+* **typescript-fetch:** serialize JSON header parameter content ([b56fe7a](https://github.com/xseman/openapi-generator/commit/b56fe7aa3e343c91146429666c4ffbef332f9169))
+
+
+### Build System
+
+* add samples-dart-fetch target the dart-fetch README refers to ([612cdc1](https://github.com/xseman/openapi-generator/commit/612cdc183971777ba1918d0139c165ed5d4c7ff1))
+
+
+### Maintenance
+
+* ignore the root CLI build, end samples gitignore with a newline ([d240411](https://github.com/xseman/openapi-generator/commit/d2404110e524f55bce8bfbc4a15f1b85d6101a07))
+* **parser:** fold the oneOf null count into the member loop ([50097c2](https://github.com/xseman/openapi-generator/commit/50097c258a43a85c9bcb7e0868fc8cdc42e234d2))
+* **typescript-fetch:** drop the dead isNull branch of enum values ([7f4dbae](https://github.com/xseman/openapi-generator/commit/7f4dbaeec35ff75cd773a12984ea9067e46d3941))
+
+
+### Testing
+
+* add an enum edge-value feature spec ([e95e49a](https://github.com/xseman/openapi-generator/commit/e95e49a508e1cc7e0c7ab15b01aa1104aa8702f9))
+* add feature specs and make regress ([7cca37c](https://github.com/xseman/openapi-generator/commit/7cca37cfce0fdf2d6dfbb95db121e8ffcb1654f6))
+* flip each generator option on its own in make regress ([b4c7572](https://github.com/xseman/openapi-generator/commit/b4c7572895a863838a30f8b3293fb0231a3aa474))
+* **typescript-fetch:** shorten container serialization tests ([300e307](https://github.com/xseman/openapi-generator/commit/300e30799190b76a15bab596d521b90a53a54ccd))
+
 ## [0.2.1](https://github.com/xseman/openapi-generator/compare/v0.2.0...v0.2.1) (2026-09-19)
 
 
