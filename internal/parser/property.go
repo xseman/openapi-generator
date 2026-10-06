@@ -220,7 +220,7 @@ func (p *Parser) schemaToProperty(name string, schema *openapi3.Schema, required
 	if len(schema.Enum) > 0 {
 		prop.IsEnum = true
 		prop.IsInnerEnum = true
-		vars := enumVars(schema.Enum, schemaType == "string")
+		vars := enumVars(schema.Enum, schemaType != "integer" && schemaType != "number" && schemaType != "boolean")
 		prop.AllowableValues = map[string]any{
 			"values":   schema.Enum,
 			"enumVars": vars,
@@ -503,13 +503,15 @@ func isObjectSchema(schema *openapi3.Schema) bool {
 }
 
 // enumVars builds the allowableValues.enumVars the enum templates iterate.
-// isString records whether each value must be quoted as a string literal. It is
+// isString records whether each value must be quoted as a string literal: all
+// but numbers and booleans, an untyped enum included, as upstream. It is
 // stored on the enumVar itself rather than relying on Mustache context fallback
 // to the enclosing property: an array-of-enum parameter is not itself a string,
 // so the values of its inherited enumVars would otherwise render unquoted.
 func enumVars(values []any, isString bool) []map[string]any {
 	vars := make([]map[string]any, 0, len(values))
 	seen := make(map[string]int)
+	quote := strings.NewReplacer(`\`, `\\`, "'", `\'`) // for a single-quoted string literal
 
 	for _, v := range values {
 		// null is no member: a nullable enum lists it, the property carries it.
@@ -526,10 +528,9 @@ func enumVars(values []any, isString bool) []map[string]any {
 			name += strconv.Itoa(seen[name])
 		}
 
-		// Escape single quotes for TypeScript string literals
 		vars = append(vars, map[string]any{
 			"name":     name,
-			"value":    strings.ReplaceAll(valueStr, "'", "\\'"),
+			"value":    quote.Replace(valueStr),
 			"isString": isString,
 		})
 	}

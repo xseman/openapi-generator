@@ -87,7 +87,7 @@ func (p *Parser) schemaToModel(name string, schema *openapi3.Schema) *codegen.Co
 		model.IsEnum = true
 		model.AllowableValues = map[string]any{
 			"values":   schema.Enum,
-			"enumVars": enumVars(schema.Enum, schemaType != nil && schemaType.Is("string")),
+			"enumVars": enumVars(schema.Enum, !schemaType.Is("integer") && !schemaType.Is("number") && !schemaType.Is("boolean")),
 		}
 	}
 

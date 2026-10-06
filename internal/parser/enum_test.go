@@ -21,6 +21,8 @@ components:
     Priority:
       type: integer
       enum: [0, 99, -1]
+    Untyped:
+      enum: [placed, 'a\b']
 `)
 
 	p := NewParser()
@@ -42,10 +44,15 @@ components:
 	}{
 		{"Status", []string{"Active", "WeirdValue", "Active2"}, true},
 		{"Priority", []string{"_0", "_99", "Minus1"}, false},
+		{"Untyped", []string{"Placed", "AB"}, true}, // no type: quoted, as upstream
 	} {
 		vars, _ := findModel(t, models, tt.model).AllowableValues["enumVars"].([]map[string]any)
 		if len(vars) != len(tt.want) {
 			t.Fatalf("%s enumVars = %v, want names %v", tt.model, vars, tt.want)
+		}
+
+		if tt.model == "Untyped" && vars[1]["value"] != `a\\b` {
+			t.Errorf("Untyped value = %v, want the backslash escaped", vars[1]["value"])
 		}
 
 		for i, v := range vars {
