@@ -112,6 +112,10 @@ type CodegenParameter struct {
 	// Content (for complex parameters)
 	Content map[string]*CodegenMediaType `json:"content"`
 
+	// JsonHeaderUsesModelSerializer marks a header whose JSON content is a model,
+	// serialized with its ToJSON (upstream's TypeScript-fetch extension).
+	JsonHeaderUsesModelSerializer bool `json:"jsonHeaderUsesModelSerializer"`
+
 	// Vendor extensions
 	VendorExtensions map[string]any `json:"vendorExtensions"`
 

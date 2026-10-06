@@ -40,10 +40,19 @@ func (p *Parser) parameterToCodegen(param *openapi3.Parameter) *codegen.CodegenP
 		cp.IsCookieParam = true
 	}
 
+	// A parameter gives its type either as a schema or as a single content entry
+	// (a JSON-encoded header, say), whose schema then stands in.
+	schemaRef, mediaType := param.Schema, ""
+	if schemaRef == nil {
+		for mt, media := range param.Content {
+			schemaRef, mediaType = media.Schema, mt
+		}
+	}
+
 	// Process schema
-	if param.Schema != nil && param.Schema.Value != nil {
-		schema := param.Schema.Value
-		prop := p.schemaRefToProperty(param.Name, param.Schema, param.Required)
+	if schemaRef != nil && schemaRef.Value != nil {
+		schema := schemaRef.Value
+		prop := p.schemaRefToProperty(param.Name, schemaRef, param.Required)
 
 		cp.DataType = prop.DataType
 		cp.BaseType = prop.BaseType
@@ -77,6 +86,10 @@ func (p *Parser) parameterToCodegen(param *openapi3.Parameter) *codegen.CodegenP
 		}
 	}
 
+	// A header carrying a model as JSON goes out as JSON.stringify(<Model>ToJSON(v)),
+	// as upstream does since 7.27, instead of String(v) = "[object Object]".
+	cp.JsonHeaderUsesModelSerializer = cp.IsHeaderParam && cp.IsModel && isJSONMimeType(mediaType)
+
 	// Ensure DataType is never empty - default to "any" if not set
 	if cp.DataType == "" {
 		cp.DataType = "any"
@@ -96,4 +109,13 @@ func (p *Parser) parameterToCodegen(param *openapi3.Parameter) *codegen.CodegenP
 	}
 
 	return cp
+}
+
+// isJSONMimeType reports whether mediaType is application/json or a +json
+// structured syntax suffix (application/vnd.example+json), parameters ignored.
+func isJSONMimeType(mediaType string) bool {
+	mt, _, _ := strings.Cut(strings.ToLower(mediaType), ";")
+	mt = strings.TrimSpace(mt)
+
+	return mt == "application/json" || strings.HasSuffix(mt, "+json")
 }

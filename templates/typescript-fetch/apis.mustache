@@ -164,10 +164,15 @@ export class {{classname}} extends runtime.BaseAPI {
         if (requestParameters["{{paramName}}"] != null) {
             headerParameters["{{baseName}}"] = {{#uniqueItems}}Array.from({{/uniqueItems}}requestParameters["{{paramName}}"]{{#uniqueItems}}){{/uniqueItems}}!.join(runtime.COLLECTION_FORMATS["{{collectionFormat}}"]);
         }
-{{/isArray}}{{^isArray}}
+{{/isArray}}{{^isArray}}{{#jsonHeaderUsesModelSerializer}}
+        if (requestParameters["{{paramName}}"] !== undefined) {
+            headerParameters["{{baseName}}"] = JSON.stringify({{^withoutRuntimeChecks}}{{{dataType}}}ToJSON({{/withoutRuntimeChecks}}requestParameters["{{paramName}}"]{{^withoutRuntimeChecks}}){{/withoutRuntimeChecks}});
+        }
+{{/jsonHeaderUsesModelSerializer}}{{^jsonHeaderUsesModelSerializer}}
         if (requestParameters["{{paramName}}"] != null) {
             headerParameters["{{baseName}}"] = String(requestParameters["{{paramName}}"]);
         }
+{{/jsonHeaderUsesModelSerializer}}
 {{/isArray}}{{/headerParams}}{{#authMethods}}{{#isBasic}}{{#isBasicBasic}}
         if (this.configuration && (this.configuration.username !== undefined || this.configuration.password !== undefined)) {
      headerParameters["Authorization"] = "Basic " + btoa(this.configuration.username + ":" + this.configuration.password);
