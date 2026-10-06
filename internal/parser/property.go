@@ -2,6 +2,8 @@ package parser
 
 import (
 	"fmt"
+	"maps"
+	"strconv"
 	"strings"
 
 	"github.com/getkin/kin-openapi/openapi3"
@@ -218,12 +220,27 @@ func (p *Parser) schemaToProperty(name string, schema *openapi3.Schema, required
 	if len(schema.Enum) > 0 {
 		prop.IsEnum = true
 		prop.IsInnerEnum = true
+		vars := enumVars(schema.Enum, schemaType == "string")
 		prop.AllowableValues = map[string]any{
-			"values": schema.Enum,
+			"values":   schema.Enum,
+			"enumVars": vars,
 		}
-		prop.AllowableValues["enumVars"] = enumVars(schema.Enum, schemaType == "string")
+		// A lone value is checked in the model's type guard, which tells oneOf
+		// members apart by such a tag (`kind: {enum: [known]}`). A list, as the
+		// template's mustache has no -first/-last to spot it.
+		if len(vars) == 1 {
+			prop.AllowableValues["singleValue"] = []map[string]any{{"value": vars[0]["value"]}}
+		}
+
 		prop.EnumName = p.toEnumName(name)
 		prop.DatatypeWithEnum = prop.EnumName
+	}
+
+	// A string barred from some values (not: {enum: [...]}) is checked in the
+	// model's type guard, so a oneOf can tell it from the member that takes them.
+	if cmp := notEnumComparison(prop, schema, schemaType); cmp != "" {
+		prop.VendorExtensions = maps.Clone(prop.VendorExtensions)
+		prop.VendorExtensions["x-typescript-fetch-not-enum-comparison"] = cmp
 	}
 
 	// Type-specific handling
@@ -503,4 +520,40 @@ func enumVars(values []any, isString bool) []map[string]any {
 	}
 
 	return vars
+}
+
+// notEnumComparison is the TypeScript condition that holds when a value carries
+// one of the values a string property's `not: {enum: [...]}` excludes, under
+// both its sanitized and wire names; "" when there is nothing to compare.
+// Non-string excluded values are skipped: the property is a string.
+func notEnumComparison(prop *codegen.CodegenProperty, schema *openapi3.Schema, schemaType string) string {
+	if schemaType != "string" || schema.Not == nil || schema.Not.Value == nil {
+		return ""
+	}
+
+	names := []string{prop.Name}
+	if prop.HasSanitizedName && prop.Name != prop.BaseName {
+		names = append(names, prop.BaseName)
+	}
+
+	var comparisons []string
+
+	for _, v := range schema.Not.Value.Enum {
+		var literal string
+
+		switch v := v.(type) {
+		case nil:
+			literal = "null"
+		case string:
+			literal = strconv.Quote(v)
+		default:
+			continue
+		}
+
+		for _, n := range names {
+			comparisons = append(comparisons, "(value as Record<string, unknown>)["+strconv.Quote(n)+"] === "+literal)
+		}
+	}
+
+	return strings.Join(comparisons, " || ")
 }

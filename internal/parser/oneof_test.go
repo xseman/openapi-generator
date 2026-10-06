@@ -194,3 +194,56 @@ components:
 		}
 	}
 }
+
+// TestOneOfMemberTagGuards checks what a oneOf's type guards tell members apart
+// by: a lone enum value (singleValue, as the template's mustache has no
+// -first/-last) and the values a string's `not: {enum}` excludes.
+func TestOneOfMemberTagGuards(t *testing.T) {
+	spec := []byte(`
+openapi: 3.1.0
+info:
+  title: Tags
+  version: 1.0.0
+paths: {}
+components:
+  schemas:
+    Known:
+      type: object
+      required: [kind]
+      properties:
+        kind: {type: string, enum: [known]}
+    Other:
+      type: object
+      required: [file-path]
+      properties:
+        file-path:
+          type: string
+          not: {enum: [known, 'a"b', 42, null]}
+`)
+
+	p := NewParser()
+
+	p.SkipValidation = true
+	if err := p.LoadFromData(spec); err != nil {
+		t.Fatalf("LoadFromData: %v", err)
+	}
+
+	models, err := p.GetModels()
+	if err != nil {
+		t.Fatalf("GetModels: %v", err)
+	}
+
+	single, _ := findModel(t, models, "Known").Vars[0].AllowableValues["singleValue"].([]map[string]any)
+	if len(single) != 1 || single[0]["value"] != "known" {
+		t.Errorf("Known.kind singleValue = %v, want [{value: known}]", single)
+	}
+
+	got := findModel(t, models, "Other").Vars[0].VendorExtensions["x-typescript-fetch-not-enum-comparison"]
+
+	want := `(value as Record<string, unknown>)["filePath"] === "known" || (value as Record<string, unknown>)["file-path"] === "known" || ` +
+		`(value as Record<string, unknown>)["filePath"] === "a\"b" || (value as Record<string, unknown>)["file-path"] === "a\"b" || ` +
+		`(value as Record<string, unknown>)["filePath"] === null || (value as Record<string, unknown>)["file-path"] === null`
+	if got != want {
+		t.Errorf("Other.file-path not-enum comparison =\n%v\nwant\n%v", got, want)
+	}
+}

@@ -66,24 +66,21 @@ export function instanceOf{{classname}}(value: object): value is {{classname}} {
     {{^isContainer}}
     {{#isEnum}}
     {{#allowableValues}}
-    {{#values}}
-    {{#-first}}
-    {{#-last}}
+    {{#singleValue}}
     {{#hasSanitizedName}}
-    {{#isString}}if (!(('{{name}}' in (value as Record<string, any>) && (value as Record<string, any>)['{{name}}'] === '{{.}}') || ('{{baseName}}' in (value as Record<string, any>) && (value as Record<string, any>)['{{baseName}}'] === '{{.}}'))) return false;{{/isString}}
-    {{^isString}}if (!(('{{name}}' in (value as Record<string, any>) && (value as Record<string, any>)['{{name}}'] === {{.}}) || ('{{baseName}}' in (value as Record<string, any>) && (value as Record<string, any>)['{{baseName}}'] === {{.}}))) return false;{{/isString}}
+    {{#isString}}if (!(('{{name}}' in (value as Record<string, any>) && (value as Record<string, any>)['{{name}}'] === '{{{value}}}') || ('{{baseName}}' in (value as Record<string, any>) && (value as Record<string, any>)['{{baseName}}'] === '{{{value}}}'))) return false;{{/isString}}{{^isString}}if (!(('{{name}}' in (value as Record<string, any>) && (value as Record<string, any>)['{{name}}'] === {{{value}}}) || ('{{baseName}}' in (value as Record<string, any>) && (value as Record<string, any>)['{{baseName}}'] === {{{value}}}))) return false;{{/isString}}
     {{/hasSanitizedName}}
     {{^hasSanitizedName}}
-    {{#isString}}if (value['{{name}}'] !== '{{.}}') return false;{{/isString}}
-    {{^isString}}if (value['{{name}}'] !== {{.}}) return false;{{/isString}}
+    {{#isString}}if (value['{{name}}'] !== '{{{value}}}') return false;{{/isString}}{{^isString}}if (value['{{name}}'] !== {{{value}}}) return false;{{/isString}}
     {{/hasSanitizedName}}
-    {{/-last}}
-    {{/-first}}
-    {{/values}}
+    {{/singleValue}}
     {{/allowableValues}}
     {{/isEnum}}
     {{/isContainer}}
     {{/required}}
+    {{#vendorExtensions.x-typescript-fetch-not-enum-comparison}}
+    if ({{{vendorExtensions.x-typescript-fetch-not-enum-comparison}}}) return false;
+    {{/vendorExtensions.x-typescript-fetch-not-enum-comparison}}
     {{/vars}}
     return true;
 }
