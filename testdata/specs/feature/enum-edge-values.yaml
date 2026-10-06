@@ -1,0 +1,43 @@
+openapi: "3.0.0"
+info:
+  title: Enum Edge Values Feature
+  version: 1.0.0
+paths:
+  /levels:
+    get:
+      operationId: getLevels
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Levels"
+components:
+  schemas:
+    Levels:
+      type: object
+      properties:
+        level:
+          $ref: "#/components/schemas/Level"
+        severity:
+          $ref: "#/components/schemas/Severity"
+        state:
+          $ref: "#/components/schemas/State"
+        rating:
+          $ref: "#/components/schemas/Rating"
+    # null is no member; -1 must not collide with 1
+    Level:
+      type: integer
+      nullable: true
+      enum: [-1, 1, 2, null]
+    # values that name alike get a count suffix; quotes and backslashes are escaped
+    Severity:
+      type: string
+      enum: [low, LOW, "it's", 'a\b']
+    # no type: values are strings
+    State:
+      enum: [placed, approved]
+    # no type, all numbers: values stay numbers
+    Rating:
+      enum: [1, 5]
