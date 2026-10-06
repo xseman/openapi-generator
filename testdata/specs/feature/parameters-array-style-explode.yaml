@@ -1,0 +1,63 @@
+openapi: "3.0.0"
+info:
+  title: Array Query Param Style/Explode Combinations Feature
+  version: 1.0.0
+paths:
+  /filter/{pathIds}:
+    get:
+      operationId: filterItems
+      parameters:
+        - name: formExplodeTrue
+          in: query
+          required: false
+          style: form
+          explode: true
+          schema:
+            type: array
+            items:
+              type: string
+        - name: formExplodeFalse
+          in: query
+          required: false
+          style: form
+          explode: false
+          schema:
+            type: array
+            items:
+              type: string
+        - name: spaceDelimited
+          in: query
+          required: false
+          style: spaceDelimited
+          explode: false
+          schema:
+            type: array
+            items:
+              type: integer
+        - name: pipeDelimited
+          in: query
+          required: false
+          style: pipeDelimited
+          explode: false
+          schema:
+            type: array
+            items:
+              type: integer
+        - name: pathIds
+          in: path
+          required: true
+          style: simple
+          explode: false
+          schema:
+            type: array
+            items:
+              type: string
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string

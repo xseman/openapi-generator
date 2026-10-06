@@ -1,0 +1,47 @@
+openapi: "3.0.0"
+info:
+  title: OneOf Composition Feature
+  version: 1.0.0
+paths:
+  /search:
+    post:
+      operationId: search
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SearchResult"
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SearchResult"
+components:
+  schemas:
+    SearchResult:
+      oneOf:
+        - $ref: "#/components/schemas/Cat"
+        - $ref: "#/components/schemas/Dog"
+        - type: string
+        - type: array
+          items:
+            type: integer
+    Cat:
+      type: object
+      required: [petType, huntingSkill]
+      properties:
+        petType:
+          type: string
+        huntingSkill:
+          type: string
+    Dog:
+      type: object
+      required: [petType, packSize]
+      properties:
+        petType:
+          type: string
+        packSize:
+          type: integer

@@ -1,0 +1,45 @@
+openapi: "3.0.0"
+info:
+  title: Composite OneOf Response Feature
+  version: 1.0.0
+paths:
+  /accounts/{id}:
+    get:
+      operationId: getAccount
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: personal or business account
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Account"
+components:
+  schemas:
+    Account:
+      oneOf:
+        - $ref: "#/components/schemas/PersonalAccount"
+        - $ref: "#/components/schemas/BusinessAccount"
+    PersonalAccount:
+      type: object
+      required: [accountType, ownerName]
+      properties:
+        accountType:
+          type: string
+        ownerName:
+          type: string
+    BusinessAccount:
+      type: object
+      required: [accountType, companyName]
+      properties:
+        accountType:
+          type: string
+        companyName:
+          type: string
+        taxId:
+          type: string

@@ -1,0 +1,56 @@
+openapi: "3.0.0"
+info:
+  title: Reserved TypeScript Keywords as Names Feature
+  version: 1.0.0
+paths:
+  /keywords:
+    get:
+      operationId: getKeywords
+      parameters:
+        - name: class
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: default
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: function
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/KeywordHolder"
+components:
+  schemas:
+    KeywordHolder:
+      type: object
+      properties:
+        class:
+          type: string
+        default:
+          type: boolean
+        function:
+          type: string
+        export:
+          type: string
+        import:
+          type: string
+        delete:
+          type: boolean
+        new:
+          type: string
+        return:
+          type: string
+        typeof:
+          type: string
+        this:
+          type: string

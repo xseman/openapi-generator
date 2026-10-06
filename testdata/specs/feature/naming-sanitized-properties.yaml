@@ -1,0 +1,38 @@
+openapi: "3.0.0"
+info:
+  title: Property Name Sanitization Feature
+  version: 1.0.0
+paths:
+  /records:
+    get:
+      operationId: listSanitizedRecords
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SanitizedRecord"
+components:
+  schemas:
+    SanitizedRecord:
+      type: object
+      properties:
+        first-name:
+          type: string
+        last.name:
+          type: string
+        "123code":
+          type: string
+        "@type":
+          type: string
+        "@context":
+          type: string
+        "has space":
+          type: string
+        "a+b":
+          type: string
+        _leadingUnderscore:
+          type: string
+        trailingUnderscore_:
+          type: string

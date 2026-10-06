@@ -1,0 +1,38 @@
+openapi: "3.0.0"
+info:
+  title: Enum Integer Feature
+  version: 1.0.0
+paths:
+  /priority:
+    get:
+      operationId: getPriority
+      parameters:
+        - name: level
+          in: query
+          required: false
+          schema:
+            type: integer
+            enum: [1, 2, 3, 5, 8]
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Ticket"
+components:
+  schemas:
+    Ticket:
+      type: object
+      properties:
+        priority:
+          $ref: "#/components/schemas/Priority"
+        nullablePriority:
+          allOf:
+            - $ref: "#/components/schemas/Priority"
+          nullable: true
+    Priority:
+      type: integer
+      format: int32
+      description: Ticket priority level
+      enum: [0, 1, 2, 3, 99]

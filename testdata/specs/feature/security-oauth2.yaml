@@ -1,0 +1,70 @@
+openapi: "3.0.0"
+info:
+  title: OAuth2 Security Feature
+  version: 1.0.0
+paths:
+  /secure/oauth-code:
+    get:
+      operationId: getWithOAuthCode
+      security:
+        - OAuth2Code: [read, write]
+      responses:
+        "200":
+          description: ok
+  /secure/oauth-implicit:
+    get:
+      operationId: getWithOAuthImplicit
+      security:
+        - OAuth2Implicit: [read]
+      responses:
+        "200":
+          description: ok
+  /secure/oauth-password:
+    get:
+      operationId: getWithOAuthPassword
+      security:
+        - OAuth2Password: [read]
+      responses:
+        "200":
+          description: ok
+  /secure/oauth-client-credentials:
+    get:
+      operationId: getWithOAuthClientCredentials
+      security:
+        - OAuth2ClientCredentials: [read]
+      responses:
+        "200":
+          description: ok
+components:
+  securitySchemes:
+    OAuth2Code:
+      type: oauth2
+      flows:
+        authorizationCode:
+          authorizationUrl: https://example.com/oauth/authorize
+          tokenUrl: https://example.com/oauth/token
+          refreshUrl: https://example.com/oauth/refresh
+          scopes:
+            read: Read access
+            write: Write access
+    OAuth2Implicit:
+      type: oauth2
+      flows:
+        implicit:
+          authorizationUrl: https://example.com/oauth/authorize
+          scopes:
+            read: Read access
+    OAuth2Password:
+      type: oauth2
+      flows:
+        password:
+          tokenUrl: https://example.com/oauth/token
+          scopes:
+            read: Read access
+    OAuth2ClientCredentials:
+      type: oauth2
+      flows:
+        clientCredentials:
+          tokenUrl: https://example.com/oauth/token
+          scopes:
+            read: Read access

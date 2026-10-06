@@ -1,0 +1,31 @@
+openapi: "3.0.0"
+info:
+  title: Model Named Error Feature
+  version: 1.0.0
+paths:
+  /risky:
+    get:
+      operationId: doRisky
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: failure
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+components:
+  schemas:
+    Error:
+      type: object
+      required: [message]
+      properties:
+        message:
+          type: string
+        cause:
+          $ref: "#/components/schemas/Error"

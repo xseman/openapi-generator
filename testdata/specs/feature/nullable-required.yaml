@@ -1,0 +1,42 @@
+openapi: "3.0.0"
+info:
+  title: Nullable and Required Interactions Feature
+  version: 1.0.0
+paths:
+  /records:
+    post:
+      operationId: createRecord
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Record"
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Record"
+components:
+  schemas:
+    Record:
+      type: object
+      required:
+        - requiredNotNullable
+        - requiredNullable
+      properties:
+        requiredNotNullable:
+          type: string
+        requiredNullable:
+          type: string
+          nullable: true
+        optionalNotNullable:
+          type: string
+        optionalNullable:
+          type: string
+          nullable: true
+        requiredNullableInt:
+          type: integer
+          nullable: true

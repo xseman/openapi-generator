@@ -1,0 +1,30 @@
+openapi: "3.0.0"
+info:
+  title: DeepObject Query Parameter Feature
+  version: 1.0.0
+paths:
+  /search:
+    get:
+      operationId: deepSearch
+      parameters:
+        - name: filter
+          in: query
+          required: false
+          style: deepObject
+          explode: true
+          schema:
+            type: object
+            properties:
+              name:
+                type: string
+              minPrice:
+                type: number
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string

@@ -1,0 +1,53 @@
+openapi: "3.0.0"
+info:
+  title: Path Parameter Style Feature
+  version: 1.0.0
+paths:
+  /simple/{id}:
+    get:
+      operationId: getSimplePath
+      parameters:
+        - name: id
+          in: path
+          required: true
+          style: simple
+          explode: false
+          schema:
+            type: array
+            items:
+              type: string
+      responses:
+        "200":
+          description: ok
+  /matrix/{id}:
+    get:
+      operationId: getMatrixPath
+      parameters:
+        - name: id
+          in: path
+          required: true
+          style: matrix
+          explode: false
+          schema:
+            type: array
+            items:
+              type: string
+      responses:
+        "200":
+          description: ok
+  /label/{id}:
+    get:
+      operationId: getLabelPath
+      parameters:
+        - name: id
+          in: path
+          required: true
+          style: label
+          explode: true
+          schema:
+            type: array
+            items:
+              type: string
+      responses:
+        "200":
+          description: ok

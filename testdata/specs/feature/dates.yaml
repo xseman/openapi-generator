@@ -1,0 +1,75 @@
+openapi: "3.0.0"
+info:
+  title: Dates Feature
+  version: 1.0.0
+paths:
+  /events:
+    get:
+      operationId: listEvents
+      parameters:
+        - name: since
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+        - name: onDay
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Event"
+    post:
+      operationId: createEvent
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Event"
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Event"
+components:
+  schemas:
+    Event:
+      type: object
+      required: [startDate, createdAt]
+      properties:
+        startDate:
+          type: string
+          format: date
+        endDate:
+          type: string
+          format: date
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+          nullable: true
+        reminderDates:
+          type: array
+          items:
+            type: string
+            format: date
+        reminderTimestamps:
+          type: array
+          items:
+            type: string
+            format: date-time

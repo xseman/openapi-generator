@@ -1,0 +1,45 @@
+openapi: "3.0.0"
+info:
+  title: Enum String Feature
+  version: 1.0.0
+paths:
+  /status:
+    get:
+      operationId: getStatus
+      parameters:
+        - name: filter
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [active, inactive, "on-hold", "2fa-required"]
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StatusHolder"
+components:
+  schemas:
+    StatusHolder:
+      type: object
+      properties:
+        status:
+          $ref: "#/components/schemas/Status"
+        nullableStatus:
+          allOf:
+            - $ref: "#/components/schemas/Status"
+          nullable: true
+        reservedWordValues:
+          type: string
+          enum: [class, default, "for", "public and private"]
+    Status:
+      type: string
+      description: Current lifecycle status of the resource
+      enum:
+        - active
+        - inactive
+        - PENDING_REVIEW
+        - "weird value!"
+        - "123numericstart"

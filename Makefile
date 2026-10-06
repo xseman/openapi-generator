@@ -80,5 +80,9 @@ samples-dart-fetch: build
 	@rm -rf samples/dart-fetch/petstore-expanded
 	$(OUTPUT_DIR)/openapi-generator generate -c samples/dart-fetch/config.yaml
 
+## regress: Diff generated output against a git ref (default HEAD): make regress REF=master
+regress:
+	./scripts/regress.sh $(REF)
+
 ## all: Run tests, lint, and build
 all: test lint build

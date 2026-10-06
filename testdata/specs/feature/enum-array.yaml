@@ -1,0 +1,44 @@
+openapi: "3.0.0"
+info:
+  title: Enum Array Feature
+  version: 1.0.0
+paths:
+  /widgets:
+    get:
+      operationId: listWidgets
+      parameters:
+        - name: colors
+          in: query
+          required: false
+          style: form
+          explode: false
+          schema:
+            type: array
+            items:
+              type: string
+              enum: [red, green, blue]
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Widget"
+components:
+  schemas:
+    Widget:
+      type: object
+      properties:
+        tags:
+          type: array
+          items:
+            type: string
+            enum: [fragile, heavy, "gift-wrapped"]
+        sizes:
+          type: array
+          nullable: true
+          items:
+            type: integer
+            enum: [1, 2, 3]

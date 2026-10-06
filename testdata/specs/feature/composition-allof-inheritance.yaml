@@ -1,0 +1,49 @@
+openapi: "3.0.0"
+info:
+  title: AllOf Inheritance Feature
+  version: 1.0.0
+paths:
+  /vehicles/{id}:
+    get:
+      operationId: getVehicle
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Car"
+components:
+  schemas:
+    Vehicle:
+      type: object
+      required: [id, make]
+      properties:
+        id:
+          type: string
+        make:
+          type: string
+    Car:
+      allOf:
+        - $ref: "#/components/schemas/Vehicle"
+        - type: object
+          required: [doors]
+          properties:
+            doors:
+              type: integer
+            trunkVolumeLiters:
+              type: number
+              nullable: true
+    SportsCar:
+      allOf:
+        - $ref: "#/components/schemas/Car"
+        - type: object
+          properties:
+            topSpeedKph:
+              type: integer

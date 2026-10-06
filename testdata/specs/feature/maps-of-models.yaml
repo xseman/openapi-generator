@@ -1,0 +1,43 @@
+openapi: "3.0.0"
+info:
+  title: Maps of Models Feature
+  version: 1.0.0
+paths:
+  /inventory:
+    get:
+      operationId: getInventory
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Inventory"
+components:
+  schemas:
+    Inventory:
+      type: object
+      properties:
+        byWarehouse:
+          type: object
+          additionalProperties:
+            $ref: "#/components/schemas/Stock"
+        historyByDate:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              $ref: "#/components/schemas/Stock"
+        nestedMap:
+          type: object
+          additionalProperties:
+            type: object
+            additionalProperties:
+              type: integer
+    Stock:
+      type: object
+      properties:
+        sku:
+          type: string
+        quantity:
+          type: integer

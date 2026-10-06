@@ -13,10 +13,13 @@ make test               # go vet + go test -race ./...
 make lint               # golangci-lint, config in .golangci.yml — must be clean
 make fmt                # gofumpt -w .
 make cover              # coverage.out + per-function summary
+make regress REF=master # generated output, working tree vs a git ref
 go test ./internal/parser -run TestName
 ```
 
 `make test` and `make lint` are what CI runs (`.github/workflows/quality.yml`).
+After a template or parser change, `make regress` shows every generated file
+it changed across `testdata/specs/feature/` and every generator.
 
 Go 1.26, stdlib + kin-openapi (spec loading), cbroglie/mustache, cobra,
 yaml.v3, x/text. No cgo.

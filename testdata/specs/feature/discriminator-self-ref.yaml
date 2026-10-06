@@ -1,0 +1,41 @@
+openapi: "3.0.0"
+info:
+  title: Self-Referencing Discriminator Feature
+  version: 1.0.0
+paths:
+  /nodes:
+    get:
+      operationId: listNodes
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TreeNode"
+components:
+  schemas:
+    TreeNode:
+      type: object
+      required: [nodeType]
+      discriminator:
+        propertyName: nodeType
+        mapping:
+          group: "#/components/schemas/TreeNode"
+          leaf: "#/components/schemas/LeafNode"
+      properties:
+        nodeType:
+          type: string
+        children:
+          type: array
+          items:
+            $ref: "#/components/schemas/TreeNode"
+    LeafNode:
+      allOf:
+        - $ref: "#/components/schemas/TreeNode"
+        - type: object
+          properties:
+            value:
+              type: string

@@ -1,0 +1,49 @@
+openapi: "3.0.0"
+info:
+  title: Deeply Nested Inline Schemas Feature
+  version: 1.0.0
+paths:
+  /profile:
+    get:
+      operationId: getProfile
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Profile"
+components:
+  schemas:
+    Profile:
+      type: object
+      properties:
+        user:
+          type: object
+          properties:
+            name:
+              type: string
+            address:
+              type: object
+              properties:
+                street:
+                  type: string
+                geo:
+                  type: object
+                  properties:
+                    lat:
+                      type: number
+                    lng:
+                      type: number
+        settings:
+          type: array
+          items:
+            type: object
+            properties:
+              key:
+                type: string
+              value:
+                type: object
+                properties:
+                  raw:
+                    type: string

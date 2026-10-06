@@ -1,0 +1,48 @@
+openapi: "3.0.0"
+info:
+  title: Additional Properties Feature
+  version: 1.0.0
+paths:
+  /configs:
+    get:
+      operationId: getConfig
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Config"
+components:
+  schemas:
+    Config:
+      type: object
+      properties:
+        name:
+          type: string
+        freeForm:
+          type: object
+        explicitFreeForm:
+          type: object
+          additionalProperties: true
+        noExtra:
+          type: object
+          additionalProperties: false
+          properties:
+            fixed:
+              type: string
+        stringMap:
+          type: object
+          additionalProperties:
+            type: string
+        modelMap:
+          type: object
+          additionalProperties:
+            $ref: "#/components/schemas/Setting"
+    Setting:
+      type: object
+      properties:
+        value:
+          type: string
+        enabled:
+          type: boolean

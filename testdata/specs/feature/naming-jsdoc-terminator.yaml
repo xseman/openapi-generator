@@ -1,0 +1,34 @@
+openapi: "3.0.0"
+info:
+  title: JSDoc Comment Terminator in Description Feature
+  version: 1.0.0
+paths:
+  /widgets/{id}/scale:
+    get:
+      operationId: scaleWidget
+      description: |
+        Scales the widget. See the '*/scale' subresource for details.
+        Also handles /* inline comment markers */ inside descriptions.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: The widget id, formatted as */id*/ for legacy reasons
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Returns the scaled widget, terminating with */ early if unescaped
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Widget"
+components:
+  schemas:
+    Widget:
+      type: object
+      description: A widget. Comment hazard */ right here.
+      properties:
+        name:
+          type: string
+          description: Name field, contains */ danger

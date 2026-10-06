@@ -1,0 +1,30 @@
+openapi: "3.0.0"
+info:
+  title: HTTP Basic and Bearer Security Feature
+  version: 1.0.0
+paths:
+  /secure/basic:
+    get:
+      operationId: getWithBasicAuth
+      security:
+        - BasicAuth: []
+      responses:
+        "200":
+          description: ok
+  /secure/bearer:
+    get:
+      operationId: getWithBearerAuth
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: ok
+components:
+  securitySchemes:
+    BasicAuth:
+      type: http
+      scheme: basic
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
