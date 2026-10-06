@@ -1,0 +1,35 @@
+openapi: "3.0.0"
+info:
+  title: Exploded Object Query Parameter Feature
+  version: 1.0.0
+paths:
+  /items:
+    get:
+      operationId: listItems
+      parameters:
+        # form + explode (explicit): one query parameter per map entry
+        - name: labels
+          in: query
+          style: form
+          explode: true
+          schema:
+            type: object
+            additionalProperties:
+              type: string
+        # no style or explode: form and exploded by default, a free-form object is a map
+        - name: extra
+          in: query
+          schema:
+            type: object
+        # deepObject: assigned whole, the runtime brackets the keys
+        - name: range
+          in: query
+          style: deepObject
+          explode: true
+          schema:
+            type: object
+            additionalProperties:
+              type: integer
+      responses:
+        "204":
+          description: ok

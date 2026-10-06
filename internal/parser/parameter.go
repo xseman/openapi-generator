@@ -18,8 +18,14 @@ func (p *Parser) parameterToCodegen(param *openapi3.Parameter) *codegen.CodegenP
 		UnescapedDescription: escapeUnsafeChars(param.Description),
 		IsDeprecated:         param.Deprecated,
 		Style:                param.Style,
-		IsExplode:            param.Explode != nil && *param.Explode,
 		VendorExtensions:     convertExtensions(param.Extensions),
+	}
+
+	// style and explode with their defaults filled in: form style, exploded, for a
+	// query parameter that names neither.
+	if sm, err := param.SerializationMethod(); err == nil {
+		cp.IsExplode = sm.Explode
+		cp.IsDeepObject = sm.Style == openapi3.SerializationDeepObject
 	}
 
 	// Set name variants
@@ -58,7 +64,7 @@ func (p *Parser) parameterToCodegen(param *openapi3.Parameter) *codegen.CodegenP
 		cp.BaseType = prop.BaseType
 		cp.DataFormat = schema.Format
 		cp.IsArray = prop.IsArray
-		cp.IsMap = prop.IsMap
+		cp.IsMap = prop.IsMap || (prop.IsFreeFormObject && isObjectSchema(schema)) // as upstream
 		cp.IsString = prop.IsString
 		cp.IsInteger = prop.IsInteger
 		cp.IsLong = prop.IsLong
