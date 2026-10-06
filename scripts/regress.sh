@@ -28,8 +28,9 @@ git archive "$ref" | tar -x -C "$tmp/src"
 (cd "$tmp/src" && go build -o "$tmp/old-bin" ./cmd/openapi-generator)
 
 # Boolean options flipped from their defaults (see `config-help <generator>`).
-# Each generator runs once with its defaults and once with these, so template
-# branches behind an option are rendered too.
+# Each generator runs once with its defaults and once per option flipped on its
+# own, so template branches behind an option are rendered too. One at a time:
+# useSingleRequestParameter=false would hide what prefixParameterInterfaces does.
 declare -A flipped=(
     [typescript-fetch]="withPackageJson=true withInterfaces=true useSingleRequestParameter=false prefixParameterInterfaces=true withoutRuntimeChecks=true stringEnums=true validationAttributes=true"
     [dart-fetch]="useDartIoSender=false"
@@ -52,9 +53,7 @@ for spec in testdata/specs/feature/*.yaml; do
     for dir in templates/*/; do
         gen=$(basename "$dir")
         run "$gen" "$gen"
-        opts=()
-        for o in ${flipped[$gen]:-}; do opts+=(-p "$o"); done
-        [ ${#opts[@]} -eq 0 ] || run "$gen" "$gen-flipped" "${opts[@]}"
+        for opt in ${flipped[$gen]:-}; do run "$gen" "$gen-$opt" -p "$opt"; done
     done
 done
 

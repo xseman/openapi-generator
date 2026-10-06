@@ -7,7 +7,7 @@ generated output points at a cause.
 
 They are the input to the regression check, which generates every spec with
 the working tree and with a git ref, through every generator, once with its
-defaults and once with its boolean options flipped, and prints the diff:
+defaults and once per boolean option flipped, and prints the diff:
 
 ```sh
 make regress              # working tree vs HEAD
