@@ -12,7 +12,7 @@ export enum {{classname}} {
      * {{enumDescription}}
      */
     {{/enumDescription}}
-    {{{name}}} = {{{value}}}{{^-last}},{{/-last}}
+    {{{name}}} = {{#isString}}'{{{value}}}'{{/isString}}{{#isNull}}{{{value}}}{{/isNull}}{{^isString}}{{^isNull}}{{{value}}}{{/isNull}}{{/isString}}{{^-last}},{{/-last}}
 {{/enumVars}}
 {{/allowableValues}}
 }

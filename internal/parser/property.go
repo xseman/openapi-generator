@@ -221,25 +221,7 @@ func (p *Parser) schemaToProperty(name string, schema *openapi3.Schema, required
 		prop.AllowableValues = map[string]any{
 			"values": schema.Enum,
 		}
-		// isString records whether each enum value must be quoted as a string literal.
-		// It is stored on the enumVar itself rather than relying on Mustache context
-		// fallback to the enclosing property: an array-of-enum parameter is not itself a
-		// string, so the values of its inherited enumVars would otherwise render unquoted.
-		isStringEnum := schemaType == "string"
-
-		enumVars := make([]map[string]any, 0, len(schema.Enum))
-		for _, v := range schema.Enum {
-			// Escape single quotes for TypeScript string literals
-			valueStr := fmt.Sprintf("%v", v)
-			escapedValue := strings.ReplaceAll(valueStr, "'", "\\'")
-			enumVars = append(enumVars, map[string]any{
-				"name":     toEnumVarName(valueStr),
-				"value":    escapedValue,
-				"isString": isStringEnum,
-			})
-		}
-
-		prop.AllowableValues["enumVars"] = enumVars
+		prop.AllowableValues["enumVars"] = enumVars(schema.Enum, schemaType == "string")
 		prop.EnumName = p.toEnumName(name)
 		prop.DatatypeWithEnum = prop.EnumName
 	}
@@ -501,4 +483,24 @@ func (p *Parser) schemaToProperty(name string, schema *openapi3.Schema, required
 // isObjectSchema reports whether the schema's primary type is "object".
 func isObjectSchema(schema *openapi3.Schema) bool {
 	return schema.Type != nil && len(schema.Type.Slice()) > 0 && schema.Type.Slice()[0] == "object"
+}
+
+// enumVars builds the allowableValues.enumVars the enum templates iterate.
+// isString records whether each value must be quoted as a string literal. It is
+// stored on the enumVar itself rather than relying on Mustache context fallback
+// to the enclosing property: an array-of-enum parameter is not itself a string,
+// so the values of its inherited enumVars would otherwise render unquoted.
+func enumVars(values []any, isString bool) []map[string]any {
+	vars := make([]map[string]any, 0, len(values))
+	for _, v := range values {
+		// Escape single quotes for TypeScript string literals
+		valueStr := fmt.Sprintf("%v", v)
+		vars = append(vars, map[string]any{
+			"name":     toEnumVarName(valueStr),
+			"value":    strings.ReplaceAll(valueStr, "'", "\\'"),
+			"isString": isString,
+		})
+	}
+
+	return vars
 }
