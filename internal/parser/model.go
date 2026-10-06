@@ -2,6 +2,7 @@ package parser
 
 import (
 	"fmt"
+	"slices"
 	"sort"
 
 	"github.com/getkin/kin-openapi/openapi3"
@@ -182,6 +183,8 @@ func (p *Parser) schemaToModel(name string, schema *openapi3.Schema) *codegen.Co
 				model.Vars = append(model.Vars, props...)
 			}
 		}
+
+		p.requireInheritedProperties(model, schema)
 	}
 
 	// Handle discriminator
@@ -365,4 +368,28 @@ func sortedKeys(m map[string]bool) []string {
 	sort.Strings(keys)
 
 	return keys
+}
+
+// requireInheritedProperties redeclares, as required, each property a parent
+// ($ref in allOf) declares optional but this model lists in its own required,
+// so the extending interface narrows the inherited optional one, as upstream.
+func (p *Parser) requireInheritedProperties(model *codegen.CodegenModel, schema *openapi3.Schema) {
+	for _, name := range schema.Required {
+		if slices.ContainsFunc(model.Vars, func(v *codegen.CodegenProperty) bool { return v.BaseName == name }) {
+			continue
+		}
+
+		for _, ref := range schema.AllOf {
+			if ref.Ref == "" || ref.Value == nil || ref.Value.Properties[name] == nil || slices.Contains(ref.Value.Required, name) {
+				continue
+			}
+
+			prop := p.schemaRefToProperty(name, ref.Value.Properties[name], true)
+			model.Vars = append(model.Vars, prop)
+			model.RequiredVars = append(model.RequiredVars, prop)
+			model.HasVars, model.HasRequired = true, true
+
+			break
+		}
+	}
 }
