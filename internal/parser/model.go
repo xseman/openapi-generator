@@ -335,6 +335,20 @@ func (p *Parser) oneOfMembers(model *codegen.CodegenModel, schema *openapi3.Sche
 		}
 	}
 
+	// Member type names drop their nullability. null is a valid value only when
+	// exactly one member accepts it (oneOf), so only then does it join the union.
+	nullable := 0
+
+	for _, ref := range schema.OneOf {
+		if ref.Value != nil && ref.Value.Nullable {
+			nullable++
+		}
+	}
+
+	if nullable == 1 {
+		model.OneOf = append(model.OneOf, "null")
+	}
+
 	model.OneOfModels = sortedKeys(models)
 	model.OneOfArrays = sortedKeys(arrays)
 	model.HasOneOf = len(model.OneOf) > 0

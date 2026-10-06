@@ -1,6 +1,9 @@
 package parser
 
-import "testing"
+import (
+	"slices"
+	"testing"
+)
 
 // TestInlineMapOneOfMemberIsPrimitive guards against a regression where an inline map
 // member of a oneOf (type: object + additionalProperties, no $ref) was classified as a
@@ -143,6 +146,51 @@ paths:
 	for name := range want {
 		if !seen[name] {
 			t.Errorf("parameter %q not found in generated operations", name)
+		}
+	}
+}
+
+// TestOneOfNullOnlyWithOneNullableMember checks that null joins a oneOf union
+// only when exactly one member is nullable: with none, null matches nothing;
+// with two, it matches both, which oneOf rejects.
+func TestOneOfNullOnlyWithOneNullableMember(t *testing.T) {
+	spec := []byte(`
+openapi: 3.0.3
+info:
+  title: Nullable oneOf
+  version: 1.0.0
+paths: {}
+components:
+  schemas:
+    One:
+      oneOf:
+        - {type: string, nullable: true}
+        - {type: number}
+    None:
+      oneOf:
+        - {type: string}
+        - {type: number}
+    Both:
+      oneOf:
+        - {type: string, nullable: true}
+        - {type: number, nullable: true}
+`)
+
+	p := NewParser()
+
+	p.SkipValidation = true
+	if err := p.LoadFromData(spec); err != nil {
+		t.Fatalf("LoadFromData: %v", err)
+	}
+
+	models, err := p.GetModels()
+	if err != nil {
+		t.Fatalf("GetModels: %v", err)
+	}
+
+	for name, want := range map[string]bool{"One": true, "None": false, "Both": false} {
+		if got := slices.Contains(findModel(t, models, name).OneOf, "null"); got != want {
+			t.Errorf("%s: null in OneOf = %v, want %v", name, got, want)
 		}
 	}
 }
