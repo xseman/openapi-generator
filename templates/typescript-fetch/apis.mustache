@@ -225,7 +225,17 @@ export class {{classname}} extends runtime.BaseAPI {
             })
 {{/isCollectionFormatMulti}}
 {{^isCollectionFormatMulti}}
+{{#items.isModel}}
+{{^items.isPrimitiveType}}
+            formParams.append("{{baseName}}", new Blob([JSON.stringify({{#uniqueItems}}Array.from({{/uniqueItems}}requestParameters["{{paramName}}"]{{#uniqueItems}}){{/uniqueItems}}{{^withoutRuntimeChecks}}.map({{items.dataType}}ToJSON){{/withoutRuntimeChecks}})], { type: "application/json", }));
+{{/items.isPrimitiveType}}
+{{#items.isPrimitiveType}}
             formParams.append("{{baseName}}{{#useSquareBracketsInArrayNames}}[]{{/useSquareBracketsInArrayNames}}", {{#uniqueItems}}Array.from({{/uniqueItems}}requestParameters["{{paramName}}"]{{#uniqueItems}}){{/uniqueItems}}!.join(runtime.COLLECTION_FORMATS["{{collectionFormat}}"]));
+{{/items.isPrimitiveType}}
+{{/items.isModel}}
+{{^items.isModel}}
+            formParams.append("{{baseName}}{{#useSquareBracketsInArrayNames}}[]{{/useSquareBracketsInArrayNames}}", {{#uniqueItems}}Array.from({{/uniqueItems}}requestParameters["{{paramName}}"]{{#uniqueItems}}){{/uniqueItems}}!.join(runtime.COLLECTION_FORMATS["{{collectionFormat}}"]));
+{{/items.isModel}}
 {{/isCollectionFormatMulti}}
         }
 {{/isArray}}

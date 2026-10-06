@@ -320,6 +320,14 @@ func (p *Parser) addFormParams(co *codegen.CodegenOperation, schema *openapi3.Sc
 				fp.IsCollectionFormatMulti = true
 				fp.CollectionFormat = "multi"
 			}
+
+			// An array of object models goes as one JSON part, but an array of
+			// $ref to a primitive or enum schema is csv-joined like any primitive.
+			if items := propRef.Value.Items; prop.Items != nil && items != nil && items.Value != nil {
+				t := items.Value.Type
+				prop.Items.IsPrimitiveType = prop.Items.IsPrimitiveType ||
+					t.Includes("string") || t.Includes("integer") || t.Includes("number") || t.Includes("boolean")
+			}
 		}
 
 		co.FormParams = append(co.FormParams, fp)
