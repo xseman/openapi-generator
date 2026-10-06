@@ -509,16 +509,26 @@ func isObjectSchema(schema *openapi3.Schema) bool {
 // so the values of its inherited enumVars would otherwise render unquoted.
 func enumVars(values []any, isString bool) []map[string]any {
 	vars := make([]map[string]any, 0, len(values))
+	seen := make(map[string]int)
+
 	for _, v := range values {
 		// null is no member: a nullable enum lists it, the property carries it.
 		if v == nil {
 			continue
 		}
 
-		// Escape single quotes for TypeScript string literals
+		// Values that name alike (low, LOW) get a count suffix (Low, Low2), as upstream.
 		valueStr := fmt.Sprintf("%v", v)
+		name := toEnumVarName(valueStr)
+
+		seen[name]++
+		if seen[name] > 1 {
+			name += strconv.Itoa(seen[name])
+		}
+
+		// Escape single quotes for TypeScript string literals
 		vars = append(vars, map[string]any{
-			"name":     toEnumVarName(valueStr),
+			"name":     name,
 			"value":    strings.ReplaceAll(valueStr, "'", "\\'"),
 			"isString": isString,
 		})

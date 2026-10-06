@@ -17,7 +17,7 @@ components:
     Status:
       type: string
       nullable: true
-      enum: [active, "weird value!", null]
+      enum: [active, "weird value!", ACTIVE, null]
     Priority:
       type: integer
       enum: [0, 99, -1]
@@ -40,7 +40,7 @@ components:
 		want     []string
 		isString bool
 	}{
-		{"Status", []string{"Active", "WeirdValue"}, true},
+		{"Status", []string{"Active", "WeirdValue", "Active2"}, true},
 		{"Priority", []string{"_0", "_99", "Minus1"}, false},
 	} {
 		vars, _ := findModel(t, models, tt.model).AllowableValues["enumVars"].([]map[string]any)
