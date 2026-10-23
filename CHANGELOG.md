@@ -1,5 +1,41 @@
 # Changelog
 
+## [0.4.0](https://github.com/xseman/openapi-generator/compare/v0.3.0...v0.4.0) (2026-10-23)
+
+
+### Features
+
+* **typescript-fetch:** type runtime exports for isolated declarations ([dc9d04a](https://github.com/xseman/openapi-generator/commit/dc9d04a1dd1d75076ad793c682cd662706a3d85d))
+
+
+### Bug Fixes
+
+* **parser:** keep OpenAPI 3.1 numeric exclusive bounds ([eb87798](https://github.com/xseman/openapi-generator/commit/eb877988bf0335e52d47e6838fb4a5e5476715a2))
+
+
+### Documentation
+
+* align CLAUDE.md with the conventions of the sibling repos ([aebf867](https://github.com/xseman/openapi-generator/commit/aebf867c0eb2cfb6d7610898368eb198ae0f06e3))
+
+
+### Build System
+
+* **deps:** upgrade kin-openapi, cobra and mustache, move to go.yaml.in ([c6d7080](https://github.com/xseman/openapi-generator/commit/c6d70804d5fe56cfa3eba64ffcf571905c619766))
+* **make:** drop the broken generate target, declare every phony target ([1aba3e1](https://github.com/xseman/openapi-generator/commit/1aba3e1efdbf406deacd2139174b1e023546679b))
+
+
+### Automation
+
+* run quality checks on template changes, report coverage inline ([a2bca81](https://github.com/xseman/openapi-generator/commit/a2bca8182e938dce91db7ff0f2c31bc00dfd864b))
+
+
+### Maintenance
+
+* keep template whitespace in .editorconfig, add charset and JSON ([c77626a](https://github.com/xseman/openapi-generator/commit/c77626aad0dede26f62ace50085d21d5f183dc2f))
+* **lint:** enable the gofmt and gofumpt formatters ([9051a42](https://github.com/xseman/openapi-generator/commit/9051a422f7280578da65671499585c6c4045d3a6))
+* **parser:** title-case words without x/text ([af84141](https://github.com/xseman/openapi-generator/commit/af84141112133da8fffc204da1914073429d852e))
+* use maps and slices from the standard library ([0f8dc3c](https://github.com/xseman/openapi-generator/commit/0f8dc3cdeed0df022730af575c084a1c10001efc))
+
 ## [0.3.0](https://github.com/xseman/openapi-generator/compare/v0.2.1...v0.3.0) (2026-10-06)
 
 
