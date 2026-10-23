@@ -117,3 +117,12 @@ linters:
               linters:
                   - revive
               text: "var-naming|stutters"
+
+formatters:
+    enable:
+        - gofmt
+        - gofumpt
+
+issues:
+    max-issues-per-linter: 0
+    max-same-issues: 0
