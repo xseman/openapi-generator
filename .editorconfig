@@ -1,11 +1,22 @@
 root = true
 
 [*]
+charset = utf-8
 indent_style = tab
+tab_width = 4
 end_of_line = lf
 insert_final_newline = true
 trim_trailing_whitespace = true
 
-[*.{md,toml,yml,yaml}]
+[*.{json,md,toml,yml,yaml}]
 indent_style = space
 indent_size = 4
+
+# Templates indent with the spaces of the code they generate. Their whitespace
+# reaches the output: the trailing space of an empty doc-comment line (" * "),
+# and the final newline a partial leaves out on purpose.
+[*.mustache]
+indent_style = space
+indent_size = 4
+insert_final_newline = false
+trim_trailing_whitespace = false
