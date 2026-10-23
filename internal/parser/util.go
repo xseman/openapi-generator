@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/getkin/kin-openapi/openapi3"
@@ -58,4 +59,19 @@ func discriminatorMapping(mapping map[string]openapi3.MappingRef) map[string]str
 	}
 
 	return out
+}
+
+// bound renders one side of a numeric range for the templates: the limit and
+// whether it is exclusive. OAS 3.0 marks limit exclusive with a boolean; OAS 3.1
+// writes the exclusive bound as its own number, which then stands in for limit.
+func bound(limit *float64, exclusive openapi3.ExclusiveBound) (string, bool) {
+	if exclusive.Value != nil {
+		return fmt.Sprintf("%v", *exclusive.Value), true
+	}
+
+	if limit == nil {
+		return "", exclusive.IsTrue()
+	}
+
+	return fmt.Sprintf("%v", *limit), exclusive.IsTrue()
 }

@@ -463,20 +463,13 @@ func (p *Parser) schemaToProperty(name string, schema *openapi3.Schema, required
 
 	// Validation
 	prop.Pattern = schema.Pattern
-	if schema.Min != nil {
-		prop.Minimum = fmt.Sprintf("%v", *schema.Min)
-	}
-
-	if schema.Max != nil {
-		prop.Maximum = fmt.Sprintf("%v", *schema.Max)
-	}
+	prop.Minimum, prop.ExclusiveMinimum = bound(schema.Min, schema.ExclusiveMin)
+	prop.Maximum, prop.ExclusiveMaximum = bound(schema.Max, schema.ExclusiveMax)
 
 	prop.MinLength = intPtr(int(schema.MinLength))
 	prop.MaxLength = uint64ToIntPtr(schema.MaxLength)
 	prop.MinItems = intPtr(int(schema.MinItems))
 	prop.MaxItems = uint64ToIntPtr(schema.MaxItems)
-	prop.ExclusiveMinimum = schema.ExclusiveMin.IsTrue()
-	prop.ExclusiveMaximum = schema.ExclusiveMax.IsTrue()
 	prop.HasValidation = prop.Pattern != "" || prop.Minimum != "" || prop.Maximum != "" ||
 		prop.MinLength != nil || prop.MaxLength != nil ||
 		prop.MinItems != nil || prop.MaxItems != nil

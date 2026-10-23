@@ -1,7 +1,6 @@
 package parser
 
 import (
-	"fmt"
 	"slices"
 	"sort"
 
@@ -230,21 +229,14 @@ func (p *Parser) schemaToModel(name string, schema *openapi3.Schema) *codegen.Co
 
 	// Set validation properties
 	model.Pattern = schema.Pattern
-	if schema.Min != nil {
-		model.Minimum = fmt.Sprintf("%v", *schema.Min)
-	}
-
-	if schema.Max != nil {
-		model.Maximum = fmt.Sprintf("%v", *schema.Max)
-	}
+	model.Minimum, model.ExclusiveMinimum = bound(schema.Min, schema.ExclusiveMin)
+	model.Maximum, model.ExclusiveMaximum = bound(schema.Max, schema.ExclusiveMax)
 
 	model.MinLength = intPtr(int(schema.MinLength))
 	model.MaxLength = uint64ToIntPtr(schema.MaxLength)
 	model.MinItems = intPtr(int(schema.MinItems))
 	model.MaxItems = uint64ToIntPtr(schema.MaxItems)
 	model.UniqueItems = schema.UniqueItems
-	model.ExclusiveMinimum = schema.ExclusiveMin.IsTrue()
-	model.ExclusiveMaximum = schema.ExclusiveMax.IsTrue()
 
 	return model
 }
