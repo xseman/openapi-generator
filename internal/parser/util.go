@@ -1,6 +1,10 @@
 package parser
 
-import "strings"
+import (
+	"strings"
+
+	"github.com/getkin/kin-openapi/openapi3"
+)
 
 // extractRefName returns the final path segment of an OpenAPI $ref, e.g.
 // "#/components/schemas/Pet" -> "Pet".
@@ -39,4 +43,19 @@ func uint64ToIntPtr(v *uint64) *int {
 	i := int(*v)
 
 	return &i
+}
+
+// discriminatorMapping flattens a discriminator mapping to the raw $ref each
+// value names, the shape CodegenDiscriminator.Mapping carries.
+func discriminatorMapping(mapping map[string]openapi3.MappingRef) map[string]string {
+	if mapping == nil {
+		return nil
+	}
+
+	out := make(map[string]string, len(mapping))
+	for name, ref := range mapping {
+		out[name] = ref.Ref
+	}
+
+	return out
 }

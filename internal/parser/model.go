@@ -192,7 +192,7 @@ func (p *Parser) schemaToModel(name string, schema *openapi3.Schema) *codegen.Co
 		model.Discriminator = &codegen.CodegenDiscriminator{
 			PropertyName:     p.toVarName(schema.Discriminator.PropertyName),
 			PropertyBaseName: schema.Discriminator.PropertyName,
-			Mapping:          schema.Discriminator.Mapping,
+			Mapping:          discriminatorMapping(schema.Discriminator.Mapping),
 		}
 		if len(schema.Discriminator.Mapping) > 0 {
 			model.HasDiscriminatorWithNonEmptyMapping = true
@@ -208,7 +208,7 @@ func (p *Parser) schemaToModel(name string, schema *openapi3.Schema) *codegen.Co
 			for _, mappingName := range mappingNames {
 				mapped := &codegen.MappedModel{
 					MappingName: mappingName,
-					ModelName:   extractRefName(schema.Discriminator.Mapping[mappingName]),
+					ModelName:   extractRefName(schema.Discriminator.Mapping[mappingName].Ref),
 				}
 				// A mapping that resolves to this model itself would make the
 				// generated FromJSONTyped call itself forever; divert it to the
@@ -243,8 +243,8 @@ func (p *Parser) schemaToModel(name string, schema *openapi3.Schema) *codegen.Co
 	model.MinItems = intPtr(int(schema.MinItems))
 	model.MaxItems = uint64ToIntPtr(schema.MaxItems)
 	model.UniqueItems = schema.UniqueItems
-	model.ExclusiveMinimum = schema.ExclusiveMin
-	model.ExclusiveMaximum = schema.ExclusiveMax
+	model.ExclusiveMinimum = schema.ExclusiveMin.IsTrue()
+	model.ExclusiveMaximum = schema.ExclusiveMax.IsTrue()
 
 	return model
 }

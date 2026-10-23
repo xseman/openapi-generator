@@ -6,7 +6,7 @@ import (
 	"sort"
 
 	"github.com/getkin/kin-openapi/openapi3"
-	"gopkg.in/yaml.v3"
+	"go.yaml.in/yaml/v3"
 )
 
 // buildPropertyOrder recovers the declaration order of object properties from the raw

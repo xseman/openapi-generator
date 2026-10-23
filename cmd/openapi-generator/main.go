@@ -13,7 +13,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/xseman/openapi-generator/internal/gen"
 	"github.com/xseman/openapi-generator/internal/update"
-	"gopkg.in/yaml.v3"
+	"go.yaml.in/yaml/v3"
 )
 
 func main() {
