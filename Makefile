@@ -1,4 +1,4 @@
-.PHONY: help test cover lint build clean
+.PHONY: help test cover cover-html lint fmt vet build install clean tidy update samples-dart-fetch regress all
 
 GOFUMPT ?= go run mvdan.cc/gofumpt@v0.12.0
 GOLANGCI ?= go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.13.0
@@ -65,14 +65,6 @@ tidy:
 update:
 	go get -u ./...
 	go mod tidy
-
-## generate: Run code generation (example usage)
-generate:
-	@echo "Generating code from sample spec..."
-	./openapi-generator generate \
-		-i samples/config.yaml \
-		-g typescript-fetch \
-		-o generated
 
 ## samples-dart-fetch: Regenerate the dart-fetch petstore sample
 samples-dart-fetch: build
