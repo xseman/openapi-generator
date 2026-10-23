@@ -2,6 +2,7 @@ package gen
 
 import (
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
 	"sort"
@@ -100,9 +101,7 @@ func buildBaseData(spec *specData, apiPackage, modelPackage, version string, cg 
 		"modelPackage":     modelPackage,
 	}
 
-	for k, v := range cg.GetAdditionalProperties() {
-		baseData[k] = v
-	}
+	maps.Copy(baseData, cg.GetAdditionalProperties())
 
 	return baseData
 }

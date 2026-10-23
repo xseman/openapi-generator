@@ -1,6 +1,7 @@
 package gen
 
 import (
+	"maps"
 	"sort"
 	"strings"
 
@@ -50,9 +51,7 @@ func extractHost(basePath string) string {
 // copyMap creates a shallow copy of a map.
 func copyMap(m map[string]any) map[string]any {
 	result := make(map[string]any)
-	for k, v := range m {
-		result[k] = v
-	}
+	maps.Copy(result, m)
 
 	return result
 }

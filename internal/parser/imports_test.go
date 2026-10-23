@@ -2,6 +2,7 @@ package parser
 
 import (
 	"reflect"
+	"slices"
 	"testing"
 )
 
@@ -57,16 +58,7 @@ components:
 		t.Fatal("MapOfArrays.AdditionalProperties is nil, want a resolved CodegenProperty for Array<Cell>")
 	}
 
-	found := false
-
-	for _, imp := range mapOfArrays.Imports {
-		if imp == "Cell" {
-			found = true
-			break
-		}
-	}
-
-	if !found {
+	if !slices.Contains(mapOfArrays.Imports, "Cell") {
 		t.Fatalf("MapOfArrays.Imports = %v, want it to contain %q", mapOfArrays.Imports, "Cell")
 	}
 }

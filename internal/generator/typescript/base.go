@@ -2,6 +2,7 @@
 package typescript
 
 import (
+	"maps"
 	"regexp"
 	"strings"
 	"unicode"
@@ -169,9 +170,9 @@ type BaseGenerator struct {
 // NewBaseGenerator creates a new TypeScript base generator.
 func NewBaseGenerator() *BaseGenerator {
 	g := &BaseGenerator{
-		TypeMapping:                copyMap(TypeMapping),
-		ReservedWords:              copyMapBool(ReservedWords),
-		LanguageSpecificPrimitives: copyMapBool(Primitives),
+		TypeMapping:                maps.Clone(TypeMapping),
+		ReservedWords:              maps.Clone(ReservedWords),
+		LanguageSpecificPrimitives: maps.Clone(Primitives),
 		ImportMapping:              make(map[string]string),
 		InstantiationTypes:         make(map[string]string),
 		NameMapping:                make(map[string]string),
@@ -473,27 +474,6 @@ func (g *BaseGenerator) GetConfig() *config.GeneratorConfig {
 // SetConfig sets the generator config.
 func (g *BaseGenerator) SetConfig(cfg *config.GeneratorConfig) {
 	g.Config = cfg
-}
-
-// Helper functions
-
-func copyMap(m map[string]string) map[string]string {
-	result := make(map[string]string)
-	for k, v := range m {
-		result[k] = v
-	}
-
-	return result
-}
-
-// copyMapBool creates a shallow copy of a boolean map.
-func copyMapBool(m map[string]bool) map[string]bool {
-	result := make(map[string]bool)
-	for k, v := range m {
-		result[k] = v
-	}
-
-	return result
 }
 
 // sanitizeSeparators replaces the separator characters upstream openapi-generator's

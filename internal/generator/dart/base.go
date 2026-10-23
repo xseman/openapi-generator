@@ -2,6 +2,7 @@
 package dart
 
 import (
+	"maps"
 	"regexp"
 	"strings"
 	"unicode"
@@ -136,9 +137,9 @@ type BaseGenerator struct {
 // NewBaseGenerator creates a new Dart base generator.
 func NewBaseGenerator() *BaseGenerator {
 	g := &BaseGenerator{
-		TypeMapping:                copyMap(TypeMapping),
-		ReservedWords:              copyMapBool(ReservedWords),
-		LanguageSpecificPrimitives: copyMapBool(Primitives),
+		TypeMapping:                maps.Clone(TypeMapping),
+		ReservedWords:              maps.Clone(ReservedWords),
+		LanguageSpecificPrimitives: maps.Clone(Primitives),
 		ImportMapping:              make(map[string]string),
 		InstantiationTypes:         make(map[string]string),
 		NameMapping:                make(map[string]string),
@@ -393,24 +394,6 @@ func (g *BaseGenerator) GetConfig() *config.GeneratorConfig { return g.Config }
 func (g *BaseGenerator) SetConfig(cfg *config.GeneratorConfig) { g.Config = cfg }
 
 // Helpers
-
-func copyMap(m map[string]string) map[string]string {
-	r := make(map[string]string, len(m))
-	for k, v := range m {
-		r[k] = v
-	}
-
-	return r
-}
-
-func copyMapBool(m map[string]bool) map[string]bool {
-	r := make(map[string]bool, len(m))
-	for k, v := range m {
-		r[k] = v
-	}
-
-	return r
-}
 
 // SanitizeName replaces non-word characters with underscores.
 func SanitizeName(name string) string {
