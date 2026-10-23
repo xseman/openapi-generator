@@ -22,7 +22,7 @@ After a template or parser change, `make regress` shows every generated file
 it changed across `testdata/specs/feature/` and every generator.
 
 Go 1.26, stdlib + kin-openapi (spec loading), cbroglie/mustache, cobra,
-yaml.v3, x/text. No cgo.
+go.yaml.in/yaml/v3. No cgo.
 
 ## Layout
 
@@ -43,8 +43,8 @@ yaml.v3, x/text. No cgo.
 
 - Generated client code is never edited by hand: fix the template under
   `templates/<generator>/` or the logic in `internal/generator/` or
-  `internal/parser/`, then regenerate. Delete `generated/` first so stale
-  files do not survive.
+  `internal/parser/`, then regenerate. Delete the output directory first:
+  the generator does not remove stale files.
 - `codegen`, `config` and `generator` mirror the Java openapi-generator's
   names one for one (`OperationIdCamelCase`, `IsUuid`, `ApiPackage`), so a
   template author can read the upstream docs. Keep them, even where Go would
@@ -58,22 +58,27 @@ yaml.v3, x/text. No cgo.
 - Tests: table tests over small specs in the package that owns the logic;
   `internal/parser` has the most. A parser for a spec fragment gets a case for
   the fragment, not a full petstore.
+- A change in behaviour updates `README.md`, or the generator's
+  `templates/<generator>/README.md` for one of its options.
 - `make lint` must stay clean. Never silence a linter to get there: fix the
   code, or write `//nolint:<linter> // <reason>` — `nolintlint` rejects a
-  directive without both. A deliberately dropped error reads `_ = f()`.
+  directive without both. A deliberately dropped error reads `_ = f()`, with a
+  short comment when the reason is not obvious from the line.
 - Doc comments start with the identifier and end with a period. Exported API
   gets one; so does anything whose behaviour the name does not give away.
 - `// ponytail:` marks a deliberate shortcut left for later, with its ceiling
   and the upgrade path. Keep them true.
 - Format with `make fmt` (gofumpt). Tabs in Go and the Makefile; Markdown
-  tables aligned with spaces.
+  tables aligned with spaces; templates indent with the spaces of the code
+  they generate. `.editorconfig` says the same to an editor.
 - Code reads in paragraphs: a step and its check sit together, a blank line
   separates it from the next step, from a `case` longer than two lines, and
   from a closing `return`. A block (`if`, `for`, `switch`) cuddles only with
   the one line it uses. `wsl_v5` and `nlreturn` enforce it;
   `golangci-lint run --fix` inserts the lines.
 - Commit only when asked, as a conventional commit: release-please builds the
-  changelog from the types (`feat`, `fix`, `refactor`, `docs`, `ci`, …).
+  changelog from the types (`feat`, `fix`, `refactor`, `docs`, `ci`, …). Do
+  not edit `CHANGELOG.md` or `.github/.release-manifest.json` by hand.
 
 ## Gotchas
 
