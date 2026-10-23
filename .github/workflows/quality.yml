@@ -5,6 +5,7 @@ on:
         branches: [master]
         paths:
             - "**/*.go"
+            - "templates/**"
             - "go.mod"
             - "go.sum"
             - "Makefile"
@@ -14,6 +15,7 @@ on:
         branches: [master]
         paths:
             - "**/*.go"
+            - "templates/**"
             - "go.mod"
             - "go.sum"
             - "Makefile"
@@ -23,11 +25,15 @@ on:
 permissions:
     contents: read
     actions: write
+    pull-requests: write
 
 jobs:
     test:
         name: Test
         runs-on: ubuntu-latest
+        concurrency:
+            group: coverage-comment-${{ github.event.pull_request.number || github.ref }}
+            cancel-in-progress: false
 
         steps:
             - uses: actions/checkout@v6
@@ -40,13 +46,13 @@ jobs:
             - name: Run tests with coverage
               run: make cover
 
-            - name: Upload coverage artifact
-              if: github.event_name == 'pull_request'
-              uses: actions/upload-artifact@v6
+            - name: Coverage report
+              # Release PRs only bump the version and the changelog.
+              if: github.event_name == 'pull_request' && !startsWith(github.head_ref, 'release-please--')
+              uses: xseman/coverage@v0.4.0
               with:
-                  name: go-coverage
-                  path: coverage.out
-                  if-no-files-found: warn
+                  update-comment-marker: "<!-- coverage-reporter-openapi-generator -->"
+                  coverage-artifact-paths: go:coverage.out
 
     lint:
         name: Lint
