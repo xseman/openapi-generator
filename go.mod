@@ -7,7 +7,6 @@ require (
 	github.com/getkin/kin-openapi v0.152.0
 	github.com/spf13/cobra v1.10.2
 	go.yaml.in/yaml/v3 v3.0.4
-	golang.org/x/text v0.43.0
 )
 
 require (
@@ -20,4 +19,5 @@ require (
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.3 // indirect
 	github.com/spf13/pflag v1.0.9 // indirect
 	github.com/stretchr/testify v1.11.1 // indirect
+	golang.org/x/text v0.43.0 // indirect
 )

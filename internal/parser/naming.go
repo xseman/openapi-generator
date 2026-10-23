@@ -3,9 +3,7 @@ package parser
 import (
 	"strconv"
 	"strings"
-
-	"golang.org/x/text/cases"
-	"golang.org/x/text/language"
+	"unicode"
 )
 
 // unsafeCommentChars maps comment delimiters in spec description text to
@@ -24,29 +22,38 @@ func toCamelCase(s string) string {
 		return s
 	}
 
-	titleCaser := cases.Title(language.English)
-
 	var b strings.Builder
 
 	b.WriteString(strings.ToLower(words[0]))
 
 	for _, word := range words[1:] {
-		b.WriteString(titleCaser.String(strings.ToLower(word)))
+		b.WriteString(titleWord(word))
 	}
 
 	return b.String()
 }
 
 func toPascalCase(s string) string {
-	titleCaser := cases.Title(language.English)
-
 	var b strings.Builder
 
 	for _, word := range splitWords(s) {
-		b.WriteString(titleCaser.String(strings.ToLower(word)))
+		b.WriteString(titleWord(word))
 	}
 
 	return b.String()
+}
+
+// titleWord lower-cases an ASCII word and upper-cases its first letter, past
+// any leading digits ("2fa" -> "2Fa"), as cases.Title does for such words.
+func titleWord(word string) string {
+	word = strings.ToLower(word)
+
+	i := strings.IndexFunc(word, unicode.IsLetter)
+	if i < 0 {
+		return word
+	}
+
+	return word[:i] + strings.ToUpper(word[i:i+1]) + word[i+1:]
 }
 
 func toSnakeCase(s string) string {
