@@ -32,8 +32,8 @@ git archive "$ref" | tar -x -C "$tmp/src"
 # own, so template branches behind an option are rendered too. One at a time:
 # useSingleRequestParameter=false would hide what prefixParameterInterfaces does.
 declare -A flipped=(
-    [typescript-fetch]="withPackageJson=true withInterfaces=true useSingleRequestParameter=false prefixParameterInterfaces=true withoutRuntimeChecks=true stringEnums=true validationAttributes=true"
-    [dart-fetch]="useDartIoSender=false"
+	[typescript-fetch]="withPackageJson=true withInterfaces=true useSingleRequestParameter=false prefixParameterInterfaces=true withoutRuntimeChecks=true stringEnums=true validationAttributes=true"
+	[dart-fetch]="useDartIoSender=false"
 )
 
 # run GEN OUT [ARGS...]: generate $spec with both builds into */OUT/$name.
@@ -42,26 +42,26 @@ declare -A flipped=(
 # would render the working tree's: template changes would never show.
 # --skip-validate-spec on both sides: we are diffing output, not validating input.
 run() {
-    local gen=$1 out=$2
-    shift 2
-    "$tmp/old-bin" generate -i "$spec" -g "$gen" -t "$tmp/src/templates/$gen" -o "$tmp/old/$out/$name" --skip-validate-spec "$@" >/dev/null 2>&1 || echo "  ! $ref failed: $out $name"
-    "$tmp/new-bin" generate -i "$spec" -g "$gen" -t "templates/$gen" -o "$tmp/new/$out/$name" --skip-validate-spec "$@" >/dev/null 2>&1 || echo "  ! working tree failed: $out $name"
+	local gen=$1 out=$2
+	shift 2
+	"$tmp/old-bin" generate -i "$spec" -g "$gen" -t "$tmp/src/templates/$gen" -o "$tmp/old/$out/$name" --skip-validate-spec "$@" >/dev/null 2>&1 || echo "  ! $ref failed: $out $name"
+	"$tmp/new-bin" generate -i "$spec" -g "$gen" -t "templates/$gen" -o "$tmp/new/$out/$name" --skip-validate-spec "$@" >/dev/null 2>&1 || echo "  ! working tree failed: $out $name"
 }
 
 for spec in testdata/specs/feature/*.yaml; do
-    name=$(basename "$spec" .yaml)
-    for dir in templates/*/; do
-        gen=$(basename "$dir")
-        run "$gen" "$gen"
-        for opt in ${flipped[$gen]:-}; do run "$gen" "$gen-$opt" -p "$opt"; done
-    done
+	name=$(basename "$spec" .yaml)
+	for dir in templates/*/; do
+		gen=$(basename "$dir")
+		run "$gen" "$gen"
+		for opt in ${flipped[$gen]:-}; do run "$gen" "$gen-$opt" -p "$opt"; done
+	done
 done
 
 # -I: README.md (withPackageJson) stamps the generation time.
 if (cd "$tmp" && diff -ruN -I '^- Build date: ' old new); then
-    echo "no change in generated output vs $ref"
+	echo "no change in generated output vs $ref"
 else
-    echo
-    echo "generated output differs from $ref (see diff above)"
-    exit 1
+	echo
+	echo "generated output differs from $ref (see diff above)"
+	exit 1
 fi
