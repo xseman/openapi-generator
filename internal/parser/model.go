@@ -76,7 +76,7 @@ func (p *Parser) schemaToModel(name string, schema *openapi3.Schema) *codegen.Co
 		// Try to infer type
 		if len(schema.Enum) > 0 {
 			model.IsEnum = true
-		} else if schema.Properties != nil {
+		} else if len(schema.Properties) > 0 {
 			schemaType = &openapi3.Types{"object"}
 		}
 	}
