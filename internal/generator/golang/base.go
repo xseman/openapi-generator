@@ -231,7 +231,7 @@ func GoType(p *codegen.CodegenProperty, named string) string {
 		return p.DataType
 	}
 
-	return scalarType(p.IsString, p.IsDate, p.IsDateTime, p.IsBinary || p.IsByteArray, p.IsInteger, p.IsLong,
+	return scalarType(p.IsString, p.IsDate, p.IsDateTime, p.IsByteArray, p.IsInteger, p.IsLong,
 		p.IsNumber, p.IsFloat, p.IsBoolean, p.OpenApiType == "object")
 }
 

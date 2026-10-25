@@ -81,6 +81,7 @@ with that body in `Model`, `XxxRaw` as the response.
 | optional and nullable                     | `Opt[T]`: absent, `Null[T]()` or `Some(v)`                                                                                                                               |
 | `date` / `date-time`                      | `Date` / `DateTime` (a `time.Time`; one without an offset, a naive FastAPI datetime, is `Naive` and goes back without one)                                               |
 | enum                                      | a named type with a constant per value; `any` when the values are of more than one JSON type                                                                             |
+| `byte` / `binary` property                | `[]byte` (base64 on the wire) / `string` (the raw text, as pydantic sends `bytes`)                                                                                       |
 | inline object                             | a struct named after its owner: `ProfileUser`, `SearchReposResponse`, `CreateCustomerAddress`                                                                            |
 | nullable item                             | `[]*T`, `map[string]*T`                                                                                                                                                  |
 | `allOf`                                   | one struct with the members' properties                                                                                                                                  |
