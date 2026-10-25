@@ -1,0 +1,9 @@
+generatorName: go-fetch
+inputSpec: samples/go-fetch/petstore-expanded.yaml
+outputDir: samples/go-fetch/petstore-expanded
+skipValidateSpec: false
+verbose: false
+additionalProperties:
+    packageName: petstore
+    withGoMod: true
+    moduleName: example.com/petstore

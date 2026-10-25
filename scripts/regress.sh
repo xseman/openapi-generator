@@ -34,6 +34,7 @@ git archive "$ref" | tar -x -C "$tmp/src"
 declare -A flipped=(
 	[typescript-fetch]="withPackageJson=true withInterfaces=true useSingleRequestParameter=false prefixParameterInterfaces=true withoutRuntimeChecks=true stringEnums=true validationAttributes=true"
 	[dart-fetch]="useDartIoSender=false"
+	[go-fetch]="withGoMod=true"
 )
 
 # run GEN OUT [ARGS...]: generate $spec with both builds into */OUT/$name.

@@ -266,7 +266,7 @@ func (p *Parser) operationToCodegen(path, method string, op *openapi3.Operation,
 // CodegenParameter per property, appending them to the operation's FormParams and
 // AllParams. This mirrors upstream openapi-generator, which surfaces form fields (e.g. an
 // uploaded `file`) as individual parameters rather than a single opaque body.
-func (p *Parser) addFormParams(co *codegen.CodegenOperation, schema *openapi3.Schema, contentType string) {
+func (p *Parser) addFormParams(co *codegen.CodegenOperation, schema *openapi3.Schema, contentType string, encoding map[string]*openapi3.Encoding) {
 	requiredSet := make(map[string]bool)
 	for _, r := range schema.Required {
 		requiredSet[r] = true
@@ -311,7 +311,16 @@ func (p *Parser) addFormParams(co *codegen.CodegenOperation, schema *openapi3.Sc
 			AllowableValues:  prop.AllowableValues,
 			EnumName:         prop.EnumName,
 			UniqueItems:      prop.UniqueItems,
+			Vars:             prop.Vars,
 		}
+
+		// The property's encoding with its defaults filled in: form style,
+		// exploded. Only an application/x-www-form-urlencoded body uses it.
+		sm := encoding[name].SerializationMethod()
+		fp.Style = sm.Style
+		fp.IsExplode = sm.Explode
+		fp.IsDeepObject = sm.Style == openapi3.SerializationDeepObject
+
 		if fp.IsArray {
 			fp.CollectionFormat = "csv"
 			// An array of files must be sent as FormData with one append per
@@ -404,7 +413,7 @@ func (p *Parser) requestBody(co *codegen.CodegenOperation, body *openapi3.Reques
 		isForm := strings.HasPrefix(contentType, "multipart/") ||
 			contentType == "application/x-www-form-urlencoded"
 		if isForm && isObjectSchema(schema) && len(schema.Properties) > 0 {
-			p.addFormParams(co, schema, contentType)
+			p.addFormParams(co, schema, contentType, mediaType.Encoding)
 
 			if strings.HasPrefix(contentType, "multipart/") {
 				co.IsMultipart = true
@@ -470,6 +479,10 @@ func (p *Parser) inlineBody(bodyParam *codegen.CodegenParameter, schema *openapi
 	// bare type. Without this an array body renders as `Array` and an
 	// undefined `ArrayToJSON` helper.
 	prop := p.schemaToProperty("body", schema, required)
+	p.inlineVars(prop, schema)
+	p.inlineMembers(prop, schema)
+	bodyParam.Vars = prop.Vars
+	bodyParam.ComposedSchemas = prop.ComposedSchemas
 	bodyParam.DataType = prop.DataType
 	bodyParam.BaseType = prop.BaseType
 	bodyParam.IsArray = prop.IsArray

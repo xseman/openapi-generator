@@ -1,4 +1,4 @@
-.PHONY: help test cover cover-html lint fmt vet build install clean tidy update samples-dart-fetch regress all
+.PHONY: help test cover cover-html lint fmt vet build install clean tidy update samples-dart-fetch samples-go-fetch regress all
 
 GOFUMPT ?= go run mvdan.cc/gofumpt@v0.12.0
 GOLANGCI ?= go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.13.0
@@ -71,6 +71,12 @@ samples-dart-fetch: build
 	@echo "Generating dart-fetch petstore sample..."
 	@rm -rf samples/dart-fetch/petstore-expanded
 	$(OUTPUT_DIR)/openapi-generator generate -c samples/dart-fetch/config.yaml
+
+## samples-go-fetch: Regenerate the go-fetch petstore sample
+samples-go-fetch: build
+	@echo "Generating go-fetch petstore sample..."
+	@rm -rf samples/go-fetch/petstore-expanded
+	$(OUTPUT_DIR)/openapi-generator generate -c samples/go-fetch/config.yaml
 
 ## regress: Diff generated output against a git ref (default HEAD): make regress REF=master
 regress:

@@ -76,6 +76,9 @@ type CodegenProperty struct {
 	IsInnerEnum      bool `json:"isInnerEnum"` // Inline enum
 	IsEnumRef        bool `json:"isEnumRef"`   // Reference to enum model
 
+	// Ref is the $ref the property is typed from, as the spec writes it.
+	Ref string `json:"ref"`
+
 	// Enum
 	Enum            []string       `json:"enum"`
 	EnumName        string         `json:"enumName"`

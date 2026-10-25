@@ -1,0 +1,58 @@
+openapi: "3.0.0"
+info:
+  title: Form Body Encoding Feature
+  version: 1.0.0
+paths:
+  /customers:
+    post:
+      operationId: createCustomer
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+                address:
+                  type: object
+                  properties:
+                    city:
+                      type: string
+                    lines:
+                      type: array
+                      items:
+                        type: string
+                metadata:
+                  type: object
+                  additionalProperties:
+                    type: string
+                expand:
+                  type: array
+                  items:
+                    type: string
+                tags:
+                  type: array
+                  items:
+                    type: string
+                ids:
+                  type: array
+                  items:
+                    type: integer
+            encoding:
+              address:
+                style: deepObject
+                explode: true
+              metadata:
+                style: deepObject
+                explode: true
+              expand:
+                style: deepObject
+                explode: true
+              tags:
+                explode: false
+      responses:
+        "204":
+          description: created

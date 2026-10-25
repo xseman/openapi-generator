@@ -65,6 +65,8 @@ func (p *Parser) responseToCodegen(code string, resp *openapi3.Response) *codege
 		} else if mediaType.Schema.Value != nil {
 			schema := mediaType.Schema.Value
 			prop := p.schemaToProperty("response", schema, false)
+			p.inlineVars(prop, schema)
+			p.inlineMembers(prop, schema)
 
 			cr.DataType = prop.DataType
 			cr.BaseType = prop.BaseType

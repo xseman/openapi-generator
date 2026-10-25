@@ -79,9 +79,10 @@ func assembleSpec(cg generator.CodegenConfig, opts Options) (*specData, error) {
 		fmt.Printf("Found %d operations in %d tags\n", opCount, len(operationsByTag))
 	}
 
+	// Tags in order: a generator may name types across operations (go-fetch).
 	models = cg.PostProcessModels(models)
-	for tag, ops := range operationsByTag {
-		operationsByTag[tag] = cg.PostProcessOperations(ops)
+	for _, tag := range slices.Sorted(maps.Keys(operationsByTag)) {
+		operationsByTag[tag] = cg.PostProcessOperations(operationsByTag[tag])
 	}
 
 	// A parameter typed as a model carries that model's read-only properties, so

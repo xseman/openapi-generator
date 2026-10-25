@@ -1,0 +1,94 @@
+# go-fetch
+
+Generates a Go client in the shape of typescript-fetch: an API type per tag,
+three methods per operation. The output imports only the standard library
+and needs Go 1.24 (`omitzero`).
+
+## Usage
+
+```bash
+openapi-generator generate -g go-fetch -i openapi.yaml -o ./petstore -p packageName=petstore
+```
+
+| Option        | Default       | Description                                  |
+| ------------- | ------------- | -------------------------------------------- |
+| `packageName` | `openapi`     | Go package name of the generated files       |
+| `withGoMod`   | `false`       | write a `go.mod`, making the output a module |
+| `moduleName`  | `packageName` | module path in `go.mod`                      |
+
+## Output
+
+| File              | Contents                                                         |
+| ----------------- | ---------------------------------------------------------------- |
+| `runtime.go`      | `Configuration`, `ResponseError`, `Opt`, `Date`, `File`, helpers |
+| `api_<tag>.go`    | `<Tag>API`, a `<Operation>Params` per operation, its methods     |
+| `model_<name>.go` | one model                                                        |
+| `README.md`       | usage of the package                                             |
+| `go.mod`          | with `withGoMod=true`                                            |
+
+## The client
+
+```go
+cfg := &petstore.Configuration{
+	HTTPClient:  &http.Client{Timeout: 10 * time.Second},
+	AccessToken: func(ctx context.Context, op, name string, scopes []string) (string, error) { return token, nil },
+}
+pets := petstore.NewDefaultAPI(cfg)
+
+pet, err := pets.FindPetByID(ctx, petstore.FindPetByIDParams{ID: 1})
+
+var rerr *petstore.ResponseError
+if errors.As(err, &rerr) {
+	if e, ok := rerr.Model.(*petstore.Error); ok {
+		log.Print(e.Message)
+	}
+}
+```
+
+| Method       | Does                                                                      |
+| ------------ | ------------------------------------------------------------------------- |
+| `Xxx`        | sends and decodes the body (JSON, text for a string, `[]byte` for binary) |
+| `XxxRaw`     | sends; returns a 2xx `*http.Response` with its body unread                |
+| `XxxRequest` | builds the `*http.Request` without sending it                             |
+
+When a 2xx status has no body next to one that has (a 204 beside a 200), the
+result is a pointer, nil for the bodiless status, unless the type is nil-able
+already or a string. Each method takes trailing
+`RequestEditorFn`s, which change the request after it is built. A status
+outside 2xx is a `*ResponseError`; its `Model` is the body decoded into the
+type the spec gives for that status (the exact code, then `4XX`/`5XX`, then
+`default`), nil when the body lacks a property that type requires.
+
+| `Configuration` | Use                                                                    |
+| --------------- | ---------------------------------------------------------------------- |
+| `BasePath`      | replaces the spec's first server URL                                   |
+| `HTTPClient`    | any `Doer`; nil is `http.DefaultClient`                                |
+| `Headers`       | added to every request                                                 |
+| `Username`      | with `Password`, HTTP basic auth                                       |
+| `APIKey`        | returns the key named `name` for operation `op`                        |
+| `AccessToken`   | returns the bearer token for scheme `name`, operation `op`, its scopes |
+
+## Types
+
+| Schema                   | Go                                                                                                                                                                       |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| required property        | `T`                                                                                                                                                                      |
+| optional (or read-only)  | `*T`; slices, maps and `any` stay as they are: nil is absent, empty is sent                                                                                              |
+| required and nullable    | `*T`, sent as `null` when nil                                                                                                                                            |
+| optional and nullable    | `Opt[T]`: absent, `Null[T]()` or `Some(v)`                                                                                                                               |
+| `date` / `date-time`     | `Date` / `time.Time`                                                                                                                                                     |
+| enum                     | a named type with a constant per value                                                                                                                                   |
+| inline object            | a struct named after its owner: `ProfileUser`, `SearchReposResponse`, `CreateCustomerAddress`                                                                            |
+| nullable item            | `[]*T`, `map[string]*T`                                                                                                                                                  |
+| `allOf`                  | one struct with the members' properties                                                                                                                                  |
+| `oneOf` / `anyOf`        | a wrapper over the raw JSON, `AsX` / `FromX`; `AsX` refuses a value without X's required properties; inline, named after its owner as an object is                       |
+| ... with a discriminator | also `Discriminator()` and `ValueByDiscriminator()`                                                                                                                      |
+| ... pinning a property   | a variant property of one value (`enum: [cat]`, 3.1 `const`) is set by `FromX` and checked by `AsX`; one that tells every variant apart is the discriminator, inline too |
+| file in a multipart body | `File{Name, Body}`; an `octet-stream` body is `io.Reader`                                                                                                                |
+| other multipart field    | its own part: a list of scalars a part per item (comma-joined with `explode: false`), an object as JSON                                                                  |
+| urlencoded form field    | sent as its `encoding` says: form and exploded by default, `deepObject` key by key (`a[b][0]=x`)                                                                         |
+
+Not covered: server code, XML, server variables, validation, a discriminator
+without `oneOf` (the parent stays a plain struct), `additionalProperties`
+next to properties (a model drops the extra keys on decode; an inline object
+stays a map).

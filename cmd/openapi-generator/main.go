@@ -105,6 +105,7 @@ var listCmd = &cobra.Command{
 		fmt.Println("CLIENT generators:")
 		fmt.Println("  - typescript-fetch")
 		fmt.Println("  - dart-fetch")
+		fmt.Println("  - go-fetch")
 		fmt.Println()
 	},
 }
@@ -123,6 +124,8 @@ var configHelpCmd = &cobra.Command{
 			gen.PrintTypeScriptFetchConfigHelp()
 		case "dart-fetch":
 			gen.PrintDartFetchConfigHelp()
+		case "go-fetch":
+			gen.PrintGoFetchConfigHelp()
 		default:
 			fmt.Printf("Unknown generator: %s\n", args[0])
 		}

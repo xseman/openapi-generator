@@ -47,6 +47,7 @@ go install github.com/xseman/openapi-generator/cmd/openapi-generator@latest
 
 - [typescript-fetch](./templates/typescript-fetch/README.md)
 - [dart-fetch](./samples/dart-fetch/README.md)
+- [go-fetch](./templates/go-fetch/README.md)
 
 ### Server
 
@@ -78,7 +79,7 @@ openapi-generator validate -i openapi.yaml --recommend
 | Option                      | Short | Description                                      |
 | --------------------------- | ----- | ------------------------------------------------ |
 | `--input-spec`              | `-i`  | Location of the OpenAPI spec (file or URL)       |
-| `--generator-name`          | `-g`  | Generator to use: typescript-fetch, dart-fetch   |
+| `--generator-name`          | `-g`  | typescript-fetch, dart-fetch, go-fetch           |
 | `--output`                  | `-o`  | Output directory                                 |
 | `--config`                  | `-c`  | Configuration file (JSON/YAML)                   |
 | `--template-dir`            | `-t`  | Custom template directory                        |

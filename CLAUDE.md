@@ -32,7 +32,7 @@ go.yaml.in/yaml/v3. No cgo.
 | `internal/parser`               | kin-openapi document → `codegen` structs: models, operations, parameters    |
 | `internal/codegen`              | the `Codegen*` structs templates render; fields mirror the Java originals   |
 | `internal/gen`                  | the pipeline: load spec → parse → render models, apis, supporting files     |
-| `internal/generator`            | `CodegenConfig` and the language configs, `typescript/` and `dart/`         |
+| `internal/generator`            | `CodegenConfig` and the language configs, `typescript/`, `dart/`, `golang/` |
 | `internal/template`             | the Mustache engine: partials, lambdas, struct-to-map via json              |
 | `internal/config`               | generator options and their config-file keys                                |
 | `internal/update`               | release check, verified download, self-update                               |

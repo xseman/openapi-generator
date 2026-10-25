@@ -153,6 +153,24 @@ func NewDartFetchConfig() *DartFetchConfig {
 	}
 }
 
+// GoFetchConfig holds configuration specific to the go-fetch generator.
+//
+// The go-fetch generator produces a Go client that imports only the
+// standard library, in a single package.
+type GoFetchConfig struct {
+	// PackageName is the Go package name of the generated files.
+	PackageName string `json:"packageName,omitempty"`
+	// WithGoMod writes a go.mod, making the output a module of its own.
+	WithGoMod bool `json:"withGoMod,omitempty"`
+	// ModuleName is the module path in go.mod (default: PackageName).
+	ModuleName string `json:"moduleName,omitempty"`
+}
+
+// NewGoFetchConfig creates a new GoFetchConfig with default values.
+func NewGoFetchConfig() *GoFetchConfig {
+	return &GoFetchConfig{PackageName: "openapi"}
+}
+
 // FileNamingType represents the file naming convention.
 type FileNamingType string
 

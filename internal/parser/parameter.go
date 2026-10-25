@@ -81,6 +81,7 @@ func (p *Parser) parameterToCodegen(param *openapi3.Parameter) *codegen.CodegenP
 		cp.IsModel = prop.IsModel
 		cp.IsContainer = prop.IsContainer
 		cp.Items = prop.Items
+		cp.Vars = prop.Vars
 		cp.AllowableValues = prop.AllowableValues
 		cp.EnumName = prop.EnumName
 		cp.DatatypeWithEnum = prop.DatatypeWithEnum

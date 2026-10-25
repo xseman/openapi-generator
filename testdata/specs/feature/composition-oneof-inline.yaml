@@ -1,0 +1,80 @@
+openapi: 3.0.3
+info:
+  title: Inline oneOf
+  version: 1.0.0
+  description: oneOf and anyOf written in place, in a property, an array item, a request body and a response, not as a schema of their own; the members tell themselves apart by a kind of one value, or are objects of their own.
+paths:
+  /shelters/{id}/pets:
+    post:
+      operationId: admit
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - $ref: "#/components/schemas/Cat"
+                - $ref: "#/components/schemas/Dog"
+      responses:
+        "200":
+          description: the shelter after admission
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Shelter" }
+  /pets/random:
+    get:
+      operationId: randomPet
+      responses:
+        "200":
+          description: a cat or a dog
+          content:
+            application/json:
+              schema:
+                anyOf:
+                  - $ref: "#/components/schemas/Cat"
+                  - $ref: "#/components/schemas/Dog"
+components:
+  schemas:
+    Cat:
+      type: object
+      required: [kind, lives]
+      properties:
+        kind: { type: string, enum: [cat] }
+        lives: { type: integer }
+    Dog:
+      type: object
+      required: [kind, barkVolume]
+      properties:
+        kind: { type: string, enum: [dog] }
+        barkVolume: { type: number }
+    Shelter:
+      type: object
+      required: [favourite]
+      properties:
+        favourite:
+          description: The pet everyone likes.
+          oneOf:
+            - $ref: "#/components/schemas/Cat"
+            - $ref: "#/components/schemas/Dog"
+        location:
+          oneOf:
+            - type: object
+              required: [street]
+              properties:
+                street: { type: string }
+            - type: object
+              required: [lat, lon]
+              properties:
+                lat: { type: number }
+                lon: { type: number }
+        residents:
+          type: array
+          items:
+            anyOf:
+              - $ref: "#/components/schemas/Cat"
+              - $ref: "#/components/schemas/Dog"
