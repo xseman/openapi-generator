@@ -69,6 +69,76 @@ cases:
       priority: 10
       unit: lb
     skip: { typescript-fetch: "binary in a JSON body: a Blob serializes as {}" }
+  - name: literals, string members and defaults
+    op: echoLiterals
+    args: { body: { retry: always, pin: x, order: asc } }
+    result: { retry: always, pin: x, order: asc, mode: auto, tag: a, size: 25 }
+  - name: literals, int members of a mixed enum
+    op: echoLiterals
+    args: { body: { retry: 0, pin: x, order: null, mode: 1, size: 50 } }
+    result: { retry: 0, pin: x, order: null, mode: 1, tag: a, size: 50 }
+    skip: { go-fetch: "an enum without a type (members of two JSON types) is a Go string: a number can be neither sent nor decoded" }
+  - name: literals, null as an enum member
+    op: echoLiterals
+    args: { body: { retry: 1, pin: null, order: desc, tag: null } }
+    result: { retry: 1, pin: null, order: desc, tag: null, mode: auto, size: 25 }
+    skip: { typescript-fetch: "an explicit null of an optional nullable enum goes out as absent, so the server applies its default", go-fetch: "an enum without a type is a Go string (no number); enum [x, null] has no null: required sends \"\", optional drops it" }
+  - name: required nullables all null, optional nullables left out
+    op: echoNulls
+    args: { body: { note: null, due: null, color: null, dims: null, lines: null, payment: null } }
+    result:
+      note: null
+      due: null
+      color: null
+      dims: null
+      lines: null
+      payment: null
+      retries: 3
+      extras: null
+      sent: [color, dims, due, lines, note, payment]
+    skip: { typescript-fetch: "null and absent are one to it for an optional nullable array: an explicit null decodes and encodes as absent" }
+  - name: required nullables set, falsy values, explicit null over a default
+    op: echoNulls
+    args:
+      body: { note: "", due: "2024-02-29", color: "", dims: { widthCm: 1, heightCm: 2 }, lines: [], payment: { method: transfer, iban: SK31 }, retries: null, extras: null }
+    result:
+      note: ""
+      due: "2024-02-29"
+      color: ""
+      dims: { widthCm: 1, heightCm: 2 }
+      lines: []
+      payment: { method: transfer, iban: SK31 }
+      retries: null
+      extras: null
+      sent: [color, dims, due, extras, lines, note, payment, retries]
+    skip: { typescript-fetch: "null and absent are one to it for an optional nullable array: an explicit null decodes and encodes as absent" }
+  - name: naive, aware and contained times round trip
+    op: echoStamps
+    args:
+      body:
+        naive: "2024-03-01T10:00:00.5"
+        aware: "2024-03-01T10:00:00+05:30"
+        clock: "13:45:30.25+02:00"
+        span: "-PT1.5S"
+        days: ["2024-01-31", "2024-12-31"]
+        seen: { a: "2024-03-01T10:00:00Z" }
+    result:
+      naive: "2024-03-01T10:00:00.500000"
+      aware: "2024-03-01T10:00:00+05:30"
+      clock: "13:45:30.250000+02:00"
+      span: "-PT1.5S"
+      days: ["2024-01-31", "2024-12-31"]
+      seen: { a: "2024-03-01T10:00:00Z" }
+    skip: { typescript-fetch: "a naive date-time is read as local time and sent in UTC with Z (422 timezone_naive)", go-fetch: "a time.Time holds no naive date-time: it can neither send nor decode one" }
+  - name: an offset on a naive field is refused by the server
+    op: echoStamps
+    args: { body: { naive: "2024-03-01T10:00:00Z", aware: "2024-03-01T10:00:00Z", clock: "10:00:00", span: PT0S } }
+    error: { status: 422, model: { detail: [{ type: timezone_naive }] } }
+  - name: a naive time in the response and the query, a date list in the query
+    op: stampsQuery
+    args: { days: ["2024-01-31", "2024-02-29"], since: "2024-03-01T10:00:00" }
+    result: { naive: "2024-03-01T10:00:00", aware: "2024-03-01T10:00:00Z", clock: "13:45:30.250000", span: "-PT1.5S", days: ["2024-01-31", "2024-02-29"] }
+    skip: { typescript-fetch: "a date array in the query goes out as Date.toString() (Wed Jan 31 2024 ...); a naive date-time as UTC with Z", go-fetch: "a time.Time holds no naive date-time: it can neither send nor decode one" }
   - name: containers, empty and null
     op: echoContainers
     args:
@@ -147,6 +217,41 @@ cases:
     op: echoUnion
     args: { body: [1, 2] }
     result: { type: list, value: "[1, 2]" }
+  # A discriminated union as the whole body, a nullable field, map values
+  # and list items, behind a camelCase alias, and a callable discriminator.
+  - name: union body, the second member
+    op: echoPet
+    args: { body: { petKind: dog, goodBoy: true } }
+    result: { petKind: dog, goodBoy: true }
+  - name: union body, the first member
+    op: echoPet
+    args: { body: { petKind: cat, lives: 9 } }
+    result: { petKind: cat, lives: 9 }
+  - name: union body of the wrong shape is refused
+    op: echoPet
+    args: { body: { petKind: cat, goodBoy: true } }
+    error: { status: 422 }
+  - name: unions as a nullable field, map values, list items and by a callable
+    op: echoWallet
+    args:
+      body:
+        primary: { method: voucher, code: X, amount: "1.50" }
+        by_label: { a: { method: card, last4: "1234", expires: "2030-01-31" }, b: { method: transfer, iban: DE00 } }
+        pets: [{ petKind: cat, lives: 1 }]
+        tagged: { method: transfer, iban: DE11 }
+    result:
+      primary: { method: voucher, code: X, amount: "1.50" }
+      by_label: { a: { method: card, last4: "1234", expires: "2030-01-31" }, b: { method: transfer, iban: DE00 } }
+      pets: [{ petKind: cat, lives: 1 }]
+      tagged: { method: transfer, iban: DE11 }
+  - name: an explicit null union
+    op: echoWallet
+    args: { body: { primary: null } }
+    result: { primary: null, by_label: {}, pets: [] }
+  - name: unset unions are left out
+    op: echoWallet
+    args: { body: {} }
+    result: { primary: null, tagged: null }
   - name: optional body left out
     op: echoOptional
     result: { got: false }
@@ -286,7 +391,8 @@ cases:
       folder: docs
       labels: [x, y]
       meta: '{"k":1}'
-    result: [{ name: docs/a b.txt, size: 5, labels: "x,y", meta: '{"k":1}' }, { name: docs/ž.bin, size: 2 }]
+    result: [{ name: docs/a b.txt, size: 5, labels: "x|y", meta: '{"k":1}' }, { name: docs/ž.bin, size: 2 }]
+    skip: { typescript-fetch: "a multipart array goes comma-joined in one part" }
   - name: duplicate file is a 409
     op: uploadFiles
     args: { files: [{ $file: { name: a b.txt, text: again } }], folder: docs }
@@ -295,6 +401,16 @@ cases:
     op: uploadFiles
     args: { files: [{ $file: { name: a b.txt, text: again } }], folder: docs, overwrite: true }
     result: [{ name: docs/a b.txt, size: 5 }]
+  - name: typed form, lists as repeated keys
+    op: submitForm
+    args: { day: "2024-01-31", when: "2024-03-01T10:00:00Z", price: "19.99", color: light green, tags: [a, "b,c"], colors: [red, dark-blue], days: ["2024-01-31", "2024-02-29"], qty: 0, agree: true }
+    result: { day: "2024-01-31", when: "2024-03-01T10:00:00Z", price: "19.99", color: light green, tags: [a, "b,c"], colors: [red, dark-blue], days: ["2024-01-31", "2024-02-29"], qty: 0, agree: true }
+    skip: { typescript-fetch: "a union form field (Decimal: number or string) renders JSON.stringify(number | stringToJSON(...)), which does not compile" }
+  - name: typed form, defaults left out, a number for a Decimal
+    op: submitForm
+    args: { day: "2024-01-31", when: "2024-03-01T10:00:00Z", price: 5, color: red }
+    result: { price: "5", tags: [], colors: [], days: [], qty: null, agree: false }
+    skip: { typescript-fetch: "a union form field (Decimal: number or string) renders JSON.stringify(number | stringToJSON(...)), which does not compile" }
   - name: optional file left out
     op: uploadAvatar
     args: { image: { $file: { name: i.png, text: "12345" } } }
@@ -384,6 +500,27 @@ cases:
   - name: untagged operation
     op: untagged
     result: { ok: true }
+
+  # ------------------------------------------------------------ name clashes
+  - name: one camel name for a path parameter and a header, a query and a header
+    op: clashLocations
+    args: { tenant: acme, item_id: 7, Item-Id: h-7, Version: "2", version: 3 }
+    result: { tenant: acme, path: 7, header: h-7, hversion: "2", qversion: 3 }
+    skip: { typescript-fetch: "parameters of one camelCase name (item_id and Item-Id, Version and version) collapse into one field: the parser's deduplicateParams keys on the name, so the other is never sent", go-fetch: "parameters of one camelCase name (item_id and Item-Id, Version and version) collapse into one field: the parser's deduplicateParams keys on the name, so the other is never sent" }
+  - name: a snake and a camel alias of one query parameter
+    op: clashAliases
+    args: { tenant: acme, sort_by: a, sortBy: b }
+    result: { sort_by: a, sortBy: b }
+    skip: { typescript-fetch: "sort_by and sortBy collapse into one field (parser deduplicateParams): one is never sent", go-fetch: "sort_by and sortBy collapse into one field (parser deduplicateParams): one is never sent" }
+  - name: a query parameter and a form field of one camel name
+    op: clashForm
+    args: { tenant: acme, folder_name: q, folderName: f }
+    result: { query: q, form: f }
+    skip: { typescript-fetch: "a query parameter and a form field of one camel name collapse into one (parser deduplicateParams)", go-fetch: "a query parameter and a form field of one camel name collapse into one (parser deduplicateParams)" }
+  - name: query parameters named like a client's locals
+    op: clashLocals
+    args: { url: "https://x.example/?a=1", headers: h, path: p, query: q }
+    result: { url: "https://x.example/?a=1", headers: h, path: p, query: q }
 
   # ------------------------------------------------------------ cleanup
   - name: delete is a 204

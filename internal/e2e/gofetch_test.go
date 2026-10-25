@@ -123,6 +123,8 @@ func execRunner(t *testing.T, cmd *exec.Cmd) map[string]map[int]outcome {
 
 	var stderr bytes.Buffer
 
+	// Away from UTC, so a client that reads or writes local time shows it.
+	cmd.Env = append(os.Environ(), "TZ=Europe/Bratislava")
 	cmd.Stderr = &stderr
 
 	stdout, err := cmd.Output()

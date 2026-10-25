@@ -18,6 +18,19 @@
         "title": "Body_cancelOrder",
         "type": "object"
       },
+      "Body_clashForm": {
+        "properties": {
+          "folderName": {
+            "title": "Foldername",
+            "type": "string"
+          }
+        },
+        "required": [
+          "folderName"
+        ],
+        "title": "Body_clashForm",
+        "type": "object"
+      },
       "Body_issueToken": {
         "properties": {
           "client_id": {
@@ -176,6 +189,26 @@
           "expires"
         ],
         "title": "Card",
+        "type": "object"
+      },
+      "Cat": {
+        "additionalProperties": false,
+        "properties": {
+          "lives": {
+            "title": "Lives",
+            "type": "integer"
+          },
+          "petKind": {
+            "const": "cat",
+            "title": "Petkind",
+            "type": "string"
+          }
+        },
+        "required": [
+          "petKind",
+          "lives"
+        ],
+        "title": "Cat",
         "type": "object"
       },
       "Category-Input": {
@@ -444,6 +477,177 @@
           "heightCm"
         ],
         "title": "Dimensions",
+        "type": "object"
+      },
+      "Dog": {
+        "additionalProperties": false,
+        "properties": {
+          "goodBoy": {
+            "title": "Goodboy",
+            "type": "boolean"
+          },
+          "petKind": {
+            "const": "dog",
+            "title": "Petkind",
+            "type": "string"
+          }
+        },
+        "required": [
+          "petKind",
+          "goodBoy"
+        ],
+        "title": "Dog",
+        "type": "object"
+      },
+      "FormIn-Input": {
+        "additionalProperties": false,
+        "description": "A form model: every value a client must turn into text itself.",
+        "properties": {
+          "agree": {
+            "default": false,
+            "title": "Agree",
+            "type": "boolean"
+          },
+          "color": {
+            "$ref": "#/components/schemas/Color"
+          },
+          "colors": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/Color"
+            },
+            "title": "Colors",
+            "type": "array"
+          },
+          "day": {
+            "format": "date",
+            "title": "Day",
+            "type": "string"
+          },
+          "days": {
+            "default": [],
+            "items": {
+              "format": "date",
+              "type": "string"
+            },
+            "title": "Days",
+            "type": "array"
+          },
+          "price": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Price"
+          },
+          "qty": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Qty"
+          },
+          "tags": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Tags",
+            "type": "array"
+          },
+          "when": {
+            "format": "date-time",
+            "title": "When",
+            "type": "string"
+          }
+        },
+        "required": [
+          "day",
+          "when",
+          "price",
+          "color"
+        ],
+        "title": "FormIn",
+        "type": "object"
+      },
+      "FormIn-Output": {
+        "additionalProperties": false,
+        "description": "A form model: every value a client must turn into text itself.",
+        "properties": {
+          "agree": {
+            "default": false,
+            "title": "Agree",
+            "type": "boolean"
+          },
+          "color": {
+            "$ref": "#/components/schemas/Color"
+          },
+          "colors": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/Color"
+            },
+            "title": "Colors",
+            "type": "array"
+          },
+          "day": {
+            "format": "date",
+            "title": "Day",
+            "type": "string"
+          },
+          "days": {
+            "default": [],
+            "items": {
+              "format": "date",
+              "type": "string"
+            },
+            "title": "Days",
+            "type": "array"
+          },
+          "price": {
+            "title": "Price",
+            "type": "string"
+          },
+          "qty": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Qty"
+          },
+          "tags": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Tags",
+            "type": "array"
+          },
+          "when": {
+            "format": "date-time",
+            "title": "When",
+            "type": "string"
+          }
+        },
+        "required": [
+          "day",
+          "when",
+          "price",
+          "color"
+        ],
+        "title": "FormIn",
         "type": "object"
       },
       "HTTPValidationError": {
@@ -900,6 +1104,334 @@
         "title": "Keywords",
         "type": "object"
       },
+      "Literals": {
+        "additionalProperties": false,
+        "description": "Enums whose values are not one JSON type, null among them.",
+        "properties": {
+          "mode": {
+            "default": "auto",
+            "enum": [
+              "auto",
+              0,
+              1
+            ],
+            "title": "Mode"
+          },
+          "order": {
+            "anyOf": [
+              {
+                "enum": [
+                  "asc",
+                  "desc"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Order"
+          },
+          "pin": {
+            "enum": [
+              "x",
+              null
+            ],
+            "title": "Pin"
+          },
+          "retry": {
+            "$ref": "#/components/schemas/Retry"
+          },
+          "size": {
+            "default": 25,
+            "enum": [
+              10,
+              25,
+              50
+            ],
+            "title": "Size",
+            "type": "integer"
+          },
+          "tag": {
+            "default": "a",
+            "enum": [
+              "a",
+              null
+            ],
+            "title": "Tag"
+          }
+        },
+        "required": [
+          "retry",
+          "pin",
+          "order"
+        ],
+        "title": "Literals",
+        "type": "object"
+      },
+      "Nulls": {
+        "additionalProperties": false,
+        "description": "Null as a required value, and null that differs from a default.",
+        "properties": {
+          "color": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Color"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "dims": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Dimensions"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "due": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Due"
+          },
+          "extras": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/Dimensions"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Extras"
+          },
+          "lines": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/Dimensions"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lines"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "payment": {
+            "anyOf": [
+              {
+                "discriminator": {
+                  "mapping": {
+                    "card": "#/components/schemas/Card",
+                    "transfer": "#/components/schemas/Transfer",
+                    "voucher": "#/components/schemas/Voucher-Input"
+                  },
+                  "propertyName": "method"
+                },
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/Card"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Transfer"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Voucher-Input"
+                  }
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payment"
+          },
+          "retries": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": 3,
+            "title": "Retries"
+          }
+        },
+        "required": [
+          "note",
+          "due",
+          "color",
+          "dims",
+          "lines",
+          "payment"
+        ],
+        "title": "Nulls",
+        "type": "object"
+      },
+      "NullsEcho": {
+        "additionalProperties": false,
+        "properties": {
+          "color": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Color"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "dims": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Dimensions"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "due": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Due"
+          },
+          "extras": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/Dimensions"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Extras"
+          },
+          "lines": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/Dimensions"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lines"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "payment": {
+            "anyOf": [
+              {
+                "discriminator": {
+                  "mapping": {
+                    "card": "#/components/schemas/Card",
+                    "transfer": "#/components/schemas/Transfer",
+                    "voucher": "#/components/schemas/Voucher-Output"
+                  },
+                  "propertyName": "method"
+                },
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/Card"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Transfer"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Voucher-Output"
+                  }
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payment"
+          },
+          "retries": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": 3,
+            "title": "Retries"
+          },
+          "sent": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Sent",
+            "type": "array"
+          }
+        },
+        "required": [
+          "note",
+          "due",
+          "color",
+          "dims",
+          "lines",
+          "payment",
+          "sent"
+        ],
+        "title": "NullsEcho",
+        "type": "object"
+      },
       "Open": {
         "additionalProperties": true,
         "description": "Takes any extra key and returns it.",
@@ -1279,6 +1811,15 @@
         "title": "Rect",
         "type": "object"
       },
+      "Retry": {
+        "description": "Members of two JSON types: the schema has an enum and no type.",
+        "enum": [
+          0,
+          "always",
+          1
+        ],
+        "title": "Retry"
+      },
       "Scalars-Input": {
         "additionalProperties": false,
         "description": "Every scalar format pydantic writes into a schema.",
@@ -1549,6 +2090,58 @@
         "title": "Secret",
         "type": "object"
       },
+      "Stamps": {
+        "additionalProperties": false,
+        "description": "Times as ORM-backed services send them: naive, aware, in containers.",
+        "properties": {
+          "aware": {
+            "format": "date-time",
+            "title": "Aware",
+            "type": "string"
+          },
+          "clock": {
+            "format": "time",
+            "title": "Clock",
+            "type": "string"
+          },
+          "days": {
+            "default": [],
+            "items": {
+              "format": "date",
+              "type": "string"
+            },
+            "title": "Days",
+            "type": "array"
+          },
+          "naive": {
+            "format": "date-time",
+            "title": "Naive",
+            "type": "string"
+          },
+          "seen": {
+            "additionalProperties": {
+              "format": "date-time",
+              "type": "string"
+            },
+            "default": {},
+            "title": "Seen",
+            "type": "object"
+          },
+          "span": {
+            "format": "duration",
+            "title": "Span",
+            "type": "string"
+          }
+        },
+        "required": [
+          "naive",
+          "aware",
+          "clock",
+          "span"
+        ],
+        "title": "Stamps",
+        "type": "object"
+      },
       "Supplier": {
         "additionalProperties": false,
         "properties": {
@@ -1723,6 +2316,212 @@
           "amount"
         ],
         "title": "Voucher",
+        "type": "object"
+      },
+      "Wallet-Input": {
+        "additionalProperties": false,
+        "description": "The union in every place a model can hold it.",
+        "properties": {
+          "by_label": {
+            "additionalProperties": {
+              "discriminator": {
+                "mapping": {
+                  "card": "#/components/schemas/Card",
+                  "transfer": "#/components/schemas/Transfer",
+                  "voucher": "#/components/schemas/Voucher-Input"
+                },
+                "propertyName": "method"
+              },
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/Card"
+                },
+                {
+                  "$ref": "#/components/schemas/Transfer"
+                },
+                {
+                  "$ref": "#/components/schemas/Voucher-Input"
+                }
+              ]
+            },
+            "default": {},
+            "title": "By Label",
+            "type": "object"
+          },
+          "pets": {
+            "default": [],
+            "items": {
+              "discriminator": {
+                "mapping": {
+                  "cat": "#/components/schemas/Cat",
+                  "dog": "#/components/schemas/Dog"
+                },
+                "propertyName": "petKind"
+              },
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/Cat"
+                },
+                {
+                  "$ref": "#/components/schemas/Dog"
+                }
+              ]
+            },
+            "title": "Pets",
+            "type": "array"
+          },
+          "primary": {
+            "anyOf": [
+              {
+                "discriminator": {
+                  "mapping": {
+                    "card": "#/components/schemas/Card",
+                    "transfer": "#/components/schemas/Transfer",
+                    "voucher": "#/components/schemas/Voucher-Input"
+                  },
+                  "propertyName": "method"
+                },
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/Card"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Transfer"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Voucher-Input"
+                  }
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Primary"
+          },
+          "tagged": {
+            "anyOf": [
+              {
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/Card"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Transfer"
+                  }
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tagged"
+          }
+        },
+        "title": "Wallet",
+        "type": "object"
+      },
+      "Wallet-Output": {
+        "additionalProperties": false,
+        "description": "The union in every place a model can hold it.",
+        "properties": {
+          "by_label": {
+            "additionalProperties": {
+              "discriminator": {
+                "mapping": {
+                  "card": "#/components/schemas/Card",
+                  "transfer": "#/components/schemas/Transfer",
+                  "voucher": "#/components/schemas/Voucher-Output"
+                },
+                "propertyName": "method"
+              },
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/Card"
+                },
+                {
+                  "$ref": "#/components/schemas/Transfer"
+                },
+                {
+                  "$ref": "#/components/schemas/Voucher-Output"
+                }
+              ]
+            },
+            "default": {},
+            "title": "By Label",
+            "type": "object"
+          },
+          "pets": {
+            "default": [],
+            "items": {
+              "discriminator": {
+                "mapping": {
+                  "cat": "#/components/schemas/Cat",
+                  "dog": "#/components/schemas/Dog"
+                },
+                "propertyName": "petKind"
+              },
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/Cat"
+                },
+                {
+                  "$ref": "#/components/schemas/Dog"
+                }
+              ]
+            },
+            "title": "Pets",
+            "type": "array"
+          },
+          "primary": {
+            "anyOf": [
+              {
+                "discriminator": {
+                  "mapping": {
+                    "card": "#/components/schemas/Card",
+                    "transfer": "#/components/schemas/Transfer",
+                    "voucher": "#/components/schemas/Voucher-Output"
+                  },
+                  "propertyName": "method"
+                },
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/Card"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Transfer"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Voucher-Output"
+                  }
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Primary"
+          },
+          "tagged": {
+            "anyOf": [
+              {
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/Card"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Transfer"
+                  }
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tagged"
+          }
+        },
+        "title": "Wallet",
         "type": "object"
       }
     },
@@ -1980,6 +2779,47 @@
         ]
       }
     },
+    "/echo/literals": {
+      "post": {
+        "operationId": "echoLiterals",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Literals"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Literals"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Echo Literals",
+        "tags": [
+          "echo"
+        ]
+      }
+    },
     "/echo/map": {
       "post": {
         "operationId": "echoMap",
@@ -2027,6 +2867,47 @@
           }
         },
         "summary": "Echo Map",
+        "tags": [
+          "echo"
+        ]
+      }
+    },
+    "/echo/nulls": {
+      "post": {
+        "operationId": "echoNulls",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Nulls"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NullsEcho"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Echo Nulls",
         "tags": [
           "echo"
         ]
@@ -2168,6 +3049,77 @@
         ]
       }
     },
+    "/echo/pet": {
+      "post": {
+        "operationId": "echoPet",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "discriminator": {
+                  "mapping": {
+                    "cat": "#/components/schemas/Cat",
+                    "dog": "#/components/schemas/Dog"
+                  },
+                  "propertyName": "petKind"
+                },
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/Cat"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Dog"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "discriminator": {
+                    "mapping": {
+                      "cat": "#/components/schemas/Cat",
+                      "dog": "#/components/schemas/Dog"
+                    },
+                    "propertyName": "petKind"
+                  },
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/Cat"
+                    },
+                    {
+                      "$ref": "#/components/schemas/Dog"
+                    }
+                  ],
+                  "title": "Response Echopet"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Echo Pet",
+        "tags": [
+          "echo"
+        ]
+      }
+    },
     "/echo/raw": {
       "post": {
         "operationId": "echoRaw",
@@ -2289,6 +3241,47 @@
           }
         },
         "summary": "Echo Secret",
+        "tags": [
+          "echo"
+        ]
+      }
+    },
+    "/echo/stamps": {
+      "post": {
+        "operationId": "echoStamps",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Stamps"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Stamps"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Echo Stamps",
         "tags": [
           "echo"
         ]
@@ -2425,6 +3418,47 @@
         ]
       }
     },
+    "/echo/wallet": {
+      "post": {
+        "operationId": "echoWallet",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Wallet-Input"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Wallet-Output"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Echo Wallet",
+        "tags": [
+          "echo"
+        ]
+      }
+    },
     "/export.csv": {
       "get": {
         "operationId": "exportCsv",
@@ -2448,6 +3482,107 @@
         "summary": "Export Csv",
         "tags": [
           "files"
+        ]
+      }
+    },
+    "/fetch": {
+      "get": {
+        "operationId": "clashLocals",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "url",
+            "required": true,
+            "schema": {
+              "title": "Url",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "headers",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Headers"
+            }
+          },
+          {
+            "in": "query",
+            "name": "path",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Path"
+            }
+          },
+          {
+            "in": "query",
+            "name": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Query"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "title": "Response Clashlocals",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Clash Locals",
+        "tags": [
+          "clash"
         ]
       }
     },
@@ -2610,6 +3745,47 @@
           }
         },
         "summary": "Download File",
+        "tags": [
+          "files"
+        ]
+      }
+    },
+    "/forms/typed": {
+      "post": {
+        "operationId": "submitForm",
+        "requestBody": {
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/FormIn-Input"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FormIn-Output"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Submit Form",
         "tags": [
           "files"
         ]
@@ -3832,6 +5008,70 @@
         ]
       }
     },
+    "/stamps": {
+      "get": {
+        "operationId": "stampsQuery",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "days",
+            "required": false,
+            "schema": {
+              "default": [],
+              "items": {
+                "format": "date",
+                "type": "string"
+              },
+              "title": "Days",
+              "type": "array"
+            }
+          },
+          {
+            "in": "query",
+            "name": "since",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Since"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Stamps"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Stamps Query",
+        "tags": [
+          "echo"
+        ]
+      }
+    },
     "/stream": {
       "get": {
         "operationId": "streamLines",
@@ -3875,6 +5115,253 @@
         "summary": "Stream Lines",
         "tags": [
           "misc"
+        ]
+      }
+    },
+    "/tenants/{tenant}/notes": {
+      "post": {
+        "operationId": "clashForm",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "tenant",
+            "required": true,
+            "schema": {
+              "title": "Tenant",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "folder_name",
+            "required": true,
+            "schema": {
+              "title": "Folder Name",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_clashForm"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "title": "Response Clashform",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Clash Form",
+        "tags": [
+          "clash"
+        ]
+      }
+    },
+    "/tenants/{tenant}/sorted": {
+      "get": {
+        "operationId": "clashAliases",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "tenant",
+            "required": true,
+            "schema": {
+              "title": "Tenant",
+              "type": "string"
+            }
+          },
+          {
+            "deprecated": true,
+            "in": "query",
+            "name": "sort_by",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "deprecated": true,
+              "title": "Sort By"
+            }
+          },
+          {
+            "in": "query",
+            "name": "sortBy",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Sortby"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "title": "Response Clashaliases",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Clash Aliases",
+        "tags": [
+          "clash"
+        ]
+      }
+    },
+    "/tenants/{tenant}/things/{item_id}": {
+      "get": {
+        "operationId": "clashLocations",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "tenant",
+            "required": true,
+            "schema": {
+              "title": "Tenant",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "item_id",
+            "required": true,
+            "schema": {
+              "title": "Item Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "version",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Version"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Item-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Item-Id"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Version",
+            "required": false,
+            "schema": {
+              "default": "1",
+              "title": "Version",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Clashlocations",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Clash Locations",
+        "tags": [
+          "clash"
         ]
       }
     },
