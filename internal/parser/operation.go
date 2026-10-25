@@ -2,6 +2,7 @@ package parser
 
 import (
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/getkin/kin-openapi/openapi3"
@@ -353,37 +354,77 @@ func (p *Parser) addFormParams(co *codegen.CodegenOperation, schema *openapi3.Sc
 	}
 }
 
-// deduplicateParams removes duplicate parameters by name, keeping the last occurrence.
-// This is useful when path-level and operation-level parameters have the same name.
+// deduplicateParams drops a parameter that a later one of the same location
+// and name replaces (an operation's over its path item's). A parameter whose
+// ParamName another one already has (path item_id next to header Item-Id,
+// query sort_by next to sortBy) is renamed itemId2, as upstream's
+// ensureUniqueParams does, so that both stay and are sent.
 func deduplicateParams(params []*codegen.CodegenParameter) []*codegen.CodegenParameter {
-	if len(params) == 0 {
-		return params
-	}
-
 	seen := make(map[string]int)
 
 	var result []*codegen.CodegenParameter
 
-	// Iterate through parameters and track positions
-	for i, param := range params {
+	for _, param := range params {
 		if param == nil {
 			continue
 		}
 
-		key := param.ParamName
-		if idx, exists := seen[key]; exists {
-			// Replace previous occurrence
+		key := paramLocation(param) + " " + param.BaseName
+		if idx, ok := seen[key]; ok {
 			result[idx] = param
-		} else {
-			// First occurrence
-			seen[key] = len(result)
-			result = append(result, param)
+
+			continue
 		}
 
-		_ = i // unused
+		seen[key] = len(result)
+		result = append(result, param)
+	}
+
+	names := make(map[string]bool, len(result))
+
+	for _, param := range result {
+		for names[param.ParamName] {
+			param.ParamName = nextName(param.ParamName)
+		}
+
+		names[param.ParamName] = true
 	}
 
 	return result
+}
+
+// paramLocation is where a parameter goes: path, query, header, cookie,
+// form or body.
+func paramLocation(p *codegen.CodegenParameter) string {
+	switch {
+	case p.IsPathParam:
+		return "path"
+	case p.IsQueryParam:
+		return "query"
+	case p.IsHeaderParam:
+		return "header"
+	case p.IsCookieParam:
+		return "cookie"
+	case p.IsFormParam:
+		return "form"
+	}
+
+	return "body"
+}
+
+// nextName counts a name up: id becomes id2, id2 becomes id3.
+func nextName(name string) string {
+	i := len(name)
+	for i > 0 && name[i-1] >= '0' && name[i-1] <= '9' {
+		i--
+	}
+
+	n, err := strconv.Atoi(name[i:])
+	if err != nil {
+		return name + "2"
+	}
+
+	return name[:i] + strconv.Itoa(n+1)
 }
 
 // requestBody turns the first content type of a request body, in sorted
