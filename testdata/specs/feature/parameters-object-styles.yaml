@@ -1,0 +1,34 @@
+openapi: "3.0.0"
+info:
+  title: Object and array parameters in every style
+  version: 1.0.0
+  description: An object (and an array) as a path, header, query and cookie parameter, in each style the OpenAPI serialization table lists, exploded and not.
+paths:
+  /simple/{a}/{b}/label/{c}/{d}/matrix/{e}/{f}/{g}:
+    get:
+      operationId: paint
+      parameters:
+        - { name: a, in: path, required: true, style: simple, explode: false, schema: { $ref: "#/components/schemas/Color" } }
+        - { name: b, in: path, required: true, style: simple, explode: true, schema: { $ref: "#/components/schemas/Color" } }
+        - { name: c, in: path, required: true, style: label, explode: false, schema: { $ref: "#/components/schemas/Color" } }
+        - { name: d, in: path, required: true, style: label, explode: true, schema: { $ref: "#/components/schemas/Color" } }
+        - { name: e, in: path, required: true, style: matrix, explode: false, schema: { $ref: "#/components/schemas/Color" } }
+        - { name: f, in: path, required: true, style: matrix, explode: true, schema: { $ref: "#/components/schemas/Color" } }
+        - { name: g, in: path, required: true, style: matrix, explode: true, schema: { type: array, items: { type: string } } }
+        - { name: q, in: query, style: form, explode: false, schema: { $ref: "#/components/schemas/Color" } }
+        - { name: X-Color, in: header, schema: { $ref: "#/components/schemas/Color" } }
+        - { name: X-Color-Exploded, in: header, explode: true, schema: { $ref: "#/components/schemas/Color" } }
+        - { name: X-Tags, in: header, schema: { type: array, items: { type: string } } }
+        - { name: prefs, in: cookie, schema: { type: array, items: { type: string } } }
+      responses:
+        "204":
+          description: painted
+components:
+  schemas:
+    Color:
+      type: object
+      required: [R, G, B]
+      properties:
+        R: { type: integer }
+        G: { type: integer }
+        B: { type: integer }

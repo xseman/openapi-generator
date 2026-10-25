@@ -318,3 +318,140 @@ components:
 		t.Errorf("param types = %s, want Color []Color json.RawMessage", got)
 	}
 }
+
+// TestModelShapes covers the model kinds the feature specs leave out:
+// aliases of each type, nullable items, bool and float enums, union
+// variants of arrays and maps, implied discriminators that do not hold, and
+// a property name that needs a quoted tag.
+func TestModelShapes(t *testing.T) {
+	ms := models(t, `openapi: 3.0.0
+info: {title: t, version: "1"}
+paths: {}
+components:
+  schemas:
+    Pet: {type: object, required: [kind], properties: {kind: {type: string, enum: [pet]}}}
+    Pets: {type: array, items: {$ref: "#/components/schemas/Pet"}}
+    Counts: {type: object, additionalProperties: {type: integer}}
+    Name: {type: string}
+    Age: {type: integer}
+    Weight: {type: number}
+    Flag: {type: boolean}
+    Free: {type: object}
+    Sparse:
+      type: object
+      properties:
+        list: {type: array, items: {type: integer, nullable: true}}
+        map: {type: object, additionalProperties: {type: string, nullable: true}}
+        "a`+"`"+`b": {type: string}
+    Toggle: {type: boolean, enum: [true, false]}
+    Ratio: {type: number, enum: [0.5, 1, 1.5]}
+    Mixed:
+      oneOf:
+        - $ref: "#/components/schemas/Pet"
+        - {type: array, items: {$ref: "#/components/schemas/Pet"}}
+        - {type: object, additionalProperties: {type: string}}
+    Same:
+      oneOf:
+        - $ref: "#/components/schemas/Pet"
+        - $ref: "#/components/schemas/Other"
+    Other: {type: object, required: [kind], properties: {kind: {type: string, enum: [pet]}}}
+`)
+
+	for model, want := range map[string]string{
+		"Pets": "[]Pet", "Counts": "map[string]int", "Name": "string", "Age": "int",
+		"Weight": "float64", "Flag": "bool", "Free": "map[string]any",
+	} {
+		if got := ms[model].VendorExtensions["x-go-alias-type"]; got != want {
+			t.Errorf("%s = %v, want %s", model, got, want)
+		}
+	}
+
+	if got, want := fields(ms["Sparse"]), "List []*int `json:\"list,omitzero\"`\nMap map[string]*string `json:\"map,omitzero\"`\n"+
+		"AB *string \"json:\\\"a`b,omitempty\\\"\""; got != want {
+		t.Errorf("Sparse fields:\n%s\nwant:\n%s", got, want)
+	}
+
+	for model, want := range map[string]string{"Toggle": "bool", "Ratio": "float64"} {
+		enums, _ := ms[model].VendorExtensions["x-go-enums"].([]map[string]any)
+		if len(enums) != 1 || enums[0]["base"] != want {
+			t.Errorf("%s enum = %v, want base %s", model, enums, want)
+		}
+	}
+
+	variants, _ := ms["Mixed"].VendorExtensions["x-go-variants"].([]map[string]any)
+
+	var methods []string
+	for _, v := range variants {
+		methods = append(methods, fmt.Sprint(v["method"]))
+	}
+
+	if got := strings.Join(methods, " "); got != "Pet PetList StringMap" {
+		t.Errorf("Mixed variants = %s", got)
+	}
+
+	// Pet and Other both pin kind to "pet": kind tells them apart from no other.
+	if d := ms["Same"].VendorExtensions["x-go-discriminator"]; d != false {
+		t.Errorf("Same discriminator = %v, want none", d)
+	}
+}
+
+// TestOperationShapes covers operation naming the feature specs leave out:
+// a FooRaw next to Foo, an operation under two tags naming its inline types
+// once, and an array of inline objects as a parameter.
+func TestOperationShapes(t *testing.T) {
+	g, p := parse(t, `openapi: 3.0.0
+info: {title: t, version: "1"}
+paths:
+  /foo:
+    get:
+      operationId: foo
+      responses: {"204": {description: ok}}
+  /foo/raw:
+    get:
+      operationId: fooRaw
+      responses: {"204": {description: ok}}
+  /shared:
+    post:
+      operationId: shared
+      tags: [a, b]
+      parameters:
+        - name: points
+          in: query
+          content:
+            application/json:
+              schema: {type: array, items: {type: object, properties: {x: {type: integer}}}}
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: {type: object, properties: {id: {type: string}}}
+`)
+
+	byTag, err := p.GetOperations()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	names := map[string]string{}
+	for _, op := range g.PostProcessOperations(byTag["default"]) {
+		names[op.OperationId] = fmt.Sprint(op.VendorExtensions["x-go-name"])
+	}
+
+	if names["foo"] != "Foo" || names["fooRaw"] != "FooRawMethod" {
+		t.Errorf("names = %v, want Foo and FooRawMethod", names)
+	}
+
+	for _, tag := range []string{"a", "b"} {
+		op := g.PostProcessOperations(byTag[tag])[0]
+
+		if got := op.VendorExtensions["x-go-type"]; got != "SharedResponse" {
+			t.Errorf("tag %s: result %v, want SharedResponse each time", tag, got)
+		}
+
+		fs, _ := op.VendorExtensions["x-go-fields"].([]map[string]any)
+		if got := fs[0]["type"]; got != "[]SharedPoints" {
+			t.Errorf("tag %s: points %v, want []SharedPoints", tag, got)
+		}
+	}
+}

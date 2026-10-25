@@ -1,0 +1,80 @@
+openapi: "3.0.0"
+info:
+  title: Request bodies that are not JSON
+  version: 1.0.0
+  description: A text/plain body, a raw octet-stream body and a multipart body with an object part.
+servers:
+  - url: http://api.example.com/v1
+paths:
+  /notes:
+    post:
+      operationId: postNote
+      security:
+        - bearer: []
+      requestBody:
+        required: true
+        content:
+          text/plain:
+            schema:
+              type: string
+      responses:
+        "200":
+          description: the note as stored
+          content:
+            text/plain:
+              schema:
+                type: string
+  /blobs:
+    put:
+      operationId: putBlob
+      requestBody:
+        required: true
+        content:
+          application/octet-stream:
+            schema:
+              type: string
+              format: binary
+      responses:
+        "200":
+          description: the blob back
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+  /reports:
+    post:
+      operationId: postReport
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [title]
+              properties:
+                title:
+                  type: string
+                meta:
+                  $ref: "#/components/schemas/Meta"
+                attachments:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+      responses:
+        "204":
+          description: stored
+components:
+  securitySchemes:
+    bearer:
+      type: http
+      scheme: bearer
+  schemas:
+    Meta:
+      type: object
+      properties:
+        author:
+          type: string
+        pages:
+          type: integer
