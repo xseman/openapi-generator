@@ -113,6 +113,64 @@ func (o *Opt[T]) UnmarshalJSON(b []byte) error {
 // Ptr returns a pointer to v, for optional fields.
 func Ptr[T any](v T) *T { return &v }
 
+// DateTime is a date-time, RFC 3339 in JSON and parameters. It also reads a
+// time without an offset, which servers send for a naive datetime (FastAPI
+// over a database column without a zone); that one stays Naive, its clock
+// in UTC, and goes back without an offset, as received.
+type DateTime struct {
+	time.Time
+	Naive bool
+}
+
+// naiveLayout is a date-time without an offset, to the microsecond as
+// Python writes it.
+const naiveLayout = "2006-01-02T15:04:05.000000"
+
+// String returns d in RFC 3339, or without an offset when d is Naive.
+func (d DateTime) String() string {
+	switch {
+	case !d.Naive:
+		return d.Format(time.RFC3339Nano)
+	case d.Nanosecond() == 0:
+		return d.Format("2006-01-02T15:04:05")
+	case d.Nanosecond()%1000 == 0:
+		return d.Format(naiveLayout)
+	}
+
+	return d.Format("2006-01-02T15:04:05.999999999")
+}
+
+// MarshalJSON encodes d as String does.
+func (d DateTime) MarshalJSON() ([]byte, error) { return []byte(`"` + d.String() + `"`), nil }
+
+// UnmarshalJSON decodes an RFC 3339 string, or one without an offset as a
+// Naive time; null leaves d as it is.
+func (d *DateTime) UnmarshalJSON(b []byte) error {
+	if string(b) == "null" {
+		return nil
+	}
+
+	var s string
+	if err := json.Unmarshal(b, &s); err != nil {
+		return err
+	}
+
+	if t, err := time.Parse(time.RFC3339Nano, s); err == nil {
+		*d = DateTime{Time: t}
+
+		return nil
+	}
+
+	t, err := time.Parse("2006-01-02T15:04:05.999999999", s)
+	if err != nil {
+		return err
+	}
+
+	*d = DateTime{Time: t, Naive: true}
+
+	return nil
+}
+
 // Date is a calendar date, "2006-01-02" in JSON and parameters.
 type Date struct{ time.Time }
 
@@ -446,12 +504,15 @@ func value(v any) (any, bool) {
 	return rv.Interface(), true
 }
 
-// paramString formats a scalar for a parameter: RFC 3339 for a time,
-// 2006-01-02 for a Date, base64 for bytes, the shortest decimal for a float.
+// paramString formats a scalar for a parameter: RFC 3339 for a time (as
+// DateTime has it), 2006-01-02 for a Date, base64 for bytes, the shortest
+// decimal for a float.
 func paramString(v any) string {
 	switch v := v.(type) {
 	case time.Time:
 		return v.Format(time.RFC3339Nano)
+	case DateTime:
+		return v.String()
 	case Date:
 		return v.String()
 	case json.RawMessage:
@@ -482,7 +543,7 @@ func paramString(v any) string {
 // an object.
 func isScalar(v any) bool {
 	switch v.(type) {
-	case time.Time, Date, []byte, json.RawMessage:
+	case time.Time, DateTime, Date, []byte, json.RawMessage:
 		return true
 	}
 

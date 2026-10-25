@@ -3,6 +3,7 @@
 package golang
 
 import (
+	"fmt"
 	"maps"
 	"strings"
 	"unicode"
@@ -30,7 +31,7 @@ var TypeMapping = map[string]string{
 var RuntimeNames = map[string]bool{
 	"BasePath": true, "Doer": true, "RequestEditorFn": true, "Configuration": true,
 	"ResponseError": true, "Opt": true, "Some": true, "Null": true, "Ptr": true,
-	"Date": true, "File": true,
+	"Date": true, "DateTime": true, "File": true,
 }
 
 // keywords are Go's reserved words, for the package name.
@@ -276,7 +277,7 @@ func scalarType(isString, isDate, isDateTime, isBytes, isInteger, isLong, isNumb
 	case isDate:
 		return "Date"
 	case isDateTime:
-		return "time.Time"
+		return "DateTime"
 	case isBytes:
 		return "[]byte"
 	case isString:
@@ -300,8 +301,20 @@ func scalarType(isString, isDate, isDateTime, isBytes, isInteger, isLong, isNumb
 
 // EnumBaseType is the Go type an enum's values have: string when they are
 // strings (isString on the enumVars), else bool, int when every value is
-// whole, float64 otherwise.
+// whole, float64 otherwise; any when they are of more than one JSON type
+// (pydantic's Literal["auto", 0]), which no Go constant type holds.
 func EnumBaseType(allowable map[string]any, isBoolean bool) string {
+	values, _ := allowable["values"].([]any)
+
+	kinds := map[string]bool{}
+	for _, v := range values {
+		kinds[fmt.Sprintf("%T", v)] = true
+	}
+
+	if kinds["string"] && len(kinds) > 1 {
+		return "any"
+	}
+
 	vars, _ := allowable["enumVars"].([]map[string]any)
 	if len(vars) > 0 && vars[0]["isString"] == true {
 		return "string"
@@ -311,7 +324,6 @@ func EnumBaseType(allowable map[string]any, isBoolean bool) string {
 		return "bool"
 	}
 
-	values, _ := allowable["values"].([]any)
 	for _, v := range values {
 		if f, ok := v.(float64); ok && f != float64(int64(f)) {
 			return "float64"

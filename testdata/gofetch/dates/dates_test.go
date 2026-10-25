@@ -24,7 +24,7 @@ func TestDates(t *testing.T) {
 	at := time.Date(2024, 1, 2, 3, 4, 5, 0, time.UTC)
 	api := NewDefaultAPI(&Configuration{BasePath: srv.URL})
 
-	events, err := api.ListEvents(context.Background(), ListEventsParams{Since: &at, OnDay: Date{at}})
+	events, err := api.ListEvents(context.Background(), ListEventsParams{Since: &DateTime{Time: at}, OnDay: Date{at}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -38,12 +38,37 @@ func TestDates(t *testing.T) {
 		t.Errorf("event = %+v", e)
 	}
 
-	out, err := json.Marshal(Event{StartDate: e.StartDate, CreatedAt: at, EndDate: Some(Date{at})})
+	out, err := json.Marshal(Event{StartDate: e.StartDate, CreatedAt: DateTime{Time: at}, EndDate: Some(Date{at})})
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	if want := `{"startDate":"2024-01-02","endDate":"2024-01-02","createdAt":"2024-01-02T03:04:05Z"}`; string(out) != want {
 		t.Errorf("Marshal = %s, want %s", out, want)
+	}
+}
+
+// TestNaiveDateTime reads a date-time without an offset, as FastAPI sends a
+// naive datetime, and writes it back without one.
+func TestNaiveDateTime(t *testing.T) {
+	for in, want := range map[string]string{
+		`"2024-03-01T10:00:00.500000"`: `"2024-03-01T10:00:00.500000"`,
+		`"2024-03-01T10:00:00"`:        `"2024-03-01T10:00:00"`,
+		`"2024-03-01T10:00:00.5"`:      `"2024-03-01T10:00:00.500000"`,
+		`"2024-03-01T10:00:00+02:00"`:  `"2024-03-01T10:00:00+02:00"`,
+	} {
+		var d DateTime
+		if err := json.Unmarshal([]byte(in), &d); err != nil {
+			t.Fatalf("%s: %v", in, err)
+		}
+
+		if out, _ := json.Marshal(d); string(out) != want {
+			t.Errorf("%s -> %s, want %s", in, out, want)
+		}
+	}
+
+	var d DateTime
+	if err := json.Unmarshal([]byte(`"yesterday"`), &d); err == nil {
+		t.Error("yesterday decoded")
 	}
 }

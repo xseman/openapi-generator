@@ -61,7 +61,7 @@ func TestGoType(t *testing.T) {
 		{str, "string"},
 		{&codegen.CodegenProperty{IsString: true, IsUuid: true}, "string"},
 		{&codegen.CodegenProperty{IsString: true, IsDate: true}, "Date"},
-		{&codegen.CodegenProperty{IsString: true, IsDateTime: true}, "time.Time"},
+		{&codegen.CodegenProperty{IsString: true, IsDateTime: true}, "DateTime"},
 		{&codegen.CodegenProperty{IsString: true, IsByteArray: true}, "[]byte"},
 		{&codegen.CodegenProperty{IsString: true, IsBinary: true}, "[]byte"},
 		{&codegen.CodegenProperty{IsInteger: true}, "int"},
