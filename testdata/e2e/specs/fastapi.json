@@ -449,6 +449,26 @@
         "title": "Containers",
         "type": "object"
       },
+      "Delta": {
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "const": "delta",
+            "default": "delta",
+            "title": "Kind",
+            "type": "string"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "title": "Delta",
+        "type": "object"
+      },
       "Dimensions": {
         "additionalProperties": false,
         "properties": {
@@ -497,6 +517,26 @@
           "goodBoy"
         ],
         "title": "Dog",
+        "type": "object"
+      },
+      "Done": {
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "const": "done",
+            "default": "done",
+            "title": "Kind",
+            "type": "string"
+          },
+          "words": {
+            "title": "Words",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "words"
+        ],
+        "title": "Done",
         "type": "object"
       },
       "FormIn-Input": {
@@ -1792,6 +1832,20 @@
         "title": "Problem",
         "type": "object"
       },
+      "Prompt": {
+        "additionalProperties": false,
+        "properties": {
+          "prompt": {
+            "title": "Prompt",
+            "type": "string"
+          }
+        },
+        "required": [
+          "prompt"
+        ],
+        "title": "Prompt",
+        "type": "object"
+      },
       "Rect": {
         "additionalProperties": false,
         "properties": {
@@ -2180,6 +2234,25 @@
           "name"
         ],
         "title": "Supplier",
+        "type": "object"
+      },
+      "Tick": {
+        "additionalProperties": false,
+        "properties": {
+          "i": {
+            "title": "I",
+            "type": "integer"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          }
+        },
+        "required": [
+          "i",
+          "label"
+        ],
+        "title": "Tick",
         "type": "object"
       },
       "Transfer": {
@@ -2701,6 +2774,85 @@
         "summary": "Category Tree",
         "tags": [
           "misc"
+        ]
+      }
+    },
+    "/chat": {
+      "post": {
+        "description": "Server-sent events over POST, a discriminated union per event.",
+        "operationId": "chat",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Prompt"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "text/event-stream": {
+                "itemSchema": {
+                  "properties": {
+                    "data": {
+                      "contentMediaType": "application/json",
+                      "contentSchema": {
+                        "discriminator": {
+                          "mapping": {
+                            "delta": "#/components/schemas/Delta",
+                            "done": "#/components/schemas/Done"
+                          },
+                          "propertyName": "kind"
+                        },
+                        "oneOf": [
+                          {
+                            "$ref": "#/components/schemas/Delta"
+                          },
+                          {
+                            "$ref": "#/components/schemas/Done"
+                          }
+                        ],
+                        "title": "Streamitem Chat"
+                      },
+                      "type": "string"
+                    },
+                    "event": {
+                      "type": "string"
+                    },
+                    "id": {
+                      "type": "string"
+                    },
+                    "retry": {
+                      "minimum": 0,
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Chat",
+        "tags": [
+          "streams"
         ]
       }
     },
@@ -3575,6 +3727,107 @@
         "summary": "Echo Wide",
         "tags": [
           "echo"
+        ]
+      }
+    },
+    "/events": {
+      "get": {
+        "operationId": "streamEvents",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "n",
+            "required": false,
+            "schema": {
+              "default": 2,
+              "title": "N",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "text/event-stream": {
+                "itemSchema": {
+                  "properties": {
+                    "data": {
+                      "contentMediaType": "application/json",
+                      "contentSchema": {
+                        "$ref": "#/components/schemas/Tick"
+                      },
+                      "type": "string"
+                    },
+                    "event": {
+                      "type": "string"
+                    },
+                    "id": {
+                      "type": "string"
+                    },
+                    "retry": {
+                      "minimum": 0,
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Stream Events",
+        "tags": [
+          "streams"
+        ]
+      }
+    },
+    "/events/raw": {
+      "get": {
+        "operationId": "streamRawEvents",
+        "responses": {
+          "200": {
+            "content": {
+              "text/event-stream": {
+                "itemSchema": {
+                  "properties": {
+                    "data": {
+                      "type": "string"
+                    },
+                    "event": {
+                      "type": "string"
+                    },
+                    "id": {
+                      "type": "string"
+                    },
+                    "retry": {
+                      "minimum": 0,
+                      "type": "integer"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Stream Raw Events",
+        "tags": [
+          "streams"
         ]
       }
     },
@@ -5599,6 +5852,96 @@
         "summary": "Clash Locations",
         "tags": [
           "clash"
+        ]
+      }
+    },
+    "/ticks": {
+      "get": {
+        "description": "FastAPI describes a yield endpoint with 3.2's itemSchema.",
+        "operationId": "streamTicks",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "n",
+            "required": false,
+            "schema": {
+              "default": 2,
+              "maximum": 10,
+              "minimum": 0,
+              "title": "N",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/jsonl": {
+                "itemSchema": {
+                  "$ref": "#/components/schemas/Tick"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Stream Ticks",
+        "tags": [
+          "streams"
+        ]
+      }
+    },
+    "/ticks/ints": {
+      "get": {
+        "operationId": "streamInts",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "n",
+            "required": false,
+            "schema": {
+              "default": 3,
+              "title": "N",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/jsonl": {
+                "itemSchema": {
+                  "title": "Streamitem Streamints",
+                  "type": "integer"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Stream Ints",
+        "tags": [
+          "streams"
         ]
       }
     },

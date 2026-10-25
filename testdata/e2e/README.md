@@ -34,8 +34,9 @@ specs declare. The backend shows the shapes a framework writes into its
 spec: pydantic's separate input and output schemas, OpenAPI 3.1 null unions,
 `const`, Decimal as number or string, FastAPI's empty JSON schema next to
 another media type, discriminated unions in every position, naive and aware
-date-times, required nullables, form models, enums of mixed JSON types and
-parameters whose names collide once camelCased.
+date-times, required nullables, form models, enums of mixed JSON types,
+parameters whose names collide once camelCased, and streamed responses
+(JSON Lines and server-sent events from `yield`, 3.2's `itemSchema`).
 
 ## Scenarios
 
@@ -134,7 +135,8 @@ A runner for another generator follows the same protocol:
    - A name never saved fails the case.
 4. **Output** is one JSON line per case, `{ suite, case, result | error | fail }`:
    - `result` is the client's result as wire JSON; a binary result is a
-     base64 string, and a call without one is `null`.
+     base64 string, a streamed one the list of its items (an event as
+     `{ data, event, id, retry }`), and a call without one is `null`.
    - `error` is `{ status, model, body }` from the client's error for a
      status (`model` is the decoded error body, or absent).
    - `fail` says why the call did not happen or failed otherwise (an

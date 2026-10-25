@@ -7,6 +7,7 @@ exact values that arrived, not only the status code."""
 
 import datetime as dt
 import uuid
+from collections.abc import AsyncIterable, Iterable
 from decimal import Decimal
 from enum import Enum, IntEnum
 from ipaddress import IPv4Address
@@ -30,6 +31,7 @@ from fastapi import (
     UploadFile,
 )
 from fastapi.responses import JSONResponse, PlainTextResponse, RedirectResponse, StreamingResponse
+from fastapi.sse import EventSourceResponse, ServerSentEvent
 from fastapi.security import (
     APIKeyCookie,
     APIKeyHeader,
@@ -936,6 +938,62 @@ def redirect() -> RedirectResponse:
          responses={200: {"content": {"application/x-ndjson": {"schema": {"type": "string"}}}}})
 def stream_lines(n: int = 3) -> StreamingResponse:
     return StreamingResponse((f'{{"i":{i}}}\n' for i in range(n)), media_type="application/x-ndjson")
+
+
+# ---------------------------------------------------------------- streams: FastAPI's yield, JSON Lines and SSE
+
+
+class Tick(Strict):
+    i: int
+    label: str
+
+
+class Delta(Strict):
+    kind: Literal["delta"] = "delta"
+    text: str
+
+
+class Done(Strict):
+    kind: Literal["done"] = "done"
+    words: int
+
+
+class Prompt(Strict):
+    prompt: str
+
+
+@app.get("/ticks", tags=["streams"], operation_id="streamTicks")
+def stream_ticks(n: Annotated[int, Query(ge=0, le=10)] = 2) -> Iterable[Tick]:
+    """FastAPI describes a yield endpoint with 3.2's itemSchema."""
+    for i in range(n):
+        yield Tick(i=i, label=f"t{i}")
+
+
+@app.get("/ticks/ints", tags=["streams"], operation_id="streamInts")
+async def stream_ints(n: int = 3) -> AsyncIterable[int]:
+    for i in range(n):
+        yield i
+
+
+@app.get("/events", tags=["streams"], operation_id="streamEvents", response_class=EventSourceResponse)
+def stream_events(n: int = 2) -> Iterable[Tick]:
+    for i in range(n):
+        yield Tick(i=i, label=f"e{i}")
+
+
+@app.post("/chat", tags=["streams"], operation_id="chat", response_class=EventSourceResponse)
+async def chat(body: Prompt) -> AsyncIterable[Annotated[Union[Delta, Done], Field(discriminator="kind")]]:
+    """Server-sent events over POST, a discriminated union per event."""
+    words = body.prompt.split()
+    for w in words:
+        yield Delta(text=w)
+    yield Done(words=len(words))
+
+
+@app.get("/events/raw", tags=["streams"], operation_id="streamRawEvents", response_class=EventSourceResponse)
+def stream_raw_events():
+    yield ServerSentEvent(data={"i": 1}, event="tick", id="1")
+    yield ServerSentEvent(data="bye", event="end", id="2")
 
 
 @app.get("/numbers/{a}/{b}", tags=["misc"], operation_id="add")

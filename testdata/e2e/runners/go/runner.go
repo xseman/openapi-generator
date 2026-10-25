@@ -177,7 +177,19 @@ func callCase(o *outcome, apis []any, c cas, vars map[string]string) {
 		return
 	}
 
-	b, err := json.Marshal(res[0].Interface())
+	result := res[0].Interface()
+	if res[0].Kind() == reflect.Func {
+		items, err := drain(res[0])
+		if err != nil {
+			o.Fail = "stream: " + err.Error()
+
+			return
+		}
+
+		result = items
+	}
+
+	b, err := json.Marshal(result)
 	if err != nil {
 		o.Fail = "result: " + err.Error()
 
@@ -186,6 +198,30 @@ func callCase(o *outcome, apis []any, c cas, vars map[string]string) {
 
 	o.Result = b
 	save(b, c.Save, vars)
+}
+
+// drain ranges over a streamed result, an iter.Seq2[T, error], and returns
+// its items; the first error ends it.
+func drain(seq reflect.Value) ([]any, error) {
+	items := []any{}
+
+	var failed error
+
+	yield := reflect.MakeFunc(seq.Type().In(0), func(in []reflect.Value) []reflect.Value {
+		if err, _ := in[1].Interface().(error); err != nil {
+			failed = err
+
+			return []reflect.Value{reflect.ValueOf(false)}
+		}
+
+		items = append(items, in[0].Interface())
+
+		return []reflect.Value{reflect.ValueOf(true)}
+	})
+
+	seq.Call([]reflect.Value{yield})
+
+	return items, failed
 }
 
 // findMethod finds the typed method of an operation: its operationId with

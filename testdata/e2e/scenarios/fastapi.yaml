@@ -523,6 +523,38 @@ cases:
     args: { n: 2 }
     result: "{\"i\":0}\n{\"i\":1}\n"
     skip: { typescript-fetch: "an any result is parsed as JSON whatever its media type" }
+  - name: JSON Lines of a model
+    op: streamTicks
+    args: { n: 2 }
+    result: [{ i: 0, label: t0 }, { i: 1, label: t1 }]
+    skip: &noItems { typescript-fetch: "a response with only an itemSchema (3.2 streaming) is void: the items are dropped" }
+  - name: JSON Lines, none
+    op: streamTicks
+    args: { n: 0 }
+    result: []
+    skip: *noItems
+  - name: JSON Lines of integers
+    op: streamInts
+    result: [0, 1, 2]
+    skip: *noItems
+  - name: a bound on a stream's query is a 422
+    op: streamTicks
+    args: { n: 11 }
+    error: { status: 422, model: { detail: [{ loc: [query, n] }] } }
+  - name: server-sent events of a model
+    op: streamEvents
+    args: { n: 2 }
+    result: [{ data: { i: 0, label: e0 } }, { data: { i: 1, label: e1 } }]
+    skip: *noItems
+  - name: server-sent events over POST, a discriminated union per event
+    op: chat
+    args: { body: { prompt: hello world } }
+    result: [{ data: { kind: delta, text: hello } }, { data: { kind: delta, text: world } }, { data: { kind: done, words: 2 } }]
+    skip: *noItems
+  - name: server-sent events with names and ids, data as text
+    op: streamRawEvents
+    result: [{ event: tick, id: "1", data: '{"i": 1}' }, { event: end, id: "2", data: '"bye"' }]
+    skip: *noItems
   - name: float path parameter and an aliased query
     op: add
     args: { a: 2, b: 0.75, round: true }
