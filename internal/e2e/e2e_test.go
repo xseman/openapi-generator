@@ -57,11 +57,13 @@ func requireE2E(t *testing.T) {
 
 // TestMock runs the scenarios of the feature specs against the mock: each
 // request must pass the spec's validation and look as the case says, and
-// the client must return what the case says from the mock's response.
+// the client must return what the case says from the mock's response. The
+// cases generated from the specs' schemas (values_test.go) run the same way.
 func TestMock(t *testing.T) {
 	requireE2E(t)
 
 	scenarios := loadScenarios(t)
+	generated := valueScenarios(t)
 
 	forEachRunner(t, func(t *testing.T, r runner) {
 		t.Helper()
@@ -72,7 +74,9 @@ func TestMock(t *testing.T) {
 			byName = map[string]*scenario{}
 		)
 
-		for _, s := range scenarios {
+		// One run takes the generated scenarios after the written ones: a
+		// client build per generator, not two.
+		for _, s := range slices.Concat(scenarios, generated) {
 			if s.Spec == "" {
 				continue
 			}
@@ -236,6 +240,11 @@ func checkCases(t *testing.T, generator string, s *scenario, outcomes map[int]ou
 
 				t.Skipf("%s (%s)", reason, strings.Join(diffs, "; "))
 
+			case len(diffs) > 0 && k.Exact && valueLenient[generator]:
+				c.fail++
+
+				t.Skip("lenient until its gaps are fixed:\n" + strings.Join(diffs, "\n"))
+
 			case len(diffs) > 0:
 				c.fail++
 
@@ -267,8 +276,17 @@ func caseDiffs(k kase, o outcome, m *mock, i int) []string {
 			diffs = append(diffs, fmt.Sprintf("request: invalid for the spec: %v", got["invalid"]))
 		case got["responseInvalid"] != nil:
 			diffs = append(diffs, fmt.Sprintf("response: the scenario's is invalid for the spec: %v", got["responseInvalid"]))
+		case k.Request != nil && k.Exact:
+			// The body alone, absent when none was sent: null is not absent.
+			sent := map[string]any{}
+			if b, ok := got["body"]; ok {
+				sent["body"] = b
+			}
+
+			diffs = append(diffs, match("request", decodeJSON(k.Request), sent, true)...)
+
 		case k.Request != nil:
-			diffs = append(diffs, match("request", decodeJSON(k.Request), got)...)
+			diffs = append(diffs, match("request", decodeJSON(k.Request), got, false)...)
 		}
 	}
 
@@ -287,12 +305,12 @@ func caseDiffs(k kase, o outcome, m *mock, i int) []string {
 			got["model"] = decodeJSON(o.Error.Model)
 		}
 
-		diffs = append(diffs, match("error", decodeJSON(k.Error), got)...)
+		diffs = append(diffs, match("error", decodeJSON(k.Error), got, k.Exact)...)
 
 	case o.Error != nil:
 		diffs = append(diffs, fmt.Sprintf("error: %d %s", o.Error.Status, o.Error.Body))
 	case k.Result != nil:
-		diffs = append(diffs, match("result", decodeJSON(k.Result), decodeJSON(o.Result))...)
+		diffs = append(diffs, match("result", decodeJSON(k.Result), decodeJSON(o.Result), k.Exact)...)
 	}
 
 	return diffs

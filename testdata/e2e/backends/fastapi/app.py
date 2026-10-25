@@ -297,7 +297,7 @@ class Page(BaseModel, Generic[T]):
 
 class Card(Strict):
     method: Literal["card"]
-    last4: Annotated[str, Field(pattern=r"^\d{4}$")]
+    last4: Annotated[str, Field(pattern=r"^\d{4}$", examples=["4242"])]
     expires: dt.date
 
 

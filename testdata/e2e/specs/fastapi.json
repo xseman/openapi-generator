@@ -173,6 +173,9 @@
             "type": "string"
           },
           "last4": {
+            "examples": [
+              "4242"
+            ],
             "pattern": "^\\d{4}$",
             "title": "Last4",
             "type": "string"

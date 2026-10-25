@@ -58,7 +58,15 @@ func newMock(t *testing.T, specPath string, cases []kase) *mock {
 	// A server-side request carries no host: match the path alone.
 	doc.Servers = openapi3.Servers{{URL: "/"}}
 
-	if m.router, err = legacy.NewRouter(doc); err != nil {
+	// An example is documentation: a wrong one (real specs have them) does
+	// not stop the mock. A 3.1 spec may hold 3.2's itemSchema, as the
+	// generator's parser allows.
+	opts := []openapi3.ValidationOption{openapi3.DisableExamplesValidation()}
+	if strings.HasPrefix(doc.OpenAPI, "3.1") {
+		opts = append(opts, openapi3.IsOpenAPI32OrLater())
+	}
+
+	if m.router, err = legacy.NewRouter(doc, opts...); err != nil {
 		t.Fatal(err)
 	}
 

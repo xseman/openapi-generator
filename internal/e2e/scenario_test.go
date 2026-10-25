@@ -52,7 +52,11 @@ type kase struct {
 	Response *mockResponse     `json:"response"`
 	Result   json.RawMessage   `json:"result"` // null is a null result, absent is unchecked
 	Error    json.RawMessage   `json:"error"`
-	Skip     map[string]string `json:"skip"`
+
+	// Exact compares the result, the error and the request's body with no
+	// other keys allowed: a generated case (values_test.go) sets it.
+	Exact bool              `json:"-"`
+	Skip  map[string]string `json:"skip"`
 }
 
 // mockResponse is what the mock answers a case with: a status, headers and

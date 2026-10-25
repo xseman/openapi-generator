@@ -8,6 +8,7 @@ checks what arrived, not only the status code.
 make e2e                              # every generator, both layers
 E2E_GENERATOR=go-fetch make e2e       # one generator
 E2E_DART=~/dart-sdk/bin/dart make e2e # a Dart other than the one on PATH
+E2E_SPECS=a.yaml,b.json make e2e      # generated cases for more specs too
 make e2e-update                       # rewrites specs/fastapi.json from the backend
 ```
 
@@ -20,7 +21,7 @@ make e2e-update                       # rewrites specs/fastapi.json from the bac
 | `typescript-fetch` | `tsc` (`npm i -g typescript`) and Node 22 or later (its `fetch`, `File`)    |
 | `dart-fetch`       | Dart 3.13 or later, which the generated pubspec asks for; skipped with less |
 
-A run takes about 7 s with warm caches.
+A run takes about 12 s with warm caches.
 
 ## Layers
 
@@ -92,6 +93,34 @@ that a language cannot represent the same way belongs in a case of its own,
 which that generator's runner skips: an int64 above 2^53 in JavaScript, a
 time with microseconds in a JavaScript `Date`, an error body a client does
 not decode.
+
+## Generated values
+
+Next to the scenarios, `internal/e2e/values_test.go` makes cases from the
+schemas of every feature spec, of `specs/fastapi.json` (served by the mock,
+not the backend) and of each spec in `E2E_SPECS`. For each JSON response
+and JSON request body it writes a few values: all properties, only the
+required ones, every nullable null, each `oneOf`/`anyOf` branch in turn, and
+edge scalars (unicode with U+2028, a date-time with nanoseconds at +05:30,
+2^53-1, 0.1, the last enum value) with extra keys where
+`additionalProperties` allows them; a string with a `pattern` takes the
+schema's example. A value kin-openapi finds invalid for its schema is
+dropped, and the run logs how many. Nothing is random: every run makes the
+same cases.
+
+- A **response** value is the mock's answer and the `result`, or the
+  `error`'s model for a 4xx/5xx, or a 2xx whose body is not the result's.
+- A **request** value is `args.body` and must arrive as `request.body`; an
+  optional body of null may also arrive as none.
+- Required parameters get a simple value. An operation without one (an
+  array in the path, a form body, a HEAD) is left out; the run logs which.
+- They compare **exactly**: no other keys, and null is not absent.
+
+go-fetch must pass every case. A failing case of typescript-fetch or
+dart-fetch counts as failed in the table but skips (`valueLenient`) until
+their gaps are fixed. A Swagger
+2.0 spec in `E2E_SPECS` is converted to OpenAPI 3 first, and of paths that
+differ only in their parameter names the first is kept.
 
 ## Runners
 
