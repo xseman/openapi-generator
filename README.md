@@ -79,16 +79,16 @@ openapi-generator validate -i openapi.yaml --recommend
 
 ### `generate`
 
-| Option                      | Short | Description                                      |
-| --------------------------- | ----- | ------------------------------------------------ |
-| `--input-spec`              | `-i`  | Location of the OpenAPI spec (file or URL)       |
-| `--generator-name`          | `-g`  | typescript-fetch, dart-fetch, go-fetch           |
-| `--output`                  | `-o`  | Output directory                                 |
-| `--config`                  | `-c`  | Configuration file (JSON/YAML)                   |
-| `--template-dir`            | `-t`  | Custom template directory                        |
-| `--additional-properties`   | `-p`  | Key=value pairs for generator options            |
-| `--skip-validate-spec`      |       | Skip OpenAPI spec validation                     |
-| `--verbose`                 | `-v`  | Enable verbose output                            |
+| Option                    | Short | Description                                          |
+| ------------------------- | ----- | ---------------------------------------------------- |
+| `--input-spec`            | `-i`  | Location of the OpenAPI spec (file or URL)           |
+| `--generator-name`        | `-g`  | typescript-fetch, dart-fetch, go-fetch               |
+| `--output`                | `-o`  | Output directory                                     |
+| `--config`                | `-c`  | Configuration file (JSON/YAML)                       |
+| `--template-dir`          | `-t`  | Custom template directory                            |
+| `--additional-properties` | `-p`  | `key=value` generator options, `a=1,b=2` or repeated |
+| `--skip-validate-spec`    |       | Skip OpenAPI spec validation                         |
+| `--verbose`               | `-v`  | Enable verbose output                                |
 
 ### `validate`
 

@@ -42,6 +42,16 @@ func TestParseAdditionalProperties(t *testing.T) {
 			want:  map[string]any{"query": "a=b"},
 		},
 		{
+			name:  "one entry may hold several comma-separated pairs",
+			props: []string{"packageName=petshop,withGoMod=true", "npmDescription=cats, dogs,x=1"},
+			want: map[string]any{
+				"packageName":    "petshop",
+				"withGoMod":      true,
+				"npmDescription": "cats, dogs",
+				"x":              "1",
+			},
+		},
+		{
 			name:  "entries without '=' are silently ignored",
 			props: []string{"noEquals", "valid=1"},
 			want:  map[string]any{"valid": "1"},

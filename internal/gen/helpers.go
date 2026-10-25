@@ -11,11 +11,25 @@ import (
 // parseAdditionalProperties converts a list of "key=value" strings (as
 // accepted via the CLI's --additional-properties flag) into a map, coercing
 // "true"/"false" values to booleans so downstream config binding can type
-// assert on bool.
+// assert on bool. One string may hold several pairs, "a=1,b=2", as upstream
+// takes them; a piece without "=" belongs to the value before it.
 func parseAdditionalProperties(props []string) map[string]any {
 	result := make(map[string]any)
 
+	var pairs []string
+
 	for _, prop := range props {
+		for i, piece := range strings.Split(prop, ",") {
+			if i > 0 && !strings.Contains(piece, "=") {
+				pairs[len(pairs)-1] += "," + piece
+				continue
+			}
+
+			pairs = append(pairs, piece)
+		}
+	}
+
+	for _, prop := range pairs {
 		parts := strings.SplitN(prop, "=", 2)
 		if len(parts) == 2 {
 			key := strings.TrimSpace(parts[0])
