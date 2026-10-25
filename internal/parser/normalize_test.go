@@ -52,6 +52,7 @@ func TestNormalize31(t *testing.T) {
 		"tags":     "Array<string> nullable=true ref= ",
 		"alias":    "string nullable=true ref=#/components/schemas/MaybeName ",
 		"mood":     "string nullable=false ref= ",
+		"tag":      "string nullable=true ref= ",
 	}
 	for name, w := range want {
 		if got[name] != w {

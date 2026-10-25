@@ -302,16 +302,24 @@ func scalarType(isString, isDate, isDateTime, isBytes, isInteger, isLong, isNumb
 // EnumBaseType is the Go type an enum's values have: string when they are
 // strings (isString on the enumVars), else bool, int when every value is
 // whole, float64 otherwise; any when they are of more than one JSON type
-// (pydantic's Literal["auto", 0]), which no Go constant type holds.
+// (pydantic's Literal["auto", 0]), which no Go constant type holds. A null
+// among them makes the enum nullable, not mixed.
 func EnumBaseType(allowable map[string]any, isBoolean bool) string {
 	values, _ := allowable["values"].([]any)
 
 	kinds := map[string]bool{}
+
 	for _, v := range values {
-		kinds[fmt.Sprintf("%T", v)] = true
+		switch v.(type) {
+		case nil:
+		case string, bool:
+			kinds[fmt.Sprintf("%T", v)] = true
+		default:
+			kinds["number"] = true
+		}
 	}
 
-	if kinds["string"] && len(kinds) > 1 {
+	if len(kinds) > 1 {
 		return "any"
 	}
 
