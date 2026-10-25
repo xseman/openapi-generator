@@ -128,6 +128,16 @@ class Scalars(Strict):
     unit: Literal["kg", "lb"] = "kg"
 
 
+class Wide(Strict):
+    """Numbers past int64 and float64's usual range: Python ints have no bound
+    and pydantic writes plain integer for them, a uint64 bound as a float."""
+
+    big: int
+    u64: Annotated[int, Field(ge=0, le=2**64 - 1)]
+    f: float
+    tiny: Annotated[float, Field(gt=0, multiple_of=1e-7)]
+
+
 class Stamps(Strict):
     """Times as ORM-backed services send them: naive, aware, in containers."""
 
@@ -154,6 +164,16 @@ class Nulls(Strict):
 
 class NullsEcho(Nulls):
     sent: list[str]  # the keys the client put on the wire
+
+
+class UploadIn(Strict):
+    """A form model holding files: FastAPI declares its body
+    application/x-www-form-urlencoded, yet only multipart carries a file."""
+
+    folder: str
+    files: list[UploadFile]
+    labels: list[str] = []
+    cover: Optional[UploadFile] = None
 
 
 class FormIn(Strict):
@@ -543,6 +563,11 @@ def stamps_query(
     )
 
 
+@app.post("/echo/wide", tags=["echo"], operation_id="echoWide")
+def echo_wide(body: Wide) -> Wide:
+    return body
+
+
 @app.post("/echo/containers", tags=["echo"], operation_id="echoContainers")
 def echo_containers(body: Containers) -> Containers:
     return body
@@ -670,6 +695,17 @@ def header_params(
     }
 
 
+@app.get("/params/header-lists", tags=["params"], operation_id="headerLists")
+def header_lists(
+    x_tags: Annotated[list[str], Header()] = [],
+    x_ids: Annotated[list[int], Header()] = [],
+    x_colors: Annotated[list[Color], Header()] = [],
+) -> dict[str, Any]:
+    """FastAPI reads a list header from repeated lines; the spec's simple
+    style is one comma-joined line, which it takes as one item."""
+    return {"tags": x_tags, "ids": x_ids, "colors": [c.value for c in x_colors]}
+
+
 # ---------------------------------------------------------------- items CRUD
 
 
@@ -782,6 +818,16 @@ def upload_files(
 @app.post("/forms/typed", tags=["files"], operation_id="submitForm")
 def submit_form(body: Annotated[FormIn, Form()]) -> FormIn:
     return body
+
+
+@app.post("/files/model", tags=["files"], operation_id="uploadModel")
+def upload_model(body: Annotated[UploadIn, Form()]) -> dict[str, Any]:
+    return {
+        "folder": body.folder,
+        "files": {f.filename: len(f.file.read()) for f in body.files},
+        "labels": body.labels,
+        "cover": body.cover.filename if body.cover else None,
+    }
 
 
 @app.post("/files/avatar", tags=["files"], operation_id="uploadAvatar")

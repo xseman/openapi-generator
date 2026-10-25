@@ -2221,6 +2221,50 @@
         "title": "Unit",
         "type": "string"
       },
+      "UploadIn": {
+        "additionalProperties": false,
+        "description": "A form model holding files: FastAPI declares its body\napplication/x-www-form-urlencoded, yet only multipart carries a file.",
+        "properties": {
+          "cover": {
+            "anyOf": [
+              {
+                "contentMediaType": "application/octet-stream",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cover"
+          },
+          "files": {
+            "items": {
+              "contentMediaType": "application/octet-stream",
+              "type": "string"
+            },
+            "title": "Files",
+            "type": "array"
+          },
+          "folder": {
+            "title": "Folder",
+            "type": "string"
+          },
+          "labels": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Labels",
+            "type": "array"
+          }
+        },
+        "required": [
+          "folder",
+          "files"
+        ],
+        "title": "UploadIn",
+        "type": "object"
+      },
       "ValidationError": {
         "properties": {
           "ctx": {
@@ -2522,6 +2566,40 @@
           }
         },
         "title": "Wallet",
+        "type": "object"
+      },
+      "Wide": {
+        "additionalProperties": false,
+        "description": "Numbers past int64 and float64's usual range: Python ints have no bound\nand pydantic writes plain integer for them, a uint64 bound as a float.",
+        "properties": {
+          "big": {
+            "title": "Big",
+            "type": "integer"
+          },
+          "f": {
+            "title": "F",
+            "type": "number"
+          },
+          "tiny": {
+            "exclusiveMinimum": 0,
+            "multipleOf": 1e-7,
+            "title": "Tiny",
+            "type": "number"
+          },
+          "u64": {
+            "maximum": 18446744073709552000,
+            "minimum": 0,
+            "title": "U64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "big",
+          "u64",
+          "f",
+          "tiny"
+        ],
+        "title": "Wide",
         "type": "object"
       }
     },
@@ -3459,6 +3537,47 @@
         ]
       }
     },
+    "/echo/wide": {
+      "post": {
+        "operationId": "echoWide",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Wide"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Wide"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Echo Wide",
+        "tags": [
+          "echo"
+        ]
+      }
+    },
     "/export.csv": {
       "get": {
         "operationId": "exportCsv",
@@ -3692,6 +3811,49 @@
           }
         },
         "summary": "Upload Avatar",
+        "tags": [
+          "files"
+        ]
+      }
+    },
+    "/files/model": {
+      "post": {
+        "operationId": "uploadModel",
+        "requestBody": {
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/UploadIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Uploadmodel",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Upload Model",
         "tags": [
           "files"
         ]
@@ -4628,6 +4790,81 @@
         "summary": "Order Status",
         "tags": [
           "orders"
+        ]
+      }
+    },
+    "/params/header-lists": {
+      "get": {
+        "description": "FastAPI reads a list header from repeated lines; the spec's simple\nstyle is one comma-joined line, which it takes as one item.",
+        "operationId": "headerLists",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "x-tags",
+            "required": false,
+            "schema": {
+              "default": [],
+              "items": {
+                "type": "string"
+              },
+              "title": "X-Tags",
+              "type": "array"
+            }
+          },
+          {
+            "in": "header",
+            "name": "x-ids",
+            "required": false,
+            "schema": {
+              "default": [],
+              "items": {
+                "type": "integer"
+              },
+              "title": "X-Ids",
+              "type": "array"
+            }
+          },
+          {
+            "in": "header",
+            "name": "x-colors",
+            "required": false,
+            "schema": {
+              "default": [],
+              "items": {
+                "$ref": "#/components/schemas/Color"
+              },
+              "title": "X-Colors",
+              "type": "array"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Headerlists",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Header Lists",
+        "tags": [
+          "params"
         ]
       }
     },
