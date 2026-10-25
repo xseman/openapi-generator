@@ -307,6 +307,7 @@ func (p *Parser) addFormParams(co *codegen.CodegenOperation, schema *openapi3.Sc
 			IsDateTime:       prop.IsDateTime,
 			IsDateTimeType:   prop.IsDateTimeType,
 			IsEnum:           prop.IsEnum,
+			IsNullable:       prop.IsNullable,
 			Items:            prop.Items,
 			AllowableValues:  prop.AllowableValues,
 			EnumName:         prop.EnumName,
@@ -315,7 +316,7 @@ func (p *Parser) addFormParams(co *codegen.CodegenOperation, schema *openapi3.Sc
 		}
 
 		// The property's encoding with its defaults filled in: form style,
-		// exploded. Only an application/x-www-form-urlencoded body uses it.
+		// exploded. go-fetch reads it for urlencoded and multipart bodies.
 		sm := encoding[name].SerializationMethod()
 		fp.Style = sm.Style
 		fp.IsExplode = sm.Explode

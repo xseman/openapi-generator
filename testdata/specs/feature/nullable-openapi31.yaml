@@ -1,0 +1,90 @@
+openapi: 3.1.0
+info:
+  title: OpenAPI 3.1 nullability
+  version: 1.0.0
+  description: The 3.1 spellings of null (a null member of anyOf/oneOf, a type list with null) and of a binary string (contentMediaType), and of a single value (const) or a choice of them, as FastAPI and pydantic write them; multipart arrays, exploded by default.
+paths:
+  /pets:
+    get:
+      operationId: listPets
+      parameters:
+        - name: q
+          in: query
+          schema:
+            anyOf: [{ type: string }, { type: "null" }]
+        - name: size
+          in: query
+          schema:
+            anyOf: [{ type: array, items: { $ref: "#/components/schemas/Size" } }, { type: "null" }]
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Pet" }
+  /pets/{id}/photo:
+    post:
+      operationId: uploadPhoto
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file: { type: string, contentMediaType: application/octet-stream }
+                caption:
+                  anyOf: [{ type: string }, { type: "null" }]
+                tags:
+                  type: array
+                  items: { type: string }
+                labels:
+                  type: array
+                  items: { type: string }
+            encoding:
+              labels:
+                explode: false
+      responses:
+        "204":
+          description: stored
+components:
+  schemas:
+    Size:
+      type: integer
+      enum: [1, 2, 3]
+    Owner:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string }
+    Pet:
+      type: object
+      required: [kind, name, size]
+      properties:
+        kind: { type: string, const: pet }
+        name: { type: string }
+        size:
+          anyOf: [{ $ref: "#/components/schemas/Size" }, { type: "null" }]
+        owner:
+          description: Who keeps the pet.
+          anyOf: [{ $ref: "#/components/schemas/Owner" }, { type: "null" }]
+        born:
+          anyOf: [{ type: string, format: date }, { type: "null" }]
+        nickname:
+          type: [string, "null"]
+        tags:
+          anyOf: [{ type: array, items: { type: string } }, { type: "null" }]
+        alias:
+          $ref: "#/components/schemas/MaybeName"
+        mood:
+          anyOf: [{ type: string, const: happy }, { type: string, const: sad }]
+    MaybeName:
+      anyOf: [{ type: string }, { type: "null" }]

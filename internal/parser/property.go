@@ -66,8 +66,11 @@ func (p *Parser) schemaRefToProperty(name string, ref *openapi3.SchemaRef, requi
 		p.inlineMembers(prop, ref.Value)
 	}
 
-	prop.Ref = ref.Ref
-	prop.IsEnumRef = ref.Ref != "" && prop.IsEnum
+	// A $ref sets them; an `allOf: [$ref]` wrapper has them from its member.
+	if ref.Ref != "" {
+		prop.Ref = ref.Ref
+		prop.IsEnumRef = prop.IsEnum
+	}
 
 	// Only object-like targets need the override: arrays, enums and primitives are
 	// already typed correctly by schemaToProperty, and clobbering them with the
@@ -153,6 +156,16 @@ func (p *Parser) applyMemberType(prop *codegen.CodegenProperty, ref *openapi3.Sc
 	prop.Items = member.Items
 	prop.AllowableValues = member.AllowableValues
 	prop.EnumName = member.EnumName
+	prop.Ref = member.Ref
+	prop.IsEnumRef = member.IsEnumRef
+
+	// A wrapper of an enum model (`allOf: [$ref]`, a nullable 3.1 $ref) is
+	// typed as that model, as upstream types it, not as a copy of its values.
+	if member.IsEnumRef {
+		name := p.toModelName(extractRefName(member.Ref))
+		prop.DataType, prop.BaseType, prop.ComplexType, prop.DatatypeWithEnum = name, name, name, name
+		prop.IsEnum, prop.IsModel, prop.IsPrimitiveType = false, true, false
+	}
 
 	return true
 }

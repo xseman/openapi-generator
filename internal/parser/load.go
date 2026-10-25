@@ -47,6 +47,7 @@ func (p *Parser) LoadFromFile(path string) error {
 
 	p.Doc = doc
 	p.buildPropertyOrder(data)
+	p.normalize()
 
 	// Validate the spec (unless skipped)
 	return p.validateSpec()
@@ -92,6 +93,7 @@ func (p *Parser) LoadFromURL(urlStr string) error {
 
 	p.Doc = doc
 	p.buildPropertyOrder(data)
+	p.normalize()
 
 	// Validate the spec (unless skipped)
 	return p.validateSpec()
@@ -114,6 +116,7 @@ func (p *Parser) LoadFromData(data []byte) error {
 
 	p.Doc = doc
 	p.buildPropertyOrder(data)
+	p.normalize()
 
 	// Validate the spec (unless skipped)
 	return p.validateSpec()
