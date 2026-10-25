@@ -93,3 +93,25 @@ func TestGoType(t *testing.T) {
 		t.Errorf("GoType(array of enum) = %q, want []PetTagsEnum", got)
 	}
 }
+
+func TestEnumBaseType(t *testing.T) {
+	str := []map[string]any{{"isString": true}}
+
+	tests := []struct {
+		values []any
+		vars   []map[string]any
+		want   string
+	}{
+		{[]any{"a", "b"}, str, "string"},
+		{[]any{"a", nil}, str, "string"},
+		{[]any{1, 2, nil}, nil, "int"},
+		{[]any{"auto", 0}, str, "any"},
+		{[]any{1, true}, nil, "any"},
+	}
+
+	for _, tt := range tests {
+		if got := EnumBaseType(map[string]any{"values": tt.values, "enumVars": tt.vars}, false); got != tt.want {
+			t.Errorf("EnumBaseType(%v) = %q, want %q", tt.values, got, tt.want)
+		}
+	}
+}
