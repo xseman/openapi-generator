@@ -1,0 +1,22 @@
+spec: ../../specs/feature/request-body-other-media.yaml
+skip: { dart-fetch: "does not compile: lib/src/apis/default_api.dart:196: The static method or constructor 'fromJson' isn't defined for the context type 'List'." }
+auth: { bearer: tok }
+cases:
+  - name: text/plain body and response, bearer
+    op: postNote
+    args: { body: "line 1\nčo" }
+    request: { header: { Content-Type: text/plain, Authorization: Bearer tok }, body: "line 1\nčo" }
+    response: { text: "stored" }
+    result: stored
+  - name: octet-stream body and response
+    op: putBlob
+    args: { body: { $bytes: { base64: AAH/ } } }
+    request: { header: { Content-Type: application/octet-stream }, body: { $base64: AAH/ } }
+    response: { base64: /wEA }
+    result: /wEA
+  - name: multipart with an object part
+    op: postReport
+    args: { title: q3, meta: { author: ann, pages: 3 }, attachments: [{ $file: { name: a.txt, text: a } }] }
+    request: { body: { title: [q3], meta: [{ json: { author: ann, pages: 3 } }], attachments: [{ filename: a.txt, text: a }] } }
+    response: { status: 204 }
+    skip: { typescript-fetch: "an object multipart part goes as text, not application/json" }

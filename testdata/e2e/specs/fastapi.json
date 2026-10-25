@@ -1,0 +1,3995 @@
+{
+  "components": {
+    "schemas": {
+      "Body_cancelOrder": {
+        "properties": {
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          }
+        },
+        "title": "Body_cancelOrder",
+        "type": "object"
+      },
+      "Body_issueToken": {
+        "properties": {
+          "client_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Client Id"
+          },
+          "client_secret": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "format": "password",
+            "title": "Client Secret"
+          },
+          "grant_type": {
+            "anyOf": [
+              {
+                "pattern": "^password$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Grant Type"
+          },
+          "password": {
+            "format": "password",
+            "title": "Password",
+            "type": "string"
+          },
+          "scope": {
+            "default": "",
+            "title": "Scope",
+            "type": "string"
+          },
+          "username": {
+            "title": "Username",
+            "type": "string"
+          }
+        },
+        "required": [
+          "username",
+          "password"
+        ],
+        "title": "Body_issueToken",
+        "type": "object"
+      },
+      "Body_uploadAvatar": {
+        "properties": {
+          "image": {
+            "contentMediaType": "application/octet-stream",
+            "title": "Image",
+            "type": "string"
+          },
+          "thumbnail": {
+            "anyOf": [
+              {
+                "contentMediaType": "application/octet-stream",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Thumbnail"
+          }
+        },
+        "required": [
+          "image"
+        ],
+        "title": "Body_uploadAvatar",
+        "type": "object"
+      },
+      "Body_uploadFiles": {
+        "properties": {
+          "files": {
+            "description": "One or more files",
+            "items": {
+              "contentMediaType": "application/octet-stream",
+              "type": "string"
+            },
+            "title": "Files",
+            "type": "array"
+          },
+          "folder": {
+            "title": "Folder",
+            "type": "string"
+          },
+          "labels": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Labels",
+            "type": "array"
+          },
+          "meta": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "JSON text",
+            "title": "Meta"
+          },
+          "overwrite": {
+            "default": false,
+            "title": "Overwrite",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "files",
+          "folder"
+        ],
+        "title": "Body_uploadFiles",
+        "type": "object"
+      },
+      "Card": {
+        "additionalProperties": false,
+        "properties": {
+          "expires": {
+            "format": "date",
+            "title": "Expires",
+            "type": "string"
+          },
+          "last4": {
+            "pattern": "^\\d{4}$",
+            "title": "Last4",
+            "type": "string"
+          },
+          "method": {
+            "const": "card",
+            "title": "Method",
+            "type": "string"
+          }
+        },
+        "required": [
+          "method",
+          "last4",
+          "expires"
+        ],
+        "title": "Card",
+        "type": "object"
+      },
+      "Category-Input": {
+        "additionalProperties": false,
+        "properties": {
+          "children": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/Category-Input"
+            },
+            "title": "Children",
+            "type": "array"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "parent": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Category-Input"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "Category",
+        "type": "object"
+      },
+      "Category-Output": {
+        "additionalProperties": false,
+        "properties": {
+          "children": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/Category-Output"
+            },
+            "title": "Children",
+            "type": "array"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "parent": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Category-Output"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "Category",
+        "type": "object"
+      },
+      "Circle": {
+        "additionalProperties": false,
+        "properties": {
+          "radius": {
+            "title": "Radius",
+            "type": "number"
+          }
+        },
+        "required": [
+          "radius"
+        ],
+        "title": "Circle",
+        "type": "object"
+      },
+      "Color": {
+        "enum": [
+          "red",
+          "dark-blue",
+          "light green",
+          "2nd",
+          "type",
+          ""
+        ],
+        "title": "Color",
+        "type": "string"
+      },
+      "Conflict": {
+        "additionalProperties": false,
+        "properties": {
+          "current_version": {
+            "title": "Current Version",
+            "type": "integer"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "required": [
+          "message",
+          "current_version"
+        ],
+        "title": "Conflict",
+        "type": "object"
+      },
+      "Containers": {
+        "additionalProperties": false,
+        "properties": {
+          "by_name": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/Dimensions"
+            },
+            "default": {},
+            "title": "By Name",
+            "type": "object"
+          },
+          "counts": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "default": {},
+            "title": "Counts",
+            "type": "object"
+          },
+          "groups": {
+            "additionalProperties": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "default": {},
+            "title": "Groups",
+            "type": "object"
+          },
+          "matrix": {
+            "default": [],
+            "items": {
+              "items": {
+                "type": "integer"
+              },
+              "type": "array"
+            },
+            "title": "Matrix",
+            "type": "array"
+          },
+          "maybe_list": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Maybe List"
+          },
+          "maybe_map": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Maybe Map"
+          },
+          "pair": {
+            "maxItems": 2,
+            "minItems": 2,
+            "prefixItems": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Pair",
+            "type": "array"
+          },
+          "sparse": {
+            "default": [],
+            "items": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "title": "Sparse",
+            "type": "array"
+          },
+          "tags": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Tags",
+            "type": "array"
+          },
+          "unique": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Unique",
+            "type": "array",
+            "uniqueItems": true
+          }
+        },
+        "required": [
+          "tags",
+          "pair"
+        ],
+        "title": "Containers",
+        "type": "object"
+      },
+      "Dimensions": {
+        "additionalProperties": false,
+        "properties": {
+          "depthCm": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Depthcm"
+          },
+          "heightCm": {
+            "title": "Heightcm",
+            "type": "number"
+          },
+          "widthCm": {
+            "title": "Widthcm",
+            "type": "number"
+          }
+        },
+        "required": [
+          "widthCm",
+          "heightCm"
+        ],
+        "title": "Dimensions",
+        "type": "object"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "title": "Detail",
+            "type": "array"
+          }
+        },
+        "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "Item": {
+        "additionalProperties": false,
+        "description": "An item as the server returns it.",
+        "properties": {
+          "attributes": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "default": {},
+            "title": "Attributes",
+            "type": "object"
+          },
+          "color": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Color"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "createdAt": {
+            "format": "date-time",
+            "title": "Createdat",
+            "type": "string"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Free text; null clears it.",
+            "title": "Description"
+          },
+          "dimensions": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Dimensions"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "discontinued": {
+            "default": false,
+            "deprecated": true,
+            "title": "Discontinued",
+            "type": "boolean"
+          },
+          "displayName": {
+            "readOnly": true,
+            "title": "Displayname",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "price": {
+            "title": "Price",
+            "type": "string"
+          },
+          "priority": {
+            "$ref": "#/components/schemas/Priority",
+            "default": 5
+          },
+          "sku": {
+            "examples": [
+              "ABC-1234"
+            ],
+            "pattern": "^[A-Z]{3}-\\d{4}$",
+            "title": "Sku",
+            "type": "string"
+          },
+          "supplier": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Supplier"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "tags": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Tags",
+            "type": "array"
+          },
+          "unit": {
+            "$ref": "#/components/schemas/Unit",
+            "default": "kg"
+          },
+          "updatedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updatedat"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          },
+          "weight": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Weight"
+          }
+        },
+        "required": [
+          "sku",
+          "name",
+          "price",
+          "id",
+          "createdAt",
+          "version",
+          "displayName"
+        ],
+        "title": "Item",
+        "type": "object"
+      },
+      "ItemIn": {
+        "additionalProperties": false,
+        "description": "An item as a client sends it.",
+        "properties": {
+          "attributes": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "default": {},
+            "title": "Attributes",
+            "type": "object"
+          },
+          "color": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Color"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Free text; null clears it.",
+            "title": "Description"
+          },
+          "dimensions": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Dimensions"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "discontinued": {
+            "default": false,
+            "deprecated": true,
+            "title": "Discontinued",
+            "type": "boolean"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "price": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Price"
+          },
+          "priority": {
+            "$ref": "#/components/schemas/Priority",
+            "default": 5
+          },
+          "sku": {
+            "examples": [
+              "ABC-1234"
+            ],
+            "pattern": "^[A-Z]{3}-\\d{4}$",
+            "title": "Sku",
+            "type": "string"
+          },
+          "supplier": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Supplier"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "tags": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Tags",
+            "type": "array"
+          },
+          "unit": {
+            "$ref": "#/components/schemas/Unit",
+            "default": "kg"
+          },
+          "weight": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Weight"
+          }
+        },
+        "required": [
+          "sku",
+          "name",
+          "price"
+        ],
+        "title": "ItemIn",
+        "type": "object"
+      },
+      "ItemPatch": {
+        "additionalProperties": false,
+        "properties": {
+          "color": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Color"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "dimensions": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Dimensions"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "price": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Price"
+          },
+          "tags": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tags"
+          }
+        },
+        "title": "ItemPatch",
+        "type": "object"
+      },
+      "Keywords": {
+        "additionalProperties": false,
+        "description": "Property names that are keywords or predeclared in Go.",
+        "properties": {
+          "1st": {
+            "title": "1St",
+            "type": "string"
+          },
+          "UPPER": {
+            "title": "Upper",
+            "type": "string"
+          },
+          "default": {
+            "default": false,
+            "title": "Default",
+            "type": "boolean"
+          },
+          "dot.name": {
+            "title": "Dot.Name",
+            "type": "string"
+          },
+          "error": {
+            "title": "Error",
+            "type": "string"
+          },
+          "func": {
+            "title": "Func",
+            "type": "integer"
+          },
+          "interface": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Interface"
+          },
+          "map": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Map",
+            "type": "object"
+          },
+          "package": {
+            "default": "main",
+            "title": "Package",
+            "type": "string"
+          },
+          "range": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Range",
+            "type": "array"
+          },
+          "select": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Select"
+          },
+          "string": {
+            "title": "String",
+            "type": "string"
+          },
+          "type": {
+            "title": "Type",
+            "type": "string"
+          },
+          "x-dash-name": {
+            "title": "X-Dash-Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "func",
+          "range",
+          "map",
+          "string",
+          "error",
+          "x-dash-name",
+          "dot.name",
+          "UPPER",
+          "1st"
+        ],
+        "title": "Keywords",
+        "type": "object"
+      },
+      "Open": {
+        "additionalProperties": true,
+        "description": "Takes any extra key and returns it.",
+        "properties": {
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind"
+        ],
+        "title": "Open",
+        "type": "object"
+      },
+      "Order": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Code"
+          },
+          "extraPayments": {
+            "default": [],
+            "items": {
+              "discriminator": {
+                "mapping": {
+                  "card": "#/components/schemas/Card",
+                  "transfer": "#/components/schemas/Transfer",
+                  "voucher": "#/components/schemas/Voucher-Output"
+                },
+                "propertyName": "method"
+              },
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/Card"
+                },
+                {
+                  "$ref": "#/components/schemas/Transfer"
+                },
+                {
+                  "$ref": "#/components/schemas/Voucher-Output"
+                }
+              ]
+            },
+            "title": "Extrapayments",
+            "type": "array"
+          },
+          "gift": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "default": false,
+            "title": "Gift"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "lines": {
+            "items": {
+              "$ref": "#/components/schemas/OrderLine"
+            },
+            "minItems": 1,
+            "title": "Lines",
+            "type": "array"
+          },
+          "payment": {
+            "discriminator": {
+              "mapping": {
+                "card": "#/components/schemas/Card",
+                "transfer": "#/components/schemas/Transfer",
+                "voucher": "#/components/schemas/Voucher-Output"
+              },
+              "propertyName": "method"
+            },
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/Card"
+              },
+              {
+                "$ref": "#/components/schemas/Transfer"
+              },
+              {
+                "$ref": "#/components/schemas/Voucher-Output"
+              }
+            ],
+            "title": "Payment"
+          },
+          "placedAt": {
+            "format": "date-time",
+            "title": "Placedat",
+            "type": "string"
+          },
+          "shape": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Circle"
+              },
+              {
+                "$ref": "#/components/schemas/Rect"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Shape"
+          },
+          "status": {
+            "$ref": "#/components/schemas/OrderStatus"
+          }
+        },
+        "required": [
+          "lines",
+          "payment",
+          "id",
+          "status",
+          "placedAt"
+        ],
+        "title": "Order",
+        "type": "object"
+      },
+      "OrderIn": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Code"
+          },
+          "extraPayments": {
+            "default": [],
+            "items": {
+              "discriminator": {
+                "mapping": {
+                  "card": "#/components/schemas/Card",
+                  "transfer": "#/components/schemas/Transfer",
+                  "voucher": "#/components/schemas/Voucher-Input"
+                },
+                "propertyName": "method"
+              },
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/Card"
+                },
+                {
+                  "$ref": "#/components/schemas/Transfer"
+                },
+                {
+                  "$ref": "#/components/schemas/Voucher-Input"
+                }
+              ]
+            },
+            "title": "Extrapayments",
+            "type": "array"
+          },
+          "gift": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "default": false,
+            "title": "Gift"
+          },
+          "lines": {
+            "items": {
+              "$ref": "#/components/schemas/OrderLine"
+            },
+            "minItems": 1,
+            "title": "Lines",
+            "type": "array"
+          },
+          "payment": {
+            "discriminator": {
+              "mapping": {
+                "card": "#/components/schemas/Card",
+                "transfer": "#/components/schemas/Transfer",
+                "voucher": "#/components/schemas/Voucher-Input"
+              },
+              "propertyName": "method"
+            },
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/Card"
+              },
+              {
+                "$ref": "#/components/schemas/Transfer"
+              },
+              {
+                "$ref": "#/components/schemas/Voucher-Input"
+              }
+            ],
+            "title": "Payment"
+          },
+          "shape": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Circle"
+              },
+              {
+                "$ref": "#/components/schemas/Rect"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Shape"
+          }
+        },
+        "required": [
+          "lines",
+          "payment"
+        ],
+        "title": "OrderIn",
+        "type": "object"
+      },
+      "OrderLine": {
+        "additionalProperties": false,
+        "properties": {
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "quantity": {
+            "exclusiveMinimum": 0,
+            "title": "Quantity",
+            "type": "integer"
+          },
+          "sku": {
+            "title": "Sku",
+            "type": "string"
+          }
+        },
+        "required": [
+          "sku",
+          "quantity"
+        ],
+        "title": "OrderLine",
+        "type": "object"
+      },
+      "OrderStatus": {
+        "enum": [
+          "placed",
+          "paid",
+          "shipped"
+        ],
+        "title": "OrderStatus",
+        "type": "string"
+      },
+      "Page_Item_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/Item"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total"
+        ],
+        "title": "Page[Item]",
+        "type": "object"
+      },
+      "Priority": {
+        "enum": [
+          1,
+          5,
+          10
+        ],
+        "title": "Priority",
+        "type": "integer"
+      },
+      "Problem": {
+        "additionalProperties": false,
+        "properties": {
+          "detail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Detail"
+          },
+          "status": {
+            "title": "Status",
+            "type": "integer"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "type": {
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "title",
+          "status"
+        ],
+        "title": "Problem",
+        "type": "object"
+      },
+      "Rect": {
+        "additionalProperties": false,
+        "properties": {
+          "height": {
+            "title": "Height",
+            "type": "number"
+          },
+          "width": {
+            "title": "Width",
+            "type": "number"
+          }
+        },
+        "required": [
+          "width",
+          "height"
+        ],
+        "title": "Rect",
+        "type": "object"
+      },
+      "Scalars-Input": {
+        "additionalProperties": false,
+        "description": "Every scalar format pydantic writes into a schema.",
+        "properties": {
+          "anything": {
+            "title": "Anything"
+          },
+          "b": {
+            "title": "B",
+            "type": "boolean"
+          },
+          "blob": {
+            "contentMediaType": "application/octet-stream",
+            "title": "Blob",
+            "type": "string"
+          },
+          "clock": {
+            "format": "time",
+            "title": "Clock",
+            "type": "string"
+          },
+          "color": {
+            "$ref": "#/components/schemas/Color"
+          },
+          "d": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "D"
+          },
+          "day": {
+            "format": "date",
+            "title": "Day",
+            "type": "string"
+          },
+          "email": {
+            "format": "email",
+            "title": "Email",
+            "type": "string"
+          },
+          "f": {
+            "title": "F",
+            "type": "number"
+          },
+          "i": {
+            "title": "I",
+            "type": "integer"
+          },
+          "i64": {
+            "maximum": 9223372036854776000,
+            "minimum": -9223372036854776000,
+            "title": "I64",
+            "type": "integer"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "ip": {
+            "format": "ipv4",
+            "title": "Ip",
+            "type": "string"
+          },
+          "priority": {
+            "$ref": "#/components/schemas/Priority"
+          },
+          "s": {
+            "maxLength": 40,
+            "minLength": 1,
+            "pattern": "^[^\\x00]+$",
+            "title": "S",
+            "type": "string"
+          },
+          "span": {
+            "format": "duration",
+            "title": "Span",
+            "type": "string"
+          },
+          "unit": {
+            "default": "kg",
+            "enum": [
+              "kg",
+              "lb"
+            ],
+            "title": "Unit",
+            "type": "string"
+          },
+          "url": {
+            "format": "uri",
+            "maxLength": 2083,
+            "minLength": 1,
+            "title": "Url",
+            "type": "string"
+          },
+          "when": {
+            "format": "date-time",
+            "title": "When",
+            "type": "string"
+          }
+        },
+        "required": [
+          "i",
+          "i64",
+          "f",
+          "d",
+          "b",
+          "s",
+          "when",
+          "day",
+          "clock",
+          "span",
+          "id",
+          "email",
+          "url",
+          "ip",
+          "blob",
+          "color",
+          "priority"
+        ],
+        "title": "Scalars",
+        "type": "object"
+      },
+      "Scalars-Output": {
+        "additionalProperties": false,
+        "description": "Every scalar format pydantic writes into a schema.",
+        "properties": {
+          "anything": {
+            "title": "Anything"
+          },
+          "b": {
+            "title": "B",
+            "type": "boolean"
+          },
+          "blob": {
+            "contentMediaType": "application/octet-stream",
+            "title": "Blob",
+            "type": "string"
+          },
+          "clock": {
+            "format": "time",
+            "title": "Clock",
+            "type": "string"
+          },
+          "color": {
+            "$ref": "#/components/schemas/Color"
+          },
+          "d": {
+            "title": "D",
+            "type": "string"
+          },
+          "day": {
+            "format": "date",
+            "title": "Day",
+            "type": "string"
+          },
+          "email": {
+            "format": "email",
+            "title": "Email",
+            "type": "string"
+          },
+          "f": {
+            "title": "F",
+            "type": "number"
+          },
+          "i": {
+            "title": "I",
+            "type": "integer"
+          },
+          "i64": {
+            "maximum": 9223372036854776000,
+            "minimum": -9223372036854776000,
+            "title": "I64",
+            "type": "integer"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "ip": {
+            "format": "ipv4",
+            "title": "Ip",
+            "type": "string"
+          },
+          "priority": {
+            "$ref": "#/components/schemas/Priority"
+          },
+          "s": {
+            "maxLength": 40,
+            "minLength": 1,
+            "pattern": "^[^\\x00]+$",
+            "title": "S",
+            "type": "string"
+          },
+          "span": {
+            "format": "duration",
+            "title": "Span",
+            "type": "string"
+          },
+          "unit": {
+            "default": "kg",
+            "enum": [
+              "kg",
+              "lb"
+            ],
+            "title": "Unit",
+            "type": "string"
+          },
+          "url": {
+            "format": "uri",
+            "maxLength": 2083,
+            "minLength": 1,
+            "title": "Url",
+            "type": "string"
+          },
+          "when": {
+            "format": "date-time",
+            "title": "When",
+            "type": "string"
+          }
+        },
+        "required": [
+          "i",
+          "i64",
+          "f",
+          "d",
+          "b",
+          "s",
+          "when",
+          "day",
+          "clock",
+          "span",
+          "id",
+          "email",
+          "url",
+          "ip",
+          "blob",
+          "color",
+          "priority"
+        ],
+        "title": "Scalars",
+        "type": "object"
+      },
+      "Secret": {
+        "additionalProperties": false,
+        "properties": {
+          "password": {
+            "format": "password",
+            "title": "Password",
+            "type": "string",
+            "writeOnly": true
+          },
+          "username": {
+            "title": "Username",
+            "type": "string"
+          }
+        },
+        "required": [
+          "username",
+          "password"
+        ],
+        "title": "Secret",
+        "type": "object"
+      },
+      "Supplier": {
+        "additionalProperties": false,
+        "properties": {
+          "contactEmail": {
+            "anyOf": [
+              {
+                "format": "email",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contactemail"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "website": {
+            "anyOf": [
+              {
+                "format": "uri",
+                "maxLength": 2083,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Website"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "Supplier",
+        "type": "object"
+      },
+      "Transfer": {
+        "additionalProperties": false,
+        "properties": {
+          "iban": {
+            "title": "Iban",
+            "type": "string"
+          },
+          "method": {
+            "const": "transfer",
+            "title": "Method",
+            "type": "string"
+          },
+          "reference": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reference"
+          }
+        },
+        "required": [
+          "method",
+          "iban"
+        ],
+        "title": "Transfer",
+        "type": "object"
+      },
+      "Unit": {
+        "enum": [
+          "kg",
+          "lb"
+        ],
+        "title": "Unit",
+        "type": "string"
+      },
+      "ValidationError": {
+        "properties": {
+          "ctx": {
+            "title": "Context",
+            "type": "object"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "title": "Location",
+            "type": "array"
+          },
+          "msg": {
+            "title": "Message",
+            "type": "string"
+          },
+          "type": {
+            "title": "Error Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError",
+        "type": "object"
+      },
+      "Voucher-Input": {
+        "additionalProperties": false,
+        "properties": {
+          "amount": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Amount"
+          },
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "method": {
+            "const": "voucher",
+            "title": "Method",
+            "type": "string"
+          }
+        },
+        "required": [
+          "method",
+          "code",
+          "amount"
+        ],
+        "title": "Voucher",
+        "type": "object"
+      },
+      "Voucher-Output": {
+        "additionalProperties": false,
+        "properties": {
+          "amount": {
+            "title": "Amount",
+            "type": "string"
+          },
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "method": {
+            "const": "voucher",
+            "title": "Method",
+            "type": "string"
+          }
+        },
+        "required": [
+          "method",
+          "code",
+          "amount"
+        ],
+        "title": "Voucher",
+        "type": "object"
+      }
+    },
+    "securitySchemes": {
+      "APIKeyCookie": {
+        "in": "cookie",
+        "name": "session",
+        "type": "apiKey"
+      },
+      "APIKeyHeader": {
+        "in": "header",
+        "name": "X-API-Key",
+        "type": "apiKey"
+      },
+      "APIKeyQuery": {
+        "in": "query",
+        "name": "api_key",
+        "type": "apiKey"
+      },
+      "HTTPBasic": {
+        "scheme": "basic",
+        "type": "http"
+      },
+      "HTTPBearer": {
+        "scheme": "bearer",
+        "type": "http"
+      },
+      "OAuth2PasswordBearer": {
+        "flows": {
+          "password": {
+            "scopes": {
+              "items:read": "Read items",
+              "items:write": "Write items",
+              "orders": "Place orders"
+            },
+            "tokenUrl": "token"
+          }
+        },
+        "type": "oauth2"
+      }
+    }
+  },
+  "info": {
+    "description": "Every common OpenAPI shape in one strict API.",
+    "title": "Warehouse",
+    "version": "2.0.0"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/admin/stats": {
+      "get": {
+        "operationId": "adminStats",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "integer"
+                  },
+                  "title": "Response Adminstats",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBasic": []
+          }
+        ],
+        "summary": "Admin Stats",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/categories": {
+      "get": {
+        "operationId": "categoryTree",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Category-Output"
+                  },
+                  "title": "Response Categorytree",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Category Tree",
+        "tags": [
+          "misc"
+        ]
+      }
+    },
+    "/count": {
+      "get": {
+        "operationId": "countItems",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "Response Countitems",
+                  "type": "integer"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Count Items",
+        "tags": [
+          "misc"
+        ]
+      }
+    },
+    "/echo/containers": {
+      "post": {
+        "operationId": "echoContainers",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Containers"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Containers"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Echo Containers",
+        "tags": [
+          "echo"
+        ]
+      }
+    },
+    "/echo/keywords": {
+      "post": {
+        "operationId": "echoKeywords",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Keywords"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Keywords"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Echo Keywords",
+        "tags": [
+          "echo"
+        ]
+      }
+    },
+    "/echo/list": {
+      "post": {
+        "operationId": "echoList",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "items": {
+                  "$ref": "#/components/schemas/Dimensions"
+                },
+                "title": "Body",
+                "type": "array"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Dimensions"
+                  },
+                  "title": "Response Echolist",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Echo List",
+        "tags": [
+          "echo"
+        ]
+      }
+    },
+    "/echo/map": {
+      "post": {
+        "operationId": "echoMap",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": {
+                  "items": {
+                    "type": "integer"
+                  },
+                  "type": "array"
+                },
+                "title": "Body",
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "integer"
+                  },
+                  "title": "Response Echomap",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Echo Map",
+        "tags": [
+          "echo"
+        ]
+      }
+    },
+    "/echo/number": {
+      "post": {
+        "operationId": "echoNumber",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "title": "Body",
+                "type": "number"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "Response Echonumber",
+                  "type": "number"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Echo Number",
+        "tags": [
+          "echo"
+        ]
+      }
+    },
+    "/echo/open": {
+      "post": {
+        "operationId": "echoOpen",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Open"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Open"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Echo Open",
+        "tags": [
+          "echo"
+        ]
+      }
+    },
+    "/echo/optional": {
+      "post": {
+        "operationId": "echoOptional",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/Dimensions"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "boolean"
+                  },
+                  "title": "Response Echooptional",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Echo Optional",
+        "tags": [
+          "echo"
+        ]
+      }
+    },
+    "/echo/raw": {
+      "post": {
+        "operationId": "echoRaw",
+        "requestBody": {
+          "content": {
+            "application/octet-stream": {
+              "schema": {
+                "format": "binary",
+                "type": "string"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Echo Raw",
+        "tags": [
+          "echo"
+        ]
+      }
+    },
+    "/echo/scalars": {
+      "post": {
+        "operationId": "echoScalars",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Scalars-Input"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Scalars-Output"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Echo Scalars",
+        "tags": [
+          "echo"
+        ]
+      }
+    },
+    "/echo/secret": {
+      "post": {
+        "operationId": "echoSecret",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Secret"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "integer"
+                      }
+                    ]
+                  },
+                  "title": "Response Echosecret",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Echo Secret",
+        "tags": [
+          "echo"
+        ]
+      }
+    },
+    "/echo/text": {
+      "post": {
+        "operationId": "echoText",
+        "requestBody": {
+          "content": {
+            "text/plain": {
+              "schema": {
+                "type": "string"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Echo Text",
+        "tags": [
+          "echo"
+        ]
+      }
+    },
+    "/echo/tree": {
+      "post": {
+        "operationId": "echoTree",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Category-Input"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Category-Output"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Echo Tree",
+        "tags": [
+          "echo"
+        ]
+      }
+    },
+    "/echo/union": {
+      "post": {
+        "operationId": "echoUnion",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "items": {
+                      "type": "integer"
+                    },
+                    "type": "array"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "title": "Response Echounion",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Echo Union",
+        "tags": [
+          "echo"
+        ]
+      }
+    },
+    "/export.csv": {
+      "get": {
+        "operationId": "exportCsv",
+        "responses": {
+          "200": {
+            "content": {
+              "text/csv": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Export Csv",
+        "tags": [
+          "files"
+        ]
+      }
+    },
+    "/files": {
+      "post": {
+        "operationId": "uploadFiles",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_uploadFiles"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    },
+                    "type": "object"
+                  },
+                  "title": "Response Uploadfiles",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "APIKeyQuery": []
+          },
+          {
+            "APIKeyCookie": []
+          }
+        ],
+        "summary": "Upload Files",
+        "tags": [
+          "files"
+        ]
+      }
+    },
+    "/files/avatar": {
+      "post": {
+        "operationId": "uploadAvatar",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_uploadAvatar"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "integer"
+                  },
+                  "title": "Response Uploadavatar",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Upload Avatar",
+        "tags": [
+          "files"
+        ]
+      }
+    },
+    "/files/{name}": {
+      "get": {
+        "operationId": "downloadFile",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "title": "Name",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "No such resource"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Download File",
+        "tags": [
+          "files"
+        ]
+      }
+    },
+    "/items": {
+      "get": {
+        "operationId": "listItems",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "color",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/Color"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Color"
+            }
+          },
+          {
+            "in": "query",
+            "name": "min_price",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Min Price"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 10,
+              "maximum": 50,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_Item_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": [
+              "items:read"
+            ]
+          }
+        ],
+        "summary": "List Items",
+        "tags": [
+          "items"
+        ]
+      },
+      "post": {
+        "operationId": "createItem",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ItemIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Item"
+                }
+              }
+            },
+            "description": "Successful Response",
+            "headers": {
+              "Location": {
+                "description": "URL of the item",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "SKU taken"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": [
+              "items:write"
+            ]
+          }
+        ],
+        "summary": "Create Item",
+        "tags": [
+          "items"
+        ]
+      }
+    },
+    "/items/{item_id}": {
+      "delete": {
+        "operationId": "deleteItem",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "item_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Item Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "No such resource"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": [
+              "items:write"
+            ]
+          }
+        ],
+        "summary": "Delete Item",
+        "tags": [
+          "items"
+        ]
+      },
+      "get": {
+        "operationId": "getItem",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "item_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Item Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Item"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "No such resource"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": [
+              "items:read"
+            ]
+          }
+        ],
+        "summary": "Get Item",
+        "tags": [
+          "items"
+        ]
+      },
+      "head": {
+        "operationId": "itemExists",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "item_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Item Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "description": "absent"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": [
+              "items:read"
+            ]
+          }
+        ],
+        "summary": "Item Exists",
+        "tags": [
+          "items"
+        ]
+      },
+      "patch": {
+        "operationId": "patchItem",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "item_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Item Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "if-match",
+            "required": true,
+            "schema": {
+              "title": "If-Match",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ItemPatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Item"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "No such resource"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Conflict"
+                }
+              }
+            },
+            "description": "Stale version"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": [
+              "items:write"
+            ]
+          }
+        ],
+        "summary": "Patch Item",
+        "tags": [
+          "items"
+        ]
+      }
+    },
+    "/legacy": {
+      "get": {
+        "deprecated": true,
+        "description": "A deprecated operation with FastAPI's generated operationId.",
+        "operationId": "legacy_endpoint_legacy_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "x",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "title": "X",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "integer"
+                  },
+                  "title": "Response Legacy Endpoint Legacy Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Legacy Endpoint",
+        "tags": [
+          "misc"
+        ]
+      }
+    },
+    "/maybe": {
+      "get": {
+        "operationId": "maybeItem",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "present",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Present",
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/Dimensions"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "title": "Response Maybeitem"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Maybe Item",
+        "tags": [
+          "misc"
+        ]
+      }
+    },
+    "/numbers/{a}/{b}": {
+      "get": {
+        "operationId": "add",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "a",
+            "required": true,
+            "schema": {
+              "title": "A",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "path",
+            "name": "b",
+            "required": true,
+            "schema": {
+              "title": "B",
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "round",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Round",
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "Response Add",
+                  "type": "number"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Add",
+        "tags": [
+          "misc"
+        ]
+      }
+    },
+    "/orders": {
+      "post": {
+        "operationId": "placeOrder",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "dry_run",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Dry Run",
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "header",
+            "name": "idempotency-key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OrderIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Order"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Queued for review"
+          },
+          "422": {
+            "description": "Invalid"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": [
+              "orders"
+            ]
+          }
+        ],
+        "summary": "Place Order",
+        "tags": [
+          "orders"
+        ]
+      }
+    },
+    "/orders/{order_id}": {
+      "get": {
+        "operationId": "getOrder",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "order_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "Order Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Order"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "No such resource"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": [
+              "orders"
+            ]
+          }
+        ],
+        "summary": "Get Order",
+        "tags": [
+          "orders"
+        ]
+      }
+    },
+    "/orders/{order_id}/cancel": {
+      "post": {
+        "operationId": "cancelOrder",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "order_id",
+            "required": true,
+            "schema": {
+              "title": "Order Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_cancelOrder"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Cancellation accepted; no body"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "No such resource"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": [
+              "orders"
+            ]
+          }
+        ],
+        "summary": "Cancel Order",
+        "tags": [
+          "orders"
+        ]
+      }
+    },
+    "/orders/{order_id}/status": {
+      "get": {
+        "operationId": "orderStatus",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "order_id",
+            "required": true,
+            "schema": {
+              "title": "Order Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderStatus"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "No such resource"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": [
+              "orders"
+            ]
+          }
+        ],
+        "summary": "Order Status",
+        "tags": [
+          "orders"
+        ]
+      }
+    },
+    "/params/headers": {
+      "get": {
+        "operationId": "headerParams",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "x-request-id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "X-Request-Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "x-retry",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Retry"
+            }
+          },
+          {
+            "in": "header",
+            "name": "x-flags",
+            "required": false,
+            "schema": {
+              "default": [],
+              "items": {
+                "type": "string"
+              },
+              "title": "X-Flags",
+              "type": "array"
+            }
+          },
+          {
+            "in": "header",
+            "name": "accept-language",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Accept-Language"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "tenant",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Tenant"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "theme",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Theme"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Headerparams",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Header Params",
+        "tags": [
+          "params"
+        ]
+      }
+    },
+    "/params/path/{id}/{day}/{color}/{rest}": {
+      "get": {
+        "operationId": "pathParams",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "title": "Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "path",
+            "name": "day",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "Day",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "color",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/Color"
+            }
+          },
+          {
+            "in": "path",
+            "name": "rest",
+            "required": true,
+            "schema": {
+              "title": "Rest",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "title": "Response Pathparams",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Path Params",
+        "tags": [
+          "params"
+        ]
+      }
+    },
+    "/params/query": {
+      "get": {
+        "operationId": "queryParams",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "q",
+            "required": true,
+            "schema": {
+              "title": "Q",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page-size",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Page-Size",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "tags",
+            "required": false,
+            "schema": {
+              "default": [],
+              "items": {
+                "type": "string"
+              },
+              "title": "Tags",
+              "type": "array"
+            }
+          },
+          {
+            "in": "query",
+            "name": "ids",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "items": {
+                    "type": "integer"
+                  },
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Ids"
+            }
+          },
+          {
+            "in": "query",
+            "name": "colors",
+            "required": false,
+            "schema": {
+              "default": [],
+              "items": {
+                "$ref": "#/components/schemas/Color"
+              },
+              "title": "Colors",
+              "type": "array"
+            }
+          },
+          {
+            "in": "query",
+            "name": "since",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Since"
+            }
+          },
+          {
+            "in": "query",
+            "name": "ratio",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Ratio"
+            }
+          },
+          {
+            "in": "query",
+            "name": "active",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Active"
+            }
+          },
+          {
+            "deprecated": true,
+            "in": "query",
+            "name": "old",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "deprecated": true,
+              "title": "Old"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Queryparams",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Query Params",
+        "tags": [
+          "params"
+        ]
+      }
+    },
+    "/redirect": {
+      "get": {
+        "operationId": "redirectToCount",
+        "responses": {
+          "307": {
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Redirect",
+        "tags": [
+          "misc"
+        ]
+      }
+    },
+    "/stream": {
+      "get": {
+        "operationId": "streamLines",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "n",
+            "required": false,
+            "schema": {
+              "default": 3,
+              "title": "N",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              },
+              "application/x-ndjson": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Stream Lines",
+        "tags": [
+          "misc"
+        ]
+      }
+    },
+    "/token": {
+      "post": {
+        "operationId": "issueToken",
+        "requestBody": {
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_issueToken"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "title": "Response Issuetoken",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Issue Token",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/untagged": {
+      "get": {
+        "operationId": "untagged",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "boolean"
+                  },
+                  "title": "Response Untagged",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Untagged"
+      }
+    },
+    "/whoami": {
+      "get": {
+        "operationId": "whoami",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "title": "Response Whoami",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "APIKeyQuery": []
+          },
+          {
+            "APIKeyCookie": []
+          },
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Whoami",
+        "tags": [
+          "auth"
+        ]
+      }
+    }
+  }
+}

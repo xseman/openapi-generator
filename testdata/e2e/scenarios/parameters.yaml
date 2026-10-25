@@ -1,0 +1,13 @@
+# Parameters in each location and style; the request is as the mock decoded
+# it (path and query values unescaped).
+spec: ../../specs/feature/parameters-array-style-explode.yaml
+cases:
+  - name: array styles in query and path
+    op: filterItems
+    args: { pathIds: [a, b], formExplodeTrue: [x, y], formExplodeFalse: [x, y], spaceDelimited: [1, 2], pipeDelimited: [3, 4] }
+    request:
+      path: "/filter/a,b"
+      query: { formExplodeTrue: [x, y], formExplodeFalse: "x,y", spaceDelimited: "1 2", pipeDelimited: "3|4" }
+    response: { json: [ok] }
+    result: [ok]
+    skip: { dart-fetch: "request.path: want \"/filter/a,b\", got \"/filter/[a, b]\"", typescript-fetch: "explode false, spaceDelimited and pipeDelimited go out as an exploded list" }

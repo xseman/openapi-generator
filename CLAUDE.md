@@ -14,6 +14,7 @@ make lint               # golangci-lint, config in .golangci.yml — must be cle
 make fmt                # gofumpt -w .
 make cover              # coverage.out + per-function summary
 make regress REF=master # generated output, working tree vs a git ref
+make e2e                # generated clients against a mock and FastAPI (testdata/e2e)
 go test ./internal/parser -run TestName
 ```
 
@@ -33,6 +34,7 @@ go.yaml.in/yaml/v3. No cgo.
 | `internal/codegen`              | the `Codegen*` structs templates render; fields mirror the Java originals   |
 | `internal/gen`                  | the pipeline: load spec → parse → render models, apis, supporting files     |
 | `internal/generator`            | `CodegenConfig` and the language configs, `typescript/`, `dart/`, `golang/` |
+| `internal/e2e`                  | end-to-end tests: mock server, runners, scenarios in `testdata/e2e`         |
 | `internal/template`             | the Mustache engine: partials, lambdas, struct-to-map via json              |
 | `internal/config`               | generator options and their config-file keys                                |
 | `internal/update`               | release check, verified download, self-update                               |

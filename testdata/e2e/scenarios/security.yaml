@@ -1,0 +1,7 @@
+spec: ../../specs/feature/security-apikey.yaml
+skip: { dart-fetch: "does not compile: lib/src/apis/default_api.dart:20: Expected an identifier." }
+auth: { apiKey: k1 }
+cases:
+  - { op: getWithHeaderKey, request: { header: { X-Api-Key: k1 } }, response: { status: 200 } }
+  - { op: getWithQueryKey, request: { query: { api_key: k1 } }, response: { status: 200 } }
+  - { op: getWithCookieKey, request: { cookie: { session: k1 } }, response: { status: 200 }, skip: { typescript-fetch: "no API key in a cookie" } }

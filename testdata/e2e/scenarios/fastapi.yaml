@@ -1,0 +1,395 @@
+# The FastAPI backend (testdata/e2e/backends/fastapi), called through a
+# client generated from the spec it serves. Most endpoints echo what they
+# parsed, so a result shows what the server received. Cases run in order and
+# share the server's state: save keeps a value for ${name} in later cases.
+backend: fastapi
+skip: { dart-fetch: "does not compile: lib/src/apis/auth_api.dart:24: Expected an identifier." }
+auth: { username: admin, password: "p@ss:w0rd", apiKey: key-1 }
+cases:
+  # ------------------------------------------------------------ auth
+  - name: password form, bad login
+    op: issueToken
+    args: { username: alice, password: nope }
+    error: { status: 400, model: null, body: '{"detail":"bad login"}' }
+    skip: { typescript-fetch: "no error models: the body is decoded as JSON whatever the status declares" }
+  - name: password form with a scope
+    op: issueToken
+    args: { username: bob, password: secret, scope: "items:read" }
+    result: { access_token: tok-r, scope: "items:read" }
+    save: { token: access_token }
+  - name: api key and optional bearer
+    op: whoami
+    auth: { bearer: "${token}" }
+    result: { key_in: header, bearer: tok-r }
+  - name: basic auth with a colon in the password
+    op: adminStats
+    result: { items: 0, orders: 0 }
+
+  # ------------------------------------------------------------ scalars and containers
+  - name: every scalar format
+    op: echoScalars
+    args:
+      body:
+        i: -7
+        i64: 4611686018427387905
+        f: 0.1
+        d: "12345678901234567890.123456789"
+        b: true
+        s: 'žluťoučký kůň "quoted" \ /'
+        when: "2024-02-29T23:59:58.123456+05:30"
+        day: "2024-01-31"
+        clock: "13:45:30"
+        span: PT1H30M
+        id: 0b5f0c6e-8e7b-4c8c-9d55-7f0f3c6f2a11
+        email: a.b+c@example.com
+        url: https://example.com/a?b=1
+        ip: 10.0.0.1
+        blob: aGVsbG8Ad29ybGQ=
+        anything: { x: [1, y, null] }
+        color: light green
+        priority: 10
+        unit: lb
+    result:
+      i: -7
+      i64: 4611686018427387905
+      f: 0.1
+      d: "12345678901234567890.123456789"
+      s: 'žluťoučký kůň "quoted" \ /'
+      when: "2024-02-29T23:59:58.123456+05:30"
+      day: "2024-01-31"
+      clock: "13:45:30"
+      span: PT1H30M
+      id: 0b5f0c6e-8e7b-4c8c-9d55-7f0f3c6f2a11
+      email: a.b+c@example.com
+      url: https://example.com/a?b=1
+      ip: 10.0.0.1
+      blob: aGVsbG8Ad29ybGQ=
+      anything: { x: [1, y, null] }
+      color: light green
+      priority: 10
+      unit: lb
+    skip: { typescript-fetch: "binary in a JSON body: a Blob serializes as {}" }
+  - name: containers, empty and null
+    op: echoContainers
+    args:
+      body:
+        tags: []
+        unique: [a]
+        pair: [1, one]
+        matrix: [[1, 2], [], [3]]
+        sparse: [1, null, 3]
+        counts: { "a b": 1, "": 0 }
+        groups: { g: [x, y] }
+        by_name: { box: { widthCm: 1.5, heightCm: 2, depthCm: null } }
+        maybe_list: null
+        maybe_map: { k: null, v: "1" }
+    result:
+      tags: []
+      unique: [a]
+      pair: [1, one]
+      matrix: [[1, 2], [], [3]]
+      sparse: [1, null, 3]
+      counts: { "a b": 1, "": 0 }
+      groups: { g: [x, y] }
+      by_name: { box: { widthCm: 1.5, heightCm: 2, depthCm: null } }
+      maybe_list: null
+      maybe_map: { k: null, v: "1" }
+    skip: { typescript-fetch: "a tuple (prefixItems) renders an undefined FromJSON" }
+  - name: Go keywords and odd property names
+    op: echoKeywords
+    args:
+      body: { type: t, func: 1, range: [1, 2], map: { m: 1 }, interface: null, package: p, default: true, select: s, string: str, error: e, x-dash-name: d, dot.name: ".", UPPER: U, 1st: "1" }
+    result: { type: t, func: 1, range: [1, 2], map: { m: 1 }, interface: null, package: p, default: true, select: s, string: str, error: e, x-dash-name: d, dot.name: ".", UPPER: U, 1st: "1" }
+  - name: extra keys both ways
+    op: echoOpen
+    args: { body: { kind: k, extra: 1, nested: { a: [true] } } }
+    result: { kind: k, extra: 1, nested: { a: [true] } }
+    skip: { typescript-fetch: "drops the keys next to the declared properties (additionalProperties)" }
+  - name: recursive tree
+    op: echoTree
+    args: { body: { name: root, children: [{ name: a, children: [{ name: a1 }] }], parent: { name: up } } }
+    result: { name: root, children: [{ name: a, children: [{ name: a1, children: [] }] }], parent: { name: up } }
+  - name: writeOnly secret
+    op: echoSecret
+    args: { body: { username: u, password: "12345" } }
+    result: { username: u, password_length: 5 }
+
+  # ------------------------------------------------------------ bodies
+  - name: array body
+    op: echoList
+    args: { body: [{ widthCm: 1, heightCm: 2 }] }
+    result: [{ widthCm: 1, heightCm: 2 }]
+  - name: map body
+    op: echoMap
+    args: { body: { a: [1, 2], b: [] } }
+    result: { a: 3, b: 0 }
+  - name: number body
+    op: echoNumber
+    args: { body: 2.25 }
+    result: 4.5
+  - name: text/plain body
+    op: echoText
+    args: { body: héllo }
+    result: olléh
+  - name: octet-stream body
+    op: echoRaw
+    args: { body: { $bytes: { base64: AAH/ } } }
+    result: /wEA
+  - name: union body, int
+    op: echoUnion
+    args: { body: 5 }
+    result: { type: int, value: "5" }
+  - name: union body, string
+    op: echoUnion
+    args: { body: x }
+    result: { type: str, value: x }
+  - name: union body, list
+    op: echoUnion
+    args: { body: [1, 2] }
+    result: { type: list, value: "[1, 2]" }
+  - name: optional body left out
+    op: echoOptional
+    result: { got: false }
+  - name: optional body given
+    op: echoOptional
+    args: { body: { widthCm: 1, heightCm: 1 } }
+    result: { got: true }
+
+  # ------------------------------------------------------------ parameters
+  - name: path int, date, enum with a space, path with slashes
+    op: pathParams
+    args: { id: -3, day: "2024-12-24", color: light green, rest: "dir/a b/c%d" }
+    result: { id: "-3", day: "2024-12-24", color: light green, rest: "dir/a b/c%d" }
+  - name: query values that need escaping, arrays, offset time
+    op: queryParams
+    args:
+      q: "a&b=c+d ž"
+      page-size: 5
+      tags: [x, "y,z"]
+      ids: [1, 2]
+      colors: [red, light green]
+      since: "2024-05-01T10:00:00+02:00"
+      ratio: 0.1
+      active: false
+    result:
+      q: "a&b=c+d ž"
+      pageSize: 5
+      tags: [x, "y,z"]
+      ids: [1, 2]
+      colors: [red, light green]
+      since: "2024-05-01T10:00:00+02:00"
+      ratio: 0.1
+      active: false
+      old: null
+    skip: { typescript-fetch: "a Date comes back in UTC" }
+  - name: query, optional ones left out
+    op: queryParams
+    args: { q: only }
+    result: { q: only, pageSize: 20, tags: [], active: null }
+  - name: headers and two cookies
+    op: headerParams
+    args:
+      x-request-id: 0b5f0c6e-8e7b-4c8c-9d55-7f0f3c6f2a11
+      x-retry: 3
+      x-flags: [a]
+      accept-language: "sk-SK,en;q=0.5"
+      tenant: t1
+      theme: dark
+    result: { requestId: 0b5f0c6e-8e7b-4c8c-9d55-7f0f3c6f2a11, retry: 3, flags: [a], lang: "sk-SK,en;q=0.5", tenant: t1, theme: dark }
+    skip: { typescript-fetch: "no cookie parameters" }
+
+  # ------------------------------------------------------------ items
+  - name: read-only token cannot write
+    op: createItem
+    args: { body: { sku: ABC-0001, name: Box, price: "19.99" } }
+    error: { status: 403 }
+  - name: token with write scopes
+    op: issueToken
+    args: { username: alice, password: secret, scope: "items:read items:write orders" }
+    save: { token: access_token }
+  - name: create an item
+    op: createItem
+    auth: { bearer: "${token}" }
+    args:
+      body:
+        sku: ABC-0001
+        name: Box
+        price: "19.99"
+        description: small
+        color: dark-blue
+        tags: [a]
+        dimensions: { widthCm: 10, heightCm: 5 }
+        supplier: { name: ACME, website: https://acme.example/ }
+        attributes: { material: wood }
+    result:
+      sku: ABC-0001
+      price: "19.99"
+      version: 1
+      displayName: Box (ABC-0001)
+      supplier: { name: ACME, website: https://acme.example/ }
+      dimensions: { widthCm: 10, heightCm: 5 }
+      id: $any
+      createdAt: $any
+    save: { item: id }
+    skip: { typescript-fetch: "runner: ToJSON leaves out a result's readOnly properties" }
+  - name: create a second item, price as a number
+    op: createItem
+    args: { body: { sku: ABC-0002, name: Bag, price: 5 } }
+    result: { sku: ABC-0002, price: "5" }
+  - name: duplicate SKU is a 409 Problem
+    op: createItem
+    args: { body: { sku: ABC-0001, name: Box, price: "1" } }
+    error: { status: 409, model: { status: 409, title: SKU taken, detail: ABC-0001 } }
+  - name: page and cursor
+    op: listItems
+    args: { limit: 1 }
+    result: { items: [{ sku: ABC-0001 }], total: 2, next_cursor: "1" }
+  - name: enum and decimal filters
+    op: listItems
+    args: { color: dark-blue, min_price: "10.5" }
+    result: { items: [{ sku: ABC-0001 }], total: 1 }
+  - name: get the item
+    op: getItem
+    args: { item_id: "${item}" }
+    result: { id: $any, sku: ABC-0001, description: small, color: dark-blue, attributes: { material: wood } }
+  - name: unknown item is a 404 Problem
+    op: getItem
+    args: { item_id: 0b5f0c6e-8e7b-4c8c-9d55-7f0f3c6f2a11 }
+    error: { status: 404, model: { status: 404, title: Not found } }
+  - name: patch clears with null, sends an empty list, keeps the rest
+    op: patchItem
+    args: { item_id: "${item}", if-match: 1, body: { description: null, tags: [] } }
+    result: { description: null, tags: [], name: Box, version: 2, updatedAt: $any }
+  - name: stale version is a 409 Conflict
+    op: patchItem
+    args: { item_id: "${item}", if-match: 1, body: { name: x } }
+    error: { status: 409, model: { message: stale, current_version: 2 } }
+  - name: undeclared 400 keeps the body
+    op: patchItem
+    args: { item_id: "${item}", if-match: 2, body: { name: null } }
+    error: { status: 400, model: null, body: '{"detail":"name may not be null"}' }
+    skip: { typescript-fetch: "no error models: the body is decoded as JSON whatever the status declares" }
+  - name: HEAD of an item that exists
+    op: itemExists
+    args: { item_id: "${item}" }
+    skip: { typescript-fetch: "fails on the empty body of a HEAD" }
+  - name: HEAD of one that does not
+    op: itemExists
+    args: { item_id: 0b5f0c6e-8e7b-4c8c-9d55-7f0f3c6f2a11 }
+    error: { status: 404 }
+
+  # ------------------------------------------------------------ files
+  - name: two files, an array field and JSON text
+    op: uploadFiles
+    args:
+      files: [{ $file: { name: a b.txt, text: first } }, { $file: { name: ž.bin, base64: AP8= } }]
+      folder: docs
+      labels: [x, y]
+      meta: '{"k":1}'
+    result: [{ name: docs/a b.txt, size: 5, labels: "x,y", meta: '{"k":1}' }, { name: docs/ž.bin, size: 2 }]
+  - name: duplicate file is a 409
+    op: uploadFiles
+    args: { files: [{ $file: { name: a b.txt, text: again } }], folder: docs }
+    error: { status: 409 }
+  - name: bool form field
+    op: uploadFiles
+    args: { files: [{ $file: { name: a b.txt, text: again } }], folder: docs, overwrite: true }
+    result: [{ name: docs/a b.txt, size: 5 }]
+  - name: optional file left out
+    op: uploadAvatar
+    args: { image: { $file: { name: i.png, text: "12345" } } }
+    result: { image: 5, thumbnail: -1 }
+  - name: download by a path with a slash and unicode
+    op: downloadFile
+    args: { name: docs/ž.bin }
+    result: AP8=
+  - name: text/csv response
+    op: exportCsv
+    result: "sku,name\nABC-0001,Box\nABC-0002,Bag\n"
+
+  # ------------------------------------------------------------ orders
+  - name: unions round trip
+    op: placeOrder
+    args:
+      idempotency-key: k1
+      body:
+        lines: [{ sku: ABC-0001, quantity: 2, note: fragile }]
+        payment: { method: card, last4: "4242", expires: "2030-01-01" }
+        shape: { width: 1, height: 2 }
+        gift: wrap it
+        code: 7
+        extraPayments: [{ method: transfer, iban: SK31 }, { method: voucher, code: V, amount: "2.50" }]
+    result:
+      id: 1
+      status: placed
+      payment: { method: card, last4: "4242", expires: "2030-01-01" }
+      shape: { width: 1, height: 2 }
+      gift: wrap it
+      code: 7
+      extraPayments: [{ method: transfer, iban: SK31 }, { method: voucher, code: V, amount: "2.50" }]
+  - name: a 202 with another body than the 201
+    op: placeOrder
+    args:
+      body:
+        lines: [{ sku: ABC-0001, quantity: 500 }]
+        payment: { method: card, last4: "4242", expires: "2030-01-01" }
+    error: { status: 202, model: { title: Queued for review, status: 202 } }
+    skip: { typescript-fetch: "a 2xx with another body decodes as the result type" }
+  - name: get the order
+    op: getOrder
+    args: { order_id: 1 }
+    result: { id: 1, extraPayments: [{ method: transfer }, { method: voucher }] }
+  - name: enum response
+    op: orderStatus
+    args: { order_id: 1 }
+    result: placed
+  - name: 202 without a body, embedded body field
+    op: cancelOrder
+    args: { order_id: 1, body: { reason: changed my mind } }
+    skip: { typescript-fetch: "fails on a 2xx without a body" }
+  - name: a bound on a path parameter is a 422
+    op: getOrder
+    args: { order_id: 0 }
+    error: { status: 422, model: { detail: [{ loc: [path, order_id] }] } }
+
+  # ------------------------------------------------------------ misc
+  - name: recursive response
+    op: categoryTree
+    result: [{ name: root, children: [{ name: a, children: [{ name: a1 }] }, { name: b }] }]
+  - name: integer response
+    op: countItems
+    result: 2
+  - name: nullable response present
+    op: maybeItem
+    args: { present: true }
+    result: { widthCm: 1, heightCm: 2 }
+  - name: nullable response null
+    op: maybeItem
+    result: null
+  - name: deprecated operation with FastAPI's operationId
+    op: legacy_endpoint_legacy_get
+    args: { x: 9 }
+    result: { x: 9 }
+  - name: 307 redirect followed
+    op: redirectToCount
+  - name: ndjson stream next to an empty JSON schema
+    op: streamLines
+    args: { n: 2 }
+    result: "{\"i\":0}\n{\"i\":1}\n"
+    skip: { typescript-fetch: "an any result is parsed as JSON whatever its media type" }
+  - name: float path parameter and an aliased query
+    op: add
+    args: { a: 2, b: 0.75, round: true }
+    result: 3
+  - name: untagged operation
+    op: untagged
+    result: { ok: true }
+
+  # ------------------------------------------------------------ cleanup
+  - name: delete is a 204
+    op: deleteItem
+    args: { item_id: "${item}" }
+  - name: delete again is a 404
+    op: deleteItem
+    args: { item_id: "${item}" }
+    error: { status: 404 }

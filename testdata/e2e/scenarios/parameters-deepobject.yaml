@@ -1,0 +1,8 @@
+spec: ../../specs/feature/parameters-deepobject.yaml
+skip: { dart-fetch: "does not compile: lib/src/apis/default_api.dart:20: Expected to find '}'." }
+cases:
+  - op: deepSearch
+    args: { filter: { name: "a b&c", minPrice: 9.5 } }
+    request: { query: { "filter[name]": "a b&c", "filter[minPrice]": "9.5" } }
+    response: { json: [found] }
+    result: [found]

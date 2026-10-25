@@ -1,0 +1,15 @@
+spec: ../../specs/feature/composition-oneof.yaml
+skip: { dart-fetch: "does not compile: lib/src/models/search_result.dart:8: Target of URI doesn't exist: 'arraynumber.dart'." }
+cases:
+  - name: model variant round trip
+    op: search
+    args: { body: { petType: cat, huntingSkill: lazy } }
+    request: { body: { petType: cat, huntingSkill: lazy } }
+    response: { json: { petType: dog, packSize: 3 } }
+    result: { petType: dog, packSize: 3 }
+  - name: string and array variants
+    op: search
+    args: { body: "just text" }
+    request: { body: "just text" }
+    response: { json: [1, 2] }
+    result: [1, 2]

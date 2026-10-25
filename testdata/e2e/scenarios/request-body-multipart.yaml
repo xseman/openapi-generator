@@ -1,0 +1,15 @@
+spec: ../../specs/feature/request-body-multipart.yaml
+cases:
+  - name: a file, an optional text and a list of files
+    op: uploadFile
+    args:
+      file: { $file: { name: a.txt, text: hello } }
+      description: two files
+      attachments: [{ $file: { name: b.bin, base64: AP8= } }, { $file: { name: c.txt, text: c } }]
+    request:
+      body:
+        file: [{ filename: a.txt, text: hello }]
+        description: [two files]
+        attachments: [{ filename: b.bin, base64: AP8= }, { filename: c.txt, text: c }]
+    response: { status: 200 }
+    skip: { dart-fetch: "request: invalid for the spec: request body has an error: header Content-Type has unexpected value \"application/x-www-form-urlencoded\"" }

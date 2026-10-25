@@ -1,0 +1,5 @@
+spec: ../../specs/feature/responses-binary.yaml
+skip: { dart-fetch: "does not compile: lib/src/apis/default_api.dart:65: The static method or constructor 'fromJson' isn't defined for the context type 'List'." }
+cases:
+  - { op: downloadFile, args: { id: "1" }, response: { base64: AAH/ }, result: AAH/ }
+  - { op: getThumbnail, args: { id: "1" }, response: { header: { Content-Type: image/png }, base64: iVBORw== }, result: iVBORw== }

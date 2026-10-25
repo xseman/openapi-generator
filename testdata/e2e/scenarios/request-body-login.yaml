@@ -1,0 +1,7 @@
+spec: ../../specs/feature/request-body-form-urlencoded.yaml
+cases:
+  - op: login
+    args: { username: "a@b.c", password: "p&s=s w", rememberMe: true, tags: [x, y] }
+    request: { body: { username: "a@b.c", password: "p&s=s w", rememberMe: "true", tags: [x, y] } }
+    response: { status: 200 }
+    skip: { dart-fetch: "request.body.tags: want [\"x\",\"y\"], got [\"[x, y]\"]", typescript-fetch: "a form array goes comma-joined, not exploded" }
