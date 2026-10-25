@@ -90,7 +90,7 @@ with that body in `Model`, `XxxRaw` as the response.
 | ... pinning a property                    | a variant property of one value (`enum: [cat]`, 3.1 `const`) is set by `FromX` and checked by `AsX`; one that tells every variant apart is the discriminator, inline too |
 | file in a multipart body                  | `File{Name, Body}`; an `octet-stream` body is `io.Reader`                                                                                                                |
 | other multipart field                     | its own part: a list of scalars a part per item (comma-joined with `explode: false`), an object as JSON                                                                  |
-| urlencoded form field                     | sent as its `encoding` says: form and exploded by default, `deepObject` key by key (`a[b][0]=x`)                                                                         |
+| urlencoded form field                     | sent as its `encoding` says: form and exploded by default, `deepObject` key by key (`a[b][0]=x`); a form with a file goes as multipart                                   |
 
 Not covered: server code, XML, server variables, validation, a discriminator
 without `oneOf` (the parent stays a plain struct), `additionalProperties`
