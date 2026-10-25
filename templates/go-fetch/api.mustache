@@ -100,7 +100,7 @@ func (a *{{classname}}) {{x-go-name}}Request(ctx context.Context{{#x-go-has-para
 {{/x-go-in-query}}
 {{#x-go-body-json}}
 
-	body, err := jsonBody(p.{{.}})
+	body, err := jsonBody(p.{{field}}, {{null}})
 	if err != nil {
 		return nil, err
 	}

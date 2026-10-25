@@ -942,15 +942,18 @@ func addCookie(req *http.Request, name string, v any, explode bool) error {
 	return err
 }
 
-// jsonBody encodes v as a JSON body; nil (pointer, slice, map) sends none.
-func jsonBody(v any) (io.Reader, error) {
-	switch rv := reflect.ValueOf(v); rv.Kind() {
-	case reflect.Invalid:
-		return nil, nil
-	case reflect.Pointer, reflect.Slice, reflect.Map:
-		if rv.IsNil() {
-			return nil, nil
+// jsonBody encodes v as a JSON body; nil (pointer, slice, map) sends none,
+// or null for a required nullable body.
+func jsonBody(v any, null bool) (io.Reader, error) {
+	rv := reflect.ValueOf(v)
+
+	switch k := rv.Kind(); {
+	case k == reflect.Invalid, (k == reflect.Pointer || k == reflect.Slice || k == reflect.Map) && rv.IsNil():
+		if null {
+			return strings.NewReader("null"), nil
 		}
+
+		return nil, nil
 	}
 
 	b, err := json.Marshal(v)

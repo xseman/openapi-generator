@@ -954,7 +954,8 @@ func (g *FetchGenerator) paramExtensions(op *codegen.CodegenOperation, ext map[s
 			t = "io.Reader"
 		}
 
-		if !p.Required && !isContainer(t) && !g.containers[t] {
+		// A required nullable body is a pointer too: nil sends null.
+		if (!p.Required || p.IsBodyParam && p.IsNullable) && !isContainer(t) && !g.containers[t] {
 			t = "*" + t
 		}
 
@@ -1018,7 +1019,7 @@ func (g *FetchGenerator) bodyKind(p *codegen.CodegenParameter, t, field string, 
 	case strings.TrimPrefix(t, "*") == "string" && !isJSONMime(p.ContentType):
 		ext["x-go-body-text"] = field
 	default:
-		ext["x-go-body-json"] = field
+		ext["x-go-body-json"] = map[string]any{"field": field, "null": p.Required && p.IsNullable}
 	}
 }
 

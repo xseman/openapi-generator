@@ -34,6 +34,28 @@ func TestJSONBodies(t *testing.T) {
 		t.Errorf("CreateItems without items: body %v, %v", req.Body, err)
 	}
 
+	// A required nullable body is a pointer: nil sends null.
+	for body, want := range map[*ReplaceItemBody]string{nil: "null", {Name: Ptr("b")}: `{"name":"b"}`} {
+		req, err = api.ReplaceItemRequest(ctx, ReplaceItemParams{ID: "1", Body: body})
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if got, _ := io.ReadAll(req.Body); string(got) != want {
+			t.Errorf("ReplaceItem body %s, want %s", got, want)
+		}
+	}
+
+	// So is an any body: nil is null, not none.
+	req, err = api.SetNoteRequest(ctx, SetNoteParams{ID: "1"})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if got, _ := io.ReadAll(req.Body); string(got) != "null" {
+		t.Errorf("SetNote body %s, want null", got)
+	}
+
 	req, err = api.SetRawCountRequest(ctx, SetRawCountParams{Body: 3})
 	if err != nil {
 		t.Fatal(err)
