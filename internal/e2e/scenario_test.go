@@ -8,6 +8,7 @@ package e2e
 import (
 	"bytes"
 	"encoding/json"
+	"maps"
 	"os"
 	"path/filepath"
 	"slices"
@@ -116,9 +117,11 @@ func loadScenarios(t *testing.T) []*scenario {
 	return out
 }
 
-// opParams lists, per operationId, the names a case's args may use: the
-// parameters and, for a form body, its properties. A runner uses them to
-// tell the body's field from the parameters'.
+// opParams lists, per operationId, the names a case's args may use, in the
+// order of the spec: the parameters and, for a form body, its properties
+// (sorted). A runner uses them to tell the body's field from the
+// parameters', and their order to tell apart two names that a generator
+// gives one identifier, the second one numbered (itemId, itemId2).
 func opParams(doc *openapi3.T) map[string][]string {
 	out := map[string][]string{}
 
@@ -136,14 +139,11 @@ func opParams(doc *openapi3.T) map[string][]string {
 				for ct, mt := range op.RequestBody.Value.Content {
 					form := strings.HasPrefix(ct, "multipart/") || ct == "application/x-www-form-urlencoded"
 					if form && mt.Schema != nil && mt.Schema.Value != nil {
-						for name := range mt.Schema.Value.Properties {
-							names = append(names, name)
-						}
+						names = append(names, slices.Sorted(maps.Keys(mt.Schema.Value.Properties))...)
 					}
 				}
 			}
 
-			slices.Sort(names)
 			out[op.OperationID] = names
 		}
 	}

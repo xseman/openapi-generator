@@ -177,8 +177,14 @@ async function callCase(client: Client, info: ReturnType<typeof methods>, suite:
 
     const fields = m.request ? (info.requests[m.request] ?? {}) : {};
     const byNorm: Record<string, string> = {};
+    // The second parameter of one identifier is numbered, as generators do.
     for (const p of c.params ?? []) {
-        byNorm[norm(p)] = p;
+        let key = norm(p);
+        for (let n = 2; key in byNorm; n++) {
+            key = norm(p) + n;
+        }
+
+        byNorm[key] = p;
     }
 
     const params: Record<string, any> = {};

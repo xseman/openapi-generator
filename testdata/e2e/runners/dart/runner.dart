@@ -134,7 +134,15 @@ Future<Map<String, Object?>> callCase(Client client, Map<String, dynamic> suite,
 
     final mm = method.first;
     final args = c['args'] == null ? <String, dynamic>{} : jsonDecode(expand(jsonEncode(c['args']), vars, true)) as Map<String, dynamic>;
-    final byNorm = {for (final p in (c['params'] as List? ?? [])) norm(p as String): p};
+    // The second parameter of one identifier is numbered, as generators do.
+    final byNorm = <String, String>{};
+    for (final p in (c['params'] as List? ?? []).cast<String>()) {
+      var key = norm(p);
+      for (var n = 2; byNorm.containsKey(key); n++) {
+        key = '${norm(p)}$n';
+      }
+      byNorm[key] = p;
+    }
     final named = <Symbol, Object?>{};
     final used = <String>{};
 

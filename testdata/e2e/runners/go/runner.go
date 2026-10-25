@@ -213,7 +213,7 @@ func params(t reflect.Type, names []string, args map[string]json.RawMessage) (re
 
 	byField := map[string]string{}
 	for _, name := range names {
-		byField[norm(name)] = name
+		byField[numbered(byField, norm(name))] = name
 	}
 
 	used := map[string]bool{}
@@ -478,6 +478,20 @@ func save(result []byte, paths map[string]string, vars map[string]string) {
 		} else {
 			b, _ := json.Marshal(v)
 			vars[name] = string(b)
+		}
+	}
+}
+
+// numbered is key, or key2, key3 when taken: a generator numbers the second
+// parameter of one identifier the same way.
+func numbered(taken map[string]string, key string) string {
+	if _, ok := taken[key]; !ok {
+		return key
+	}
+
+	for n := 2; ; n++ {
+		if k := key + strconv.Itoa(n); taken[k] == "" {
+			return k
 		}
 	}
 }

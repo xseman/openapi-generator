@@ -506,17 +506,14 @@ cases:
     op: clashLocations
     args: { tenant: acme, item_id: 7, Item-Id: h-7, Version: "2", version: 3 }
     result: { tenant: acme, path: 7, header: h-7, hversion: "2", qversion: 3 }
-    skip: { typescript-fetch: "parameters of one camelCase name (item_id and Item-Id, Version and version) collapse into one field: the parser's deduplicateParams keys on the name, so the other is never sent", go-fetch: "parameters of one camelCase name (item_id and Item-Id, Version and version) collapse into one field: the parser's deduplicateParams keys on the name, so the other is never sent" }
   - name: a snake and a camel alias of one query parameter
     op: clashAliases
     args: { tenant: acme, sort_by: a, sortBy: b }
     result: { sort_by: a, sortBy: b }
-    skip: { typescript-fetch: "sort_by and sortBy collapse into one field (parser deduplicateParams): one is never sent", go-fetch: "sort_by and sortBy collapse into one field (parser deduplicateParams): one is never sent" }
   - name: a query parameter and a form field of one camel name
     op: clashForm
     args: { tenant: acme, folder_name: q, folderName: f }
     result: { query: q, form: f }
-    skip: { typescript-fetch: "a query parameter and a form field of one camel name collapse into one (parser deduplicateParams)", go-fetch: "a query parameter and a form field of one camel name collapse into one (parser deduplicateParams)" }
   - name: query parameters named like a client's locals
     op: clashLocals
     args: { url: "https://x.example/?a=1", headers: h, path: p, query: q }
