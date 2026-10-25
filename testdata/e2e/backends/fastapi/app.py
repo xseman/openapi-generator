@@ -13,6 +13,7 @@ from ipaddress import IPv4Address
 from typing import Annotated, Any, Generic, Literal, Optional, TypeVar, Union
 
 from fastapi import (
+    APIRouter,
     Body,
     Cookie,
     Depends,
@@ -43,12 +44,16 @@ from fastapi.security import (
 )
 from pydantic import (
     AliasGenerator,
+    AwareDatetime,
     BaseModel,
     ConfigDict,
+    Discriminator,
     EmailStr,
     Field,
     HttpUrl,
+    NaiveDatetime,
     SecretStr,
+    Tag,
     computed_field,
 )
 from pydantic.alias_generators import to_camel
@@ -121,6 +126,67 @@ class Scalars(Strict):
     color: Color
     priority: Priority
     unit: Literal["kg", "lb"] = "kg"
+
+
+class Stamps(Strict):
+    """Times as ORM-backed services send them: naive, aware, in containers."""
+
+    naive: NaiveDatetime
+    aware: AwareDatetime
+    clock: dt.time
+    span: dt.timedelta
+    days: list[dt.date] = []
+    seen: dict[str, dt.datetime] = {}
+
+
+class Nulls(Strict):
+    """Null as a required value, and null that differs from a default."""
+
+    note: Optional[str]
+    due: Optional[dt.date]
+    color: Optional[Color]
+    dims: Optional["Dimensions"]
+    lines: Optional[list["Dimensions"]]
+    payment: Optional["Payment"]
+    retries: Optional[int] = 3
+    extras: Optional[list["Dimensions"]] = None
+
+
+class NullsEcho(Nulls):
+    sent: list[str]  # the keys the client put on the wire
+
+
+class FormIn(Strict):
+    """A form model: every value a client must turn into text itself."""
+
+    day: dt.date
+    when: AwareDatetime
+    price: Decimal
+    color: Color
+    tags: list[str] = []
+    colors: list[Color] = []
+    days: list[dt.date] = []
+    qty: Optional[int] = None
+    agree: bool = False
+
+
+class Retry(Enum):
+    """Members of two JSON types: the schema has an enum and no type."""
+
+    never = 0
+    always = "always"
+    once = 1
+
+
+class Literals(Strict):
+    """Enums whose values are not one JSON type, null among them."""
+
+    retry: Retry
+    pin: Literal["x", None]
+    order: Optional[Literal["asc", "desc"]]
+    mode: Literal["auto", 0, 1] = "auto"
+    tag: Literal["a", None] = "a"
+    size: Literal[10, 25, 50] = 25
 
 
 # ---------------------------------------------------------------- containers
@@ -258,6 +324,42 @@ class OrderStatus(str, Enum):
     shipped = "shipped"
 
 
+class Kind(str, Enum):
+    cat = "cat"
+    dog = "dog"
+
+
+class Cat(Camel):
+    pet_kind: Literal[Kind.cat]
+    lives: int
+
+
+class Dog(Camel):
+    pet_kind: Literal[Kind.dog]
+    good_boy: bool
+
+
+# Tagged by a camelCase key whose values are enum members.
+Pet = Annotated[Union[Cat, Dog], Field(discriminator="pet_kind")]
+
+
+def _method(v: Any) -> Optional[str]:
+    return v.get("method") if isinstance(v, dict) else getattr(v, "method", None)
+
+
+# A callable discriminator: the spec has a plain oneOf, no discriminator.
+Tagged = Annotated[Union[Annotated[Card, Tag("card")], Annotated[Transfer, Tag("transfer")]], Discriminator(_method)]
+
+
+class Wallet(Strict):
+    """The union in every place a model can hold it."""
+
+    primary: Optional[Payment] = None
+    by_label: dict[str, Payment] = {}
+    pets: list[Pet] = []
+    tagged: Optional[Tagged] = None
+
+
 class Order(OrderIn):
     id: int
     status: OrderStatus
@@ -321,6 +423,10 @@ class Conflict(Strict):
 
 
 # ---------------------------------------------------------------- state
+
+# Nulls names Dimensions and Payment before they are defined.
+Nulls.model_rebuild()
+NullsEcho.model_rebuild()
 
 ITEMS: dict[uuid.UUID, Item] = {}
 ORDERS: dict[int, Order] = {}
@@ -408,6 +514,35 @@ def echo_scalars(body: Scalars) -> Scalars:
     return body
 
 
+@app.post("/echo/literals", tags=["echo"], operation_id="echoLiterals")
+def echo_literals(body: Literals) -> Literals:
+    return body
+
+
+@app.post("/echo/nulls", tags=["echo"], operation_id="echoNulls")
+def echo_nulls(body: Nulls) -> NullsEcho:
+    return NullsEcho(**body.model_dump(), sent=sorted(body.model_fields_set))
+
+
+@app.post("/echo/stamps", tags=["echo"], operation_id="echoStamps")
+def echo_stamps(body: Stamps) -> Stamps:
+    return body
+
+
+@app.get("/stamps", tags=["echo"], operation_id="stampsQuery")
+def stamps_query(
+    days: Annotated[list[dt.date], Query()] = [],
+    since: Optional[NaiveDatetime] = None,
+) -> Stamps:
+    return Stamps(
+        naive=since or dt.datetime(2024, 3, 1, 10, 0, 0, 500000),
+        aware=dt.datetime(2024, 3, 1, 10, tzinfo=dt.timezone.utc),
+        clock=dt.time(13, 45, 30, 250000),
+        span=dt.timedelta(seconds=-1.5),
+        days=days,
+    )
+
+
 @app.post("/echo/containers", tags=["echo"], operation_id="echoContainers")
 def echo_containers(body: Containers) -> Containers:
     return body
@@ -466,6 +601,16 @@ async def echo_raw(request: Request) -> Response:
 @app.post("/echo/union", tags=["echo"], operation_id="echoUnion")
 def echo_union(body: Union[int, str, list[int]]) -> dict[str, str]:
     return {"type": type(body).__name__, "value": str(body)}
+
+
+@app.post("/echo/pet", tags=["echo"], operation_id="echoPet")
+def echo_pet(body: Annotated[Pet, Body()]) -> Pet:
+    return body
+
+
+@app.post("/echo/wallet", tags=["echo"], operation_id="echoWallet")
+def echo_wallet(body: Wallet) -> Wallet:
+    return body
 
 
 @app.post("/echo/optional", tags=["echo"], operation_id="echoOptional")
@@ -630,8 +775,13 @@ def upload_files(
         if name in FILES and not overwrite:
             raise HTTPException(409, f"{name} exists")
         FILES[name] = data
-        out.append({"name": name, "size": len(data), "type": f.content_type or "", "labels": ",".join(labels), "meta": meta or ""})
+        out.append({"name": name, "size": len(data), "type": f.content_type or "", "labels": "|".join(labels), "meta": meta or ""})
     return out
+
+
+@app.post("/forms/typed", tags=["files"], operation_id="submitForm")
+def submit_form(body: Annotated[FormIn, Form()]) -> FormIn:
+    return body
 
 
 @app.post("/files/avatar", tags=["files"], operation_id="uploadAvatar")
@@ -750,3 +900,53 @@ def add(a: int, b: float, round_: Annotated[bool, Query(alias="round")] = False)
 @app.get("/untagged", operation_id="untagged")
 def untagged() -> dict[str, bool]:
     return {"ok": True}
+
+
+# ---------------------------------------------------------------- name clashes
+# Parameters that differ on the wire but share a name once camelCased, and
+# ones named like a client's own locals; a router prefix and a shared
+# dependency bring them in as real services do.
+
+
+def api_version(version: Annotated[str, Header(alias="Version")] = "1") -> str:
+    return version
+
+
+clash = APIRouter(prefix="/tenants/{tenant}", tags=["clash"])
+
+
+@clash.get("/things/{item_id}", operation_id="clashLocations")
+def clash_locations(
+    tenant: str,
+    item_id: int,
+    item_hdr: Annotated[Optional[str], Header(alias="Item-Id")] = None,
+    hv: str = Depends(api_version),
+    version: Optional[int] = None,
+) -> dict[str, Any]:
+    return {"tenant": tenant, "path": item_id, "header": item_hdr, "hversion": hv, "qversion": version}
+
+
+@clash.get("/sorted", operation_id="clashAliases")
+def clash_aliases(
+    tenant: str,
+    old: Annotated[Optional[str], Query(alias="sort_by", deprecated=True)] = None,
+    new: Annotated[Optional[str], Query(alias="sortBy")] = None,
+) -> dict[str, Optional[str]]:
+    return {"sort_by": old, "sortBy": new}
+
+
+@clash.post("/notes", operation_id="clashForm")
+def clash_form(
+    tenant: str,
+    q: Annotated[str, Query(alias="folder_name")],
+    f: Annotated[str, Form(alias="folderName")],
+) -> dict[str, str]:
+    return {"query": q, "form": f}
+
+
+@app.get("/fetch", tags=["clash"], operation_id="clashLocals")
+def clash_locals(url: str, headers: Optional[str] = None, path: Optional[str] = None, query: Optional[str] = None) -> dict[str, Optional[str]]:
+    return {"url": url, "headers": headers, "path": path, "query": query}
+
+
+app.include_router(clash)

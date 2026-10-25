@@ -32,8 +32,10 @@ A run takes about 7 s with warm caches.
 The mock layer covers every parameter style and body encoding the feature
 specs declare. The backend shows the shapes a framework writes into its
 spec: pydantic's separate input and output schemas, OpenAPI 3.1 null unions,
-`const`, Decimal as number or string, and FastAPI's empty JSON schema next
-to another media type.
+`const`, Decimal as number or string, FastAPI's empty JSON schema next to
+another media type, discriminated unions in every position, naive and aware
+date-times, required nullables, form models, enums of mixed JSON types and
+parameters whose names collide once camelCased.
 
 ## Scenarios
 
@@ -102,6 +104,9 @@ what the program prints with the scenarios.
 | `runners/go`   | go-fetch: finds methods, `Params` fields and results by reflection; standard library only                                                                              |
 | `runners/ts`   | typescript-fetch, compiled to CommonJS with `tsc`: reads the `<Op>Request` interfaces and method signatures from the sources, converts with `<Model>FromJSON`/`ToJSON` |
 | `runners/dart` | dart-fetch, on the VM with `dart:mirrors`: named parameters, `fromJson`/`toJson`; a client that does not compile fails only its own suite                              |
+
+Runners run with `TZ=Europe/Bratislava`, so a client that reads or writes
+local time shows it.
 
 typescript-fetch sends an OAuth2 token as the whole `Authorization` header,
 so its runner returns `Bearer <token>` for an OAuth2 scheme (`schemes` in the
