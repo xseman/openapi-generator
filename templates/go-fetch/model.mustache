@@ -35,6 +35,34 @@ type {{classname}} struct {
 	{{name}} {{{type}}} {{{tag}}}
 {{/vendorExtensions.x-go-fields}}
 }
+{{#vendorExtensions.x-go-extra}}
+
+// MarshalJSON writes the declared fields and the keys of {{field}}.
+func (m {{classname}}) MarshalJSON() ([]byte, error) {
+	type plain {{classname}}
+
+	b, err := json.Marshal(plain(m))
+	if err != nil {
+		return nil, err
+	}
+
+	return withExtra(b, m.{{field}}, {{{declared}}})
+}
+
+// UnmarshalJSON reads the declared fields, and the other keys into {{field}}.
+func (m *{{classname}}) UnmarshalJSON(b []byte) error {
+	type plain {{classname}}
+
+	if err := json.Unmarshal(b, (*plain)(m)); err != nil {
+		return err
+	}
+
+	extra, err := extraKeys[{{{value}}}](b, {{{declared}}})
+	m.{{field}} = extra
+
+	return err
+}
+{{/vendorExtensions.x-go-extra}}
 {{#vendorExtensions.x-go-inline}}
 
 {{#union}}

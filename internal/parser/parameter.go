@@ -86,6 +86,7 @@ func (p *Parser) parameterToCodegen(param *openapi3.Parameter) *codegen.CodegenP
 		cp.EnumName = prop.EnumName
 		cp.DatatypeWithEnum = prop.DatatypeWithEnum
 		cp.IsNullable = prop.IsNullable
+		cp.Ref = prop.Ref
 
 		// Collection format
 		if cp.IsArray {

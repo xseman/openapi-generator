@@ -100,6 +100,7 @@ type CodegenParameter struct {
 	RequiredVars         []*CodegenProperty      `json:"requiredVars"`
 	MostInnerItems       *CodegenProperty        `json:"mostInnerItems"`
 	ComposedSchemas      *CodegenComposedSchemas `json:"composedSchemas"`
+	Ref                  string                  `json:"ref"` // the $ref the parameter's schema is, as the spec writes it
 
 	// Documentation
 	Description          string         `json:"description"`

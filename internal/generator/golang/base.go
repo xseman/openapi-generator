@@ -253,7 +253,7 @@ func GoParamType(p *codegen.CodegenParameter, named string) string {
 		return "[]File"
 	case p.IsArray:
 		return "[]" + itemType(p.Items, named)
-	case (len(p.Vars) > 0 || p.ComposedSchemas != nil) && named != "":
+	case (len(p.Vars) > 0 || p.ComposedSchemas != nil || p.Ref != "") && named != "":
 		return named
 	case p.IsMap:
 		return "map[string]" + itemType(p.Items, named)

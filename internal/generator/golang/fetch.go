@@ -37,6 +37,11 @@ type FetchGenerator struct {
 	// that refers to one: the parser types it as the enum or union inline.
 	refs map[string]string
 
+	// enums are the enum models by class: a parameter that refers to one
+	// takes its type; one that refers to a union stays raw JSON, which the
+	// runtime sends as a scalar.
+	enums map[string]bool
+
 	// required are the quoted required properties of each struct model, which
 	// a union's As method checks a value for; pinned its properties an enum
 	// of one value fixes (see pinned).
@@ -46,7 +51,7 @@ type FetchGenerator struct {
 
 // NewFetchGenerator creates a new go-fetch generator.
 func NewFetchGenerator() *FetchGenerator {
-	g := &FetchGenerator{BaseGenerator: NewBaseGenerator(), containers: map[string]bool{}, types: maps.Clone(RuntimeNames), opTypes: map[string]string{}, refs: map[string]string{}, required: map[string]string{}, pinned: map[string][]map[string]any{}}
+	g := &FetchGenerator{BaseGenerator: NewBaseGenerator(), containers: map[string]bool{}, types: maps.Clone(RuntimeNames), opTypes: map[string]string{}, refs: map[string]string{}, enums: map[string]bool{}, required: map[string]string{}, pinned: map[string][]map[string]any{}}
 	g.ApiTemplateFiles["api.mustache"] = ".go"
 	g.ModelTemplateFiles["model.mustache"] = ".go"
 
@@ -144,6 +149,8 @@ func (g *FetchGenerator) PostProcessModels(models []*codegen.CodegenModel) []*co
 			g.refs[m.SchemaName] = m.Classname
 		}
 
+		g.enums[m.Classname] = kind == "enum"
+
 		g.required[m.Classname] = requiredKeys(m.AllVars)
 		g.pinned[m.Classname] = pinned(m.Classname, m.AllVars)
 
@@ -165,6 +172,7 @@ func (g *FetchGenerator) PostProcessModels(models []*codegen.CodegenModel) []*co
 		switch kinds[m.Classname] {
 		case "struct":
 			fields[m.Classname] = g.structFields(m, ext, g.modelTypeName)
+			fields[m.Classname] = extraField(m, fields[m.Classname], ext)
 			ext["x-go-fields"] = fields[m.Classname]
 
 			inline, _ := ext["x-go-inline"].([]map[string]any)
@@ -198,11 +206,9 @@ func (g *FetchGenerator) PostProcessModels(models []*codegen.CodegenModel) []*co
 // modelKind is how a model is declared: union (oneOf/anyOf), enum, struct
 // (properties or allOf) or alias of a slice, map or scalar type.
 //
-// ponytail: a struct drops additionalProperties next to its properties, so
-// extra keys are lost on decode; the upgrade is an AdditionalProperties map
-// field with its own (Un)MarshalJSON. A discriminator without oneOf (allOf
-// inheritance) makes no union either: the parent stays a plain struct; the
-// upgrade is a union wrapper for the parent too.
+// ponytail: a discriminator without oneOf (allOf inheritance) makes no
+// union: the parent stays a plain struct; the upgrade is a union wrapper for
+// the parent too.
 func modelKind(m *codegen.CodegenModel) string {
 	switch {
 	case len(m.OneOf) > 0 || len(m.AnyOf) > 0:
@@ -236,6 +242,41 @@ func aliasType(m *codegen.CodegenModel) string {
 	}
 
 	return "any"
+}
+
+// extraField adds to a struct that takes additionalProperties next to its
+// properties a map field for the keys it does not declare, and describes in
+// ext the (Un)MarshalJSON that moves them in and out of it.
+func extraField(m *codegen.CodegenModel, fields []map[string]any, ext map[string]any) []map[string]any {
+	if !m.IsAdditionalPropertiesTrue && m.AdditionalProperties == nil {
+		return fields
+	}
+
+	value := "any"
+	if m.AdditionalProperties != nil {
+		value = itemType(m.AdditionalProperties, "")
+	}
+
+	taken := make(map[string]int)
+
+	declared := make([]string, 0, len(m.AllVars))
+	for _, v := range m.AllVars {
+		declared = append(declared, strconv.Quote(v.BaseName))
+	}
+
+	for _, f := range fields {
+		name, _ := f["name"].(string)
+		taken[name]++
+	}
+
+	name := uniqueName(taken, "AdditionalProperties")
+	fields = append(fields, map[string]any{
+		"name": name, "type": "map[string]" + value, "tag": "`json:\"-\"`",
+		"doc": []string{"// " + name + " holds the keys the schema does not declare."},
+	})
+	ext["x-go-extra"] = map[string]any{"field": name, "value": value, "declared": strings.Join(declared, ", ")}
+
+	return fields
 }
 
 // isContainer reports whether a type is nil-able as it is (slice, map, any,
@@ -328,7 +369,7 @@ func (g *FetchGenerator) structFields(m *codegen.CodegenModel, ext map[string]an
 			enums = append(enums, nested...)
 		}
 
-		if ref := g.refs[v.Ref[strings.LastIndexByte(v.Ref, '/')+1:]]; v.Ref != "" && ref != "" {
+		if ref := g.refModel(v.Ref); ref != "" {
 			named = ref
 		} else if v.IsEnum {
 			base := m.Classname + exported(v.EnumName, "")
@@ -408,6 +449,15 @@ func inlineObject(p *codegen.CodegenProperty) *codegen.CodegenProperty {
 	return p
 }
 
+// refModel is the enum or union model a $ref names, "" for none.
+func (g *FetchGenerator) refModel(ref string) string {
+	if ref == "" {
+		return ""
+	}
+
+	return g.refs[ref[strings.LastIndexByte(ref, '/')+1:]]
+}
+
 // inlineUnion is the inline oneOf/anyOf a property holds, itself or as the
 // element of its slices and maps; nil when there is none.
 func inlineUnion(p *codegen.CodegenProperty) *codegen.CodegenProperty {
@@ -429,7 +479,7 @@ func (g *FetchGenerator) unionDecl(name, what, description string, members *code
 	var types []string
 
 	for i, member := range slices.Concat(members.OneOf, members.AnyOf) {
-		named := g.refs[member.Ref[strings.LastIndexByte(member.Ref, '/')+1:]]
+		named := g.refModel(member.Ref)
 
 		// An inline object member is a struct of its own, named as upstream
 		// names it: <Union>OneOf, <Union>OneOf1, ...
@@ -869,11 +919,14 @@ func (g *FetchGenerator) paramExtensions(op *codegen.CodegenOperation, ext map[s
 	body := ""
 
 	for _, p := range op.AllParams {
-		named := ""
-
 		vars, description := p.Vars, p.Description
 		if obj := inlineObject(p.Items); len(vars) == 0 && obj != nil && (p.IsArray || p.IsMap) {
 			vars, description = obj.Vars, obj.Description
+		}
+
+		named := ""
+		if ref := g.refModel(p.Ref); g.enums[ref] {
+			named = ref
 		}
 
 		typeName := g.opTypeNamer(op.OperationId)
@@ -1041,9 +1094,12 @@ func (g *FetchGenerator) responseExtensions(op *codegen.CodegenOperation, ext ma
 		}
 
 		t = GoType(op.ReturnProperty, named)
+		if op.ReturnProperty.IsNullable && t != "string" && !isContainer(t) && !g.containers[t] {
+			t = "*" + t
+		}
 	}
 
-	if t != "" && t != "string" && !isContainer(t) && !g.containers[t] {
+	if t != "" && t != "string" && !strings.HasPrefix(t, "*") && !isContainer(t) && !g.containers[t] {
 		var empty []string
 
 		for _, r := range op.Responses {
@@ -1062,6 +1118,7 @@ func (g *FetchGenerator) responseExtensions(op *codegen.CodegenOperation, ext ma
 	ext["x-go-type"] = t
 	if t != "" && !op.IsResponseBinary {
 		ext["x-go-decode-json"] = t
+		g.other2xx(op, ext)
 	}
 
 	var codes, ranges []map[string]any
@@ -1074,11 +1131,7 @@ func (g *FetchGenerator) responseExtensions(op *codegen.CodegenOperation, ext ma
 			continue
 		}
 
-		// A body without the model's required properties is not that model.
-		keys := "nil"
-		if required := g.required[rt]; required != "" {
-			keys = "[]string{" + required + "}"
-		}
+		keys := g.modelKeys(rt)
 
 		switch _, err := strconv.Atoi(r.Code); {
 		case r.IsDefault:
@@ -1096,6 +1149,43 @@ func (g *FetchGenerator) responseExtensions(op *codegen.CodegenOperation, ext ma
 			"ranges": ranges, "hasRanges": len(ranges) > 0,
 			"default": def,
 		}
+	}
+}
+
+// modelKeys is the Go []string of the required properties of model t, the
+// keys a body must hold to be decoded as one; "nil" for none.
+func (g *FetchGenerator) modelKeys(t string) string {
+	if required := g.required[t]; required != "" {
+		return "[]string{" + required + "}"
+	}
+
+	return "nil"
+}
+
+// other2xx lists the 2xx statuses whose body is of another type than the
+// result (a 201 Order next to a 202 Problem): the typed method returns
+// them as a *ResponseError holding that body, which the result cannot.
+func (g *FetchGenerator) other2xx(op *codegen.CodegenOperation, ext map[string]any) {
+	if ext["x-go-type"] == "any" {
+		return // any holds every body
+	}
+
+	var codes []map[string]any
+
+	for _, r := range op.Responses {
+		rt := responseType(r)
+		if _, err := strconv.Atoi(r.Code); err != nil || !r.Is2xx || r.DataType == "" || r.DataType == op.ReturnType || rt == "" || rt == "any" || rt == "[]byte" {
+			continue
+		}
+
+		codes = append(codes, map[string]any{"code": r.Code, "type": rt, "keys": g.modelKeys(rt)})
+
+		doc, _ := ext["x-go-doc"].([]string)
+		ext["x-go-doc"] = append(doc, "//", "// A "+r.Code+" response is a *ResponseError with its "+rt+" body in Model.")
+	}
+
+	if len(codes) > 0 {
+		ext["x-go-other-2xx"] = map[string]any{"codes": codes}
 	}
 }
 

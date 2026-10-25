@@ -237,7 +237,24 @@ func (a *{{classname}}) {{x-go-name}}Raw(ctx context.Context{{#x-go-has-params}}
 {{/x-go-doc}}
 {{#x-go-decode-json}}
 func (a *{{classname}}) {{x-go-name}}(ctx context.Context{{#x-go-has-params}}, p {{x-go-params}}{{/x-go-has-params}}, editors ...RequestEditorFn) ({{{.}}}, error) {
+{{#x-go-other-2xx}}
+	resp, err := a.{{x-go-name}}Raw(ctx{{#x-go-has-params}}, p{{/x-go-has-params}}, editors...)
+	resp, err = other2xx(resp, err, func(status int) (any, []string) {
+		switch status {
+{{#codes}}
+		case {{code}}:
+			return new({{{type}}}), {{{keys}}}
+{{/codes}}
+		}
+
+		return nil, nil
+	})
+
+	return decodeJSON[{{{x-go-type}}}](resp, err)
+{{/x-go-other-2xx}}
+{{^x-go-other-2xx}}
 	return decodeJSON[{{{.}}}](a.{{x-go-name}}Raw(ctx{{#x-go-has-params}}, p{{/x-go-has-params}}, editors...))
+{{/x-go-other-2xx}}
 }
 {{/x-go-decode-json}}
 {{#x-go-decode-bytes}}

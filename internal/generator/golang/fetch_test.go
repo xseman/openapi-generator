@@ -277,3 +277,44 @@ components:
 		t.Errorf("mappings = %s", got)
 	}
 }
+
+// TestEnumRefParam types a parameter that refers to an enum model as that
+// model, not as its base type.
+func TestEnumRefParam(t *testing.T) {
+	g, p := parse(t, `openapi: 3.0.0
+info: {title: t, version: "1"}
+paths:
+  /paint/{color}:
+    get:
+      operationId: paint
+      parameters:
+        - {name: color, in: path, required: true, schema: {$ref: "#/components/schemas/Color"}}
+        - {name: also, in: query, schema: {type: array, items: {$ref: "#/components/schemas/Color"}}}
+        - {name: either, in: query, schema: {$ref: "#/components/schemas/Either"}}
+      responses: {"204": {description: ok}}
+components:
+  schemas:
+    Color: {type: string, enum: [red, light green]}
+    Either: {oneOf: [{type: string}, {type: integer}]}
+`)
+
+	ms, err := p.GetModels()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	g.PostProcessModels(ms)
+
+	byTag, err := p.GetOperations()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	op := g.PostProcessOperations(byTag["default"])[0]
+	fs, _ := op.VendorExtensions["x-go-fields"].([]map[string]any)
+
+	// A union stays raw JSON, which the runtime sends as the scalar it holds.
+	if got := fmt.Sprint(fs[0]["type"], " ", fs[1]["type"], " ", fs[2]["type"]); got != "Color []Color json.RawMessage" {
+		t.Errorf("param types = %s, want Color []Color json.RawMessage", got)
+	}
+}

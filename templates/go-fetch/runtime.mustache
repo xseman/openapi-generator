@@ -54,7 +54,8 @@ type Configuration struct {
 	AccessToken func(ctx context.Context, op, name string, scopes []string) (string, error)
 }
 
-// ResponseError is the error an operation returns for a status outside 2xx.
+// ResponseError is the error an operation returns for a status outside 2xx,
+// and the typed method for a 2xx whose body is not the result's type.
 type ResponseError struct {
 	StatusCode int
 	Header     http.Header
@@ -242,11 +243,18 @@ func (c *Configuration) send(req *http.Request, model func(status int) (any, []s
 		return resp, nil
 	}
 
+	return nil, responseError(resp, model)
+}
+
+// responseError reads and closes resp's body into a *ResponseError, the body
+// decoded into model(status) when model gives one and the body holds the
+// keys it names.
+func responseError(resp *http.Response, model func(status int) (any, []string)) error {
 	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	rerr := &ResponseError{StatusCode: resp.StatusCode, Header: resp.Header, Body: body}
@@ -257,14 +265,90 @@ func (c *Configuration) send(req *http.Request, model func(status int) (any, []s
 		}
 	}
 
-	return nil, rerr
+	return rerr
+}
+
+// withExtra adds the keys of extra that are not declared to the JSON
+// object b, in key order.
+func withExtra[V any](b []byte, extra map[string]V, declared ...string) ([]byte, error) {
+	for _, k := range slices.Sorted(maps.Keys(extra)) {
+		if slices.Contains(declared, k) {
+			continue
+		}
+
+		key, err := json.Marshal(k)
+		if err != nil {
+			return nil, err
+		}
+
+		value, err := json.Marshal(extra[k])
+		if err != nil {
+			return nil, err
+		}
+
+		if len(b) > 2 {
+			b = append(b[:len(b)-1], ',')
+		} else {
+			b = b[:len(b)-1]
+		}
+
+		b = append(append(append(append(b, key...), ':'), value...), '}')
+	}
+
+	return b, nil
+}
+
+// extraKeys decodes the keys of the JSON object b that are not declared,
+// nil when there are none.
+func extraKeys[V any](b []byte, declared ...string) (map[string]V, error) {
+	var all map[string]json.RawMessage
+	if err := json.Unmarshal(b, &all); err != nil {
+		return nil, err
+	}
+
+	var extra map[string]V
+
+	for k, raw := range all {
+		if slices.Contains(declared, k) {
+			continue
+		}
+
+		var v V
+		if err := json.Unmarshal(raw, &v); err != nil {
+			return nil, err
+		}
+
+		if extra == nil {
+			extra = make(map[string]V)
+		}
+
+		extra[k] = v
+	}
+
+	return extra, nil
+}
+
+// other2xx passes resp on, unless model gives a type for its 2xx status:
+// then resp is a *ResponseError holding that body, which the typed result
+// cannot.
+func other2xx(resp *http.Response, err error, model func(status int) (any, []string)) (*http.Response, error) {
+	if err != nil {
+		return nil, err
+	}
+
+	if m, _ := model(resp.StatusCode); m == nil {
+		return resp, nil
+	}
+
+	return nil, responseError(resp, model)
 }
 
 var jsonMime = regexp.MustCompile(`(?i)^(application/json|[^;/ \t]+/[^;/ \t]+[+]json)[ \t]*(;.*)?$`)
 
 // decodeJSON reads and closes resp's body into a T: JSON, or the text itself
-// for a string the server does not send as JSON. An empty body is T's zero,
-// nil for a pointer.
+// for a string, or an any, the server does not send as JSON (an any typed
+// only by an empty schema next to a text media type). An empty body is T's
+// zero, nil for a pointer.
 func decodeJSON[T any](resp *http.Response, err error) (T, error) {
 	var out T
 	if err != nil {
@@ -278,10 +362,19 @@ func decodeJSON[T any](resp *http.Response, err error) (T, error) {
 		return out, err
 	}
 
-	if s, ok := any(&out).(*string); ok && !jsonMime.MatchString(resp.Header.Get("Content-Type")) {
-		*s = string(body)
+	if ct := resp.Header.Get("Content-Type"); !jsonMime.MatchString(ct) {
+		switch p := any(&out).(type) {
+		case *string:
+			*p = string(body)
 
-		return out, nil
+			return out, nil
+		case *any:
+			if ct != "" {
+				*p = string(body)
+
+				return out, nil
+			}
+		}
 	}
 
 	err = json.Unmarshal(body, &out)

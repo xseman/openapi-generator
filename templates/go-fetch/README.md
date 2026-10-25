@@ -45,19 +45,22 @@ if errors.As(err, &rerr) {
 }
 ```
 
-| Method       | Does                                                                      |
-| ------------ | ------------------------------------------------------------------------- |
-| `Xxx`        | sends and decodes the body (JSON, text for a string, `[]byte` for binary) |
-| `XxxRaw`     | sends; returns a 2xx `*http.Response` with its body unread                |
-| `XxxRequest` | builds the `*http.Request` without sending it                             |
+| Method       | Does                                                                                                                       |
+| ------------ | -------------------------------------------------------------------------------------------------------------------------- |
+| `Xxx`        | sends and decodes the body (JSON, text for a string or for an `any` the server does not send as JSON, `[]byte` for binary) |
+| `XxxRaw`     | sends; returns a 2xx `*http.Response` with its body unread                                                                 |
+| `XxxRequest` | builds the `*http.Request` without sending it                                                                              |
 
-When a 2xx status has no body next to one that has (a 204 beside a 200), the
-result is a pointer, nil for the bodiless status, unless the type is nil-able
-already or a string. Each method takes trailing
-`RequestEditorFn`s, which change the request after it is built. A status
-outside 2xx is a `*ResponseError`; its `Model` is the body decoded into the
-type the spec gives for that status (the exact code, then `4XX`/`5XX`, then
-`default`), nil when the body lacks a property that type requires.
+When a 2xx status has no body next to one that has (a 204 beside a 200), or
+the result is nullable, the result is a pointer, nil for the bodiless status
+or `null`, unless the type is nil-able already or a string. Each method
+takes trailing `RequestEditorFn`s, which change the request after it is
+built. A status outside 2xx is a `*ResponseError`; its `Model` is the body
+decoded into the type the spec gives for that status (the exact code, then
+`4XX`/`5XX`, then `default`), nil when the body lacks a property that type
+requires. So is a 2xx whose body is of another type than the result (a 202
+`Problem` next to a 201 `Order`): `Xxx` returns it as a `*ResponseError`
+with that body in `Model`, `XxxRaw` as the response.
 
 | `Configuration` | Use                                                                    |
 | --------------- | ---------------------------------------------------------------------- |
@@ -70,25 +73,26 @@ type the spec gives for that status (the exact code, then `4XX`/`5XX`, then
 
 ## Types
 
-| Schema                   | Go                                                                                                                                                                       |
-| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| required property        | `T`                                                                                                                                                                      |
-| optional (or read-only)  | `*T`; slices, maps and `any` stay as they are: nil is absent, empty is sent                                                                                              |
-| required and nullable    | `*T`, sent as `null` when nil                                                                                                                                            |
-| optional and nullable    | `Opt[T]`: absent, `Null[T]()` or `Some(v)`                                                                                                                               |
-| `date` / `date-time`     | `Date` / `time.Time`                                                                                                                                                     |
-| enum                     | a named type with a constant per value                                                                                                                                   |
-| inline object            | a struct named after its owner: `ProfileUser`, `SearchReposResponse`, `CreateCustomerAddress`                                                                            |
-| nullable item            | `[]*T`, `map[string]*T`                                                                                                                                                  |
-| `allOf`                  | one struct with the members' properties                                                                                                                                  |
-| `oneOf` / `anyOf`        | a wrapper over the raw JSON, `AsX` / `FromX`; `AsX` refuses a value without X's required properties; inline, named after its owner as an object is                       |
-| ... with a discriminator | also `Discriminator()` and `ValueByDiscriminator()`                                                                                                                      |
-| ... pinning a property   | a variant property of one value (`enum: [cat]`, 3.1 `const`) is set by `FromX` and checked by `AsX`; one that tells every variant apart is the discriminator, inline too |
-| file in a multipart body | `File{Name, Body}`; an `octet-stream` body is `io.Reader`                                                                                                                |
-| other multipart field    | its own part: a list of scalars a part per item (comma-joined with `explode: false`), an object as JSON                                                                  |
-| urlencoded form field    | sent as its `encoding` says: form and exploded by default, `deepObject` key by key (`a[b][0]=x`)                                                                         |
+| Schema                                    | Go                                                                                                                                                                       |
+| ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| required property                         | `T`                                                                                                                                                                      |
+| optional (or read-only)                   | `*T`; slices, maps and `any` stay as they are: nil is absent, empty is sent                                                                                              |
+| required and nullable                     | `*T`, sent as `null` when nil                                                                                                                                            |
+| optional and nullable                     | `Opt[T]`: absent, `Null[T]()` or `Some(v)`                                                                                                                               |
+| `date` / `date-time`                      | `Date` / `time.Time`                                                                                                                                                     |
+| enum                                      | a named type with a constant per value                                                                                                                                   |
+| inline object                             | a struct named after its owner: `ProfileUser`, `SearchReposResponse`, `CreateCustomerAddress`                                                                            |
+| nullable item                             | `[]*T`, `map[string]*T`                                                                                                                                                  |
+| `allOf`                                   | one struct with the members' properties                                                                                                                                  |
+| `additionalProperties` next to properties | an `AdditionalProperties` map (numbered on a clash) beside the fields, read and written with them                                                                        |
+| `oneOf` / `anyOf`                         | a wrapper over the raw JSON, `AsX` / `FromX`; `AsX` refuses a value without X's required properties; inline, named after its owner as an object is                       |
+| ... with a discriminator                  | also `Discriminator()` and `ValueByDiscriminator()`                                                                                                                      |
+| ... pinning a property                    | a variant property of one value (`enum: [cat]`, 3.1 `const`) is set by `FromX` and checked by `AsX`; one that tells every variant apart is the discriminator, inline too |
+| file in a multipart body                  | `File{Name, Body}`; an `octet-stream` body is `io.Reader`                                                                                                                |
+| other multipart field                     | its own part: a list of scalars a part per item (comma-joined with `explode: false`), an object as JSON                                                                  |
+| urlencoded form field                     | sent as its `encoding` says: form and exploded by default, `deepObject` key by key (`a[b][0]=x`)                                                                         |
 
 Not covered: server code, XML, server variables, validation, a discriminator
 without `oneOf` (the parent stays a plain struct), `additionalProperties`
-next to properties (a model drops the extra keys on decode; an inline object
-stays a map).
+next to the properties of an inline object (it stays a map) or inherited
+through `allOf` (the extra keys are dropped).

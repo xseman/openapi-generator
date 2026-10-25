@@ -1,0 +1,88 @@
+openapi: "3.0.0"
+info:
+  title: Mixed success responses
+  version: 1.0.0
+  description: Success responses as frameworks write them, FastAPI among them; a 202 with another body than the 201, an empty JSON schema next to a text stream, a nullable result.
+paths:
+  /orders:
+    post:
+      operationId: placeOrder
+      responses:
+        "201":
+          description: placed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Order"
+        "202":
+          description: queued for review
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+  /stream:
+    get:
+      operationId: streamLines
+      responses:
+        "200":
+          description: one JSON object per line
+          content:
+            application/json:
+              schema: {}
+            application/x-ndjson:
+              schema:
+                type: string
+  /orders/latest:
+    get:
+      operationId: latestOrder
+      responses:
+        "200":
+          description: the latest order, null when there is none
+          content:
+            application/json:
+              schema:
+                nullable: true
+                allOf:
+                  - $ref: "#/components/schemas/Order"
+  /greeting:
+    get:
+      operationId: greeting
+      responses:
+        "200":
+          description: a greeting, as text
+          content:
+            text/plain:
+              schema:
+                type: string
+                nullable: true
+  /anything:
+    get:
+      operationId: anything
+      responses:
+        "200":
+          description: any JSON
+          content:
+            application/json:
+              schema: {}
+        "201":
+          description: an order
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Order"
+components:
+  schemas:
+    Order:
+      type: object
+      required: [id]
+      properties:
+        id:
+          type: integer
+    Problem:
+      type: object
+      required: [title, status]
+      properties:
+        title:
+          type: string
+        status:
+          type: integer
