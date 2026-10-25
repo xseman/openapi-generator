@@ -916,6 +916,7 @@ func (g *FetchGenerator) paramExtensions(op *codegen.CodegenOperation, ext map[s
 	taken := make(map[string]int)
 	fields := []map[string]any{}
 	byLocation := map[string][]map[string]any{}
+	files := false
 	body := ""
 
 	for _, p := range op.AllParams {
@@ -968,6 +969,7 @@ func (g *FetchGenerator) paramExtensions(op *codegen.CodegenOperation, ext map[s
 
 		case p.IsFormParam:
 			byLocation["form"] = append(byLocation["form"], entry)
+			files = files || strings.HasSuffix(t, "File")
 
 		case p.IsPathParam:
 			entry["placeholder"] = strconv.Quote("{" + p.BaseName + "}")
@@ -990,10 +992,13 @@ func (g *FetchGenerator) paramExtensions(op *codegen.CodegenOperation, ext map[s
 	// ponytail: a multipart body is built in a bytes.Buffer, files included,
 	// so a request holds its uploads in memory; the upgrade is an io.Pipe
 	// that a goroutine writes once the request is sent.
+	// A form with a file goes as multipart whatever media type it declares,
+	// as upstream's Go client does: only multipart carries a file.
 	form := len(byLocation["form"]) > 0
+	multipart := op.IsMultipart || files
 	ext["x-go-has-body"] = body != "" || form
-	ext["x-go-body-multipart"] = form && op.IsMultipart
-	ext["x-go-body-form"] = form && !op.IsMultipart
+	ext["x-go-body-multipart"] = form && multipart
+	ext["x-go-body-form"] = form && !multipart
 }
 
 // bodyKind sets how a body parameter is encoded: as it is for a reader, as
