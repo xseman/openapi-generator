@@ -184,29 +184,29 @@ export class {{classname}} extends runtime.BaseAPI {
 {{/jsonHeaderUsesModelSerializer}}
 {{/isArray}}{{/headerParams}}{{#authMethods}}{{#isBasic}}{{#isBasicBasic}}
         if (this.configuration && (this.configuration.username !== undefined || this.configuration.password !== undefined)) {
-     headerParameters["Authorization"] = "Basic " + btoa(this.configuration.username + ":" + this.configuration.password);
+            headerParameters["Authorization"] = "Basic " + btoa(this.configuration.username + ":" + this.configuration.password);
         }
 {{/isBasicBasic}}{{#isBasicBearer}}
         if (this.configuration && this.configuration.accessToken) {
-     const token = this.configuration.accessToken;
-     const tokenString = await token("{{name}}", [{{#scopes}}"{{{scope}}}"{{^-last}}, {{/-last}}{{/scopes}}]);
+            const token = this.configuration.accessToken;
+            const tokenString = await token("{{name}}", [{{#scopes}}"{{{scope}}}"{{^-last}}, {{/-last}}{{/scopes}}]);
 
-     if (tokenString) {
-     headerParameters["Authorization"] = `Bearer ${tokenString}`;
-     }
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
         }
 {{/isBasicBearer}}{{/isBasic}}{{#isApiKey}}{{#isKeyInHeader}}
         if (this.configuration && this.configuration.apiKey) {
-     headerParameters["{{keyParamName}}"] = await this.configuration.apiKey("{{keyParamName}}"); // {{name}} authentication
+            headerParameters["{{keyParamName}}"] = await this.configuration.apiKey("{{keyParamName}}"); // {{name}} authentication
         }
 {{/isKeyInHeader}}{{#isKeyInQuery}}
         if (this.configuration && this.configuration.apiKey) {
-     queryParameters["{{keyParamName}}"] = await this.configuration.apiKey("{{keyParamName}}"); // {{name}} authentication
+            queryParameters["{{keyParamName}}"] = await this.configuration.apiKey("{{keyParamName}}"); // {{name}} authentication
         }
 {{/isKeyInQuery}}{{/isApiKey}}{{#isOAuth}}
         if (this.configuration && this.configuration.accessToken) {
-     // oauth required
-     headerParameters["Authorization"] = await this.configuration.accessToken("{{name}}", [{{#scopes}}"{{{scope}}}"{{^-last}}, {{/-last}}{{/scopes}}]);
+            // oauth required
+            headerParameters["Authorization"] = await this.configuration.accessToken("{{name}}", [{{#scopes}}"{{{scope}}}"{{^-last}}, {{/-last}}{{/scopes}}]);
         }
 {{/isOAuth}}{{/authMethods}}{{#hasFormParams}}
         const consumes: runtime.Consume[] = [

@@ -2,9 +2,12 @@ package gen
 
 import (
 	"fmt"
+	"maps"
 	"os"
+	"slices"
 	"strings"
 
+	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/xseman/openapi-generator/internal/generator"
 	"github.com/xseman/openapi-generator/internal/parser"
 )
@@ -63,6 +66,8 @@ func assembleSpec(cg generator.CodegenConfig, opts Options) (*specData, error) {
 		return nil, fmt.Errorf("failed to get security schemes: %w", err)
 	}
 
+	resolveSecurity(p.Doc, operationsByTag, securitySchemes)
+
 	if opts.Verbose {
 		fmt.Printf("Found %d models\n", len(models))
 
@@ -103,6 +108,57 @@ func assembleSpec(cg generator.CodegenConfig, opts Options) (*specData, error) {
 		info:            p.GetInfo(),
 		basePath:        p.GetBasePath(),
 	}, nil
+}
+
+// resolveSecurity completes each operation's auth methods. The parser
+// records only a scheme's name and the operation's scopes: the type, the
+// key's name and location come from the scheme in components. An operation
+// that declares no security takes the document's; "security: []" is none.
+func resolveSecurity(doc *openapi3.T, operationsByTag map[string][]*generator.CodegenOperation, schemes []*generator.CodegenSecurity) {
+	byName := make(map[string]*generator.CodegenSecurity, len(schemes))
+	for _, s := range schemes {
+		byName[s.Name] = s
+	}
+
+	for _, ops := range operationsByTag {
+		for _, op := range ops {
+			if item := doc.Paths.Value(op.Path); item != nil {
+				if src := item.GetOperation(op.HttpMethod); src != nil && src.Security == nil {
+					op.AuthMethods = securityRequirements(doc.Security)
+				}
+			}
+
+			for i, a := range op.AuthMethods {
+				if s := byName[a.Name]; s != nil {
+					full := *s
+					full.Scopes = a.Scopes
+					op.AuthMethods[i] = &full
+				}
+			}
+
+			op.HasAuthMethods = len(op.AuthMethods) > 0
+		}
+	}
+}
+
+// securityRequirements lists the schemes of requirements with their scopes,
+// names in sorted order within each requirement, as the parser does for an
+// operation's own.
+func securityRequirements(reqs openapi3.SecurityRequirements) []*generator.CodegenSecurity {
+	var out []*generator.CodegenSecurity
+
+	for _, req := range reqs {
+		for _, name := range slices.Sorted(maps.Keys(req)) {
+			sec := &generator.CodegenSecurity{Name: name, Scopes: make([]map[string]any, len(req[name]))}
+			for i, scope := range req[name] {
+				sec.Scopes[i] = map[string]any{"scope": scope, "-last": i == len(req[name])-1}
+			}
+
+			out = append(out, sec)
+		}
+	}
+
+	return out
 }
 
 // loadSpec loads inputSpec into p, treating an http(s) prefix as a remote

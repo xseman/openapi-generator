@@ -224,8 +224,9 @@ func (p *Parser) operationToCodegen(path, method string, op *openapi3.Operation,
 					Name:   name,
 					Scopes: make([]map[string]any, len(scopes)),
 				}
+				// -last for {{^-last}}, which the mustache engine lacks.
 				for i, scope := range scopes {
-					sec.Scopes[i] = map[string]any{"scope": scope}
+					sec.Scopes[i] = map[string]any{"scope": scope, "-last": i == len(scopes)-1}
 				}
 
 				co.AuthMethods = append(co.AuthMethods, sec)
