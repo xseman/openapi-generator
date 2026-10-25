@@ -213,7 +213,7 @@ func modelKind(m *codegen.CodegenModel) string {
 	switch {
 	case len(m.OneOf) > 0 || len(m.AnyOf) > 0:
 		return "union"
-	case m.IsEnum:
+	case m.IsEnum && EnumBaseType(m.AllowableValues, m.IsBoolean) != "any":
 		return "enum"
 	case len(m.AllVars) > 0 || len(m.AllOf) > 0:
 		return "struct"
@@ -371,7 +371,7 @@ func (g *FetchGenerator) structFields(m *codegen.CodegenModel, ext map[string]an
 
 		if ref := g.refModel(v.Ref); ref != "" {
 			named = ref
-		} else if v.IsEnum {
+		} else if v.IsEnum && EnumBaseType(v.AllowableValues, v.IsBoolean) != "any" {
 			base := m.Classname + exported(v.EnumName, "")
 
 			named = enumNames[base]

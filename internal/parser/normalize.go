@@ -13,8 +13,8 @@ import (
 // 3.0 shapes the parser knows:
 //
 //   - NORMALIZE_31SPEC: `type: [T, "null"]` is T with nullable, `const: v`
-//     an enum of v, and a string of contentMediaType
-//     application/octet-stream a binary string.
+//     an enum of v, a null among enum values nullable, and a string of
+//     contentMediaType application/octet-stream a binary string.
 //   - SIMPLIFY_ONEOF_ANYOF: a `{type: "null"}` member of oneOf/anyOf makes
 //     the schema nullable instead; when one member is left after that, it is
 //     the schema (a $ref one as `allOf: [$ref]`, the 3.0 spelling of a
@@ -127,6 +127,12 @@ func (p *Parser) normalizeSchemaRef(ref *openapi3.SchemaRef, seen map[*openapi3.
 
 	if s.Const != nil && len(s.Enum) == 0 {
 		s.Enum, s.Const = []any{s.Const}, nil
+	}
+
+	// A null among the values (pydantic's Literal["x", None]) makes the
+	// schema nullable; the value stays, as a 3.0 nullable enum lists it.
+	if slices.Contains(s.Enum, nil) {
+		s.Nullable = true
 	}
 
 	if (s.Type.Is(openapi3.TypeString) || s.Type.IsEmpty()) && s.Format == "" && s.ContentEncoding == "" {

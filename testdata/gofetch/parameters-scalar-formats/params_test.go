@@ -12,7 +12,7 @@ func TestScalarText(t *testing.T) {
 
 	req, err := NewDefaultAPI(nil).SearchRequest(t.Context(), SearchParams{
 		F32: Ptr(float32(0.1)), F64: Ptr(1e21), N: Ptr(0.30000000000000004), I64: Ptr(int64(1<<62 + 1)), Ok: Ptr(false),
-		Day: &Date{Time: time.Date(2024, 1, 2, 0, 0, 0, 0, time.UTC)}, At: &at, Raw: Ptr("+/8="),
+		Day: &Date{Time: time.Date(2024, 1, 2, 0, 0, 0, 0, time.UTC)}, At: &DateTime{Time: at}, Raw: Ptr("+/8="),
 	})
 	if err != nil {
 		t.Fatal(err)
