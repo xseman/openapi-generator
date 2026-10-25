@@ -121,7 +121,9 @@ func loadScenarios(t *testing.T) []*scenario {
 // order of the spec: the parameters and, for a form body, its properties
 // (sorted). A runner uses them to tell the body's field from the
 // parameters', and their order to tell apart two names that a generator
-// gives one identifier, the second one numbered (itemId, itemId2).
+// gives one identifier, the second one numbered (itemId, itemId2). kin
+// does not keep a schema's property order, so two form fields of one
+// identifier must stand in the spec in sorted order too.
 func opParams(doc *openapi3.T) map[string][]string {
 	out := map[string][]string{}
 

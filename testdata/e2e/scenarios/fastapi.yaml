@@ -81,7 +81,6 @@ cases:
     op: echoLiterals
     args: { body: { retry: 1, pin: null, order: desc, tag: null } }
     result: { retry: 1, pin: null, order: desc, tag: null, mode: auto, size: 25 }
-    skip: { typescript-fetch: "an explicit null of an optional nullable enum goes out as absent, so the server applies its default" }
   - name: required nullables all null, optional nullables left out
     op: echoNulls
     args: { body: { note: null, due: null, color: null, dims: null, lines: null, payment: null } }
@@ -196,6 +195,17 @@ cases:
     op: echoNumber
     args: { body: 2.25 }
     result: 4.5
+  - name: integers past int64
+    op: echoWide
+    args: { body: { big: 100000000000000000000, u64: 18446744073709551615, f: 1e+308, tiny: 1e-7 } }
+    result: { big: 100000000000000000000, u64: 18446744073709551615, f: 1e+308, tiny: 1e-7 }
+    skip:
+      go-fetch: a plain integer is an int, which holds no value past int64
+      typescript-fetch: a JavaScript number loses integers past 2^53
+  - name: exponent floats
+    op: echoWide
+    args: { body: { big: -1, u64: 0, f: 5e-324, tiny: 3e-7 } }
+    result: { big: -1, u64: 0, f: 5e-324, tiny: 3e-7 }
   - name: text/plain body
     op: echoText
     args: { body: héllo }
@@ -301,6 +311,17 @@ cases:
       theme: dark
     result: { requestId: 0b5f0c6e-8e7b-4c8c-9d55-7f0f3c6f2a11, retry: 3, flags: [a], lang: "sk-SK,en;q=0.5", tenant: t1, theme: dark }
     skip: { typescript-fetch: "no cookie parameters" }
+  - name: list headers, one item each
+    op: headerLists
+    args: { x-tags: [a], x-ids: [7], x-colors: [dark-blue] }
+    result: { tags: [a], ids: [7], colors: [dark-blue] }
+  - name: list headers, two items each
+    op: headerLists
+    args: { x-tags: [a, b], x-ids: [1, 2], x-colors: [red, light green] }
+    result: { tags: [a, b], ids: [1, 2], colors: [red, light green] }
+    skip:
+      go-fetch: &listHeader "a list header goes as one comma-joined line, as the spec's simple style says; FastAPI reads repeated lines only (422 on \"1,2\")"
+      typescript-fetch: *listHeader
 
   # ------------------------------------------------------------ items
   - name: read-only token cannot write
@@ -410,6 +431,16 @@ cases:
     args: { day: "2024-01-31", when: "2024-03-01T10:00:00Z", price: 5, color: red }
     result: { price: "5", tags: [], colors: [], days: [], qty: null, agree: false }
     skip: { typescript-fetch: "a union form field (Decimal: number or string) renders JSON.stringify(number | stringToJSON(...)), which does not compile" }
+  - name: a form model with files, declared url-encoded
+    op: uploadModel
+    args: { folder: docs, files: [{ $file: { name: a.txt, text: abc } }, { $file: { name: b.txt, text: de } }], labels: [x, y] }
+    result: { folder: docs, files: { a.txt: 3, b.txt: 2 }, labels: [x, y], cover: null }
+    skip: { typescript-fetch: &urlFile "a form declared url-encoded goes as URLSearchParams even with a file, a Blob as text" }
+  - name: a form model's optional file given
+    op: uploadModel
+    args: { folder: docs, files: [{ $file: { name: a.txt, text: abc } }], cover: { $file: { name: c.png, text: C } } }
+    result: { files: { a.txt: 3 }, cover: c.png }
+    skip: { typescript-fetch: *urlFile }
   - name: optional file left out
     op: uploadAvatar
     args: { image: { $file: { name: i.png, text: "12345" } } }
