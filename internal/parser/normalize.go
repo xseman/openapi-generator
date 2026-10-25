@@ -107,6 +107,10 @@ func normalizeContent(content openapi3.Content, walk func(*openapi3.SchemaRef)) 
 		if mt.Schema != nil {
 			walk(mt.Schema)
 		}
+
+		if mt.ItemSchema != nil {
+			walk(mt.ItemSchema)
+		}
 	}
 }
 
@@ -157,6 +161,7 @@ func (p *Parser) normalizeSchemaRef(ref *openapi3.SchemaRef, seen map[*openapi3.
 	p.normalizeSchemaRef(s.Items, seen)
 	p.normalizeSchemaRef(s.AdditionalProperties.Schema, seen)
 	p.normalizeSchemaRef(s.Not, seen)
+	p.normalizeSchemaRef(s.ContentSchema, seen)
 
 	mergeEnums(s)
 

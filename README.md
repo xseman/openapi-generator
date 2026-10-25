@@ -17,10 +17,11 @@ minimal dependencies.
 - Fast generation times without JVM overhead
 - Load specs from local files or remote URLs
 - Command-line interface compatible with the original OpenAPI Generator
-- Supports OpenAPI 3.x and Swagger 2.0 specifications (auto-converts 2.0 -> 3.x);
-  a 3.1 `null` member of `anyOf`/`oneOf`, a `type` list with `null`, a `const`
-  and a `contentMediaType` binary string read as their 3.0 forms, as the
-  upstream normalizer's defaults do
+- Supports OpenAPI 3.x and Swagger 2.0 specifications, JSON or YAML
+  (auto-converts 2.0 -> 3.x); a 3.1 `null` member of `anyOf`/`oneOf`, a `type`
+  list with `null`, a `const` and a `contentMediaType` binary string read as
+  their 3.0 forms, as the upstream normalizer's defaults do; 3.2's `itemSchema`
+  of a streamed response is accepted in a 3.1 document, as FastAPI writes it
 
 ## Installation
 

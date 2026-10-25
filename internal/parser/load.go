@@ -272,7 +272,22 @@ func (p *Parser) validateSpec() error {
 		return errors.New("no document loaded")
 	}
 
-	if err := p.Doc.Validate(context.Background()); err != nil {
+	// FastAPI writes 3.2's itemSchema (a streamed response) into a 3.1
+	// document: a 3.1 one may use what 3.2 adds.
+	// The other fields 3.2 adds hold operations, which no generator reads:
+	// those stay an error.
+	var opts []openapi3.ValidationOption
+	if strings.HasPrefix(p.Doc.OpenAPI, "3.1") {
+		opts = append(opts, openapi3.IsOpenAPI32OrLater())
+
+		for _, path := range p.Doc.Paths.InMatchingOrder() {
+			if item := p.Doc.Paths.Value(path); item.Query != nil || len(item.AdditionalOperations) > 0 {
+				p.ValidationErrors = append(p.ValidationErrors, "path "+path+": query and additionalOperations are for OpenAPI >=3.2")
+			}
+		}
+	}
+
+	if err := p.Doc.Validate(context.Background(), opts...); err != nil {
 		p.ValidationErrors = append(p.ValidationErrors, err.Error())
 	}
 
@@ -381,9 +396,8 @@ func (p *Parser) markSchemasInPathItem(pathItem *openapi3.PathItem, usedSchemas 
 			for _, response := range op.Responses.Map() {
 				if response != nil && response.Value != nil {
 					for _, content := range response.Value.Content {
-						if content.Schema != nil {
-							p.markSchemaAsUsed(content.Schema, usedSchemas)
-						}
+						p.markSchemaAsUsed(content.Schema, usedSchemas)
+						p.markSchemaAsUsed(content.ItemSchema, usedSchemas)
 					}
 				}
 			}
@@ -458,4 +472,6 @@ func (p *Parser) markSchemaPropertiesAsUsed(schema *openapi3.Schema, usedSchemas
 	for _, s := range schema.OneOf {
 		p.markSchemaAsUsed(s, usedSchemas)
 	}
+
+	p.markSchemaAsUsed(schema.ContentSchema, usedSchemas)
 }

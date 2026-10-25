@@ -3,12 +3,15 @@
 package {{packageName}}
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
+	"iter"
 	"maps"
 	"mime/multipart"
 	"net/http"
@@ -465,6 +468,116 @@ func decodeBytes(resp *http.Response, err error) ([]byte, error) {
 	defer resp.Body.Close()
 
 	return io.ReadAll(resp.Body)
+}
+
+// ServerSentEvent is a server-sent event: its data as a T (the text itself for a
+// string), and its name, id and retry (milliseconds) when the server sets them.
+type ServerSentEvent[T any] struct {
+	Data  T      `json:"data"`
+	Event string `json:"event,omitempty"`
+	ID    string `json:"id,omitempty"`
+	Retry int    `json:"retry,omitempty"`
+}
+
+// decodeStream yields the JSON values of resp's body (JSON Lines) as they
+// arrive, then closes it. A range over the result ends at the first error;
+// one that stops early closes the body too.
+func decodeStream[T any](resp *http.Response, err error) (iter.Seq2[T, error], error) {
+	if err != nil {
+		return nil, err
+	}
+
+	return func(yield func(T, error) bool) {
+		defer resp.Body.Close()
+
+		dec := json.NewDecoder(resp.Body)
+
+		for {
+			var v T
+
+			err := dec.Decode(&v)
+			if errors.Is(err, io.EOF) || !yield(v, err) || err != nil {
+				return
+			}
+		}
+	}, nil
+}
+
+// decodeEvents yields the server-sent events of resp's body as they arrive,
+// then closes it, as decodeStream does. An event ends at a blank line, one
+// the body ends before is dropped; several data lines are its data joined by
+// newlines, a comment line (a keep-alive ": ping") is skipped, and an id
+// holds until the next one.
+func decodeEvents[T any](resp *http.Response, err error) (iter.Seq2[ServerSentEvent[T], error], error) {
+	if err != nil {
+		return nil, err
+	}
+
+	return func(yield func(ServerSentEvent[T], error) bool) {
+		defer resp.Body.Close()
+
+		sc := bufio.NewScanner(resp.Body)
+		sc.Buffer(nil, 1<<24)
+
+		var (
+			e    ServerSentEvent[T]
+			data []string
+		)
+
+		// emit yields the event read so far, if it has data, and starts the next.
+		emit := func() bool {
+			defer func() { e, data = ServerSentEvent[T]{ID: e.ID}, nil }()
+
+			if data == nil {
+				return true
+			}
+
+			err := eventData(strings.Join(data, "\n"), &e.Data)
+
+			return yield(e, err) && err == nil
+		}
+
+		for first := true; sc.Scan(); first = false {
+			line := sc.Text()
+			if first {
+				line = strings.TrimPrefix(line, "\ufeff")
+			}
+
+			field, value, _ := strings.Cut(line, ":")
+			value = strings.TrimPrefix(value, " ")
+
+			switch field {
+			case "":
+				if line == "" && !emit() {
+					return
+				}
+			case "data":
+				data = append(data, value)
+			case "event":
+				e.Event = value
+			case "id":
+				e.ID = value
+			case "retry":
+				e.Retry, _ = strconv.Atoi(value)
+			}
+		}
+
+		if err := sc.Err(); err != nil {
+			yield(ServerSentEvent[T]{}, err)
+		}
+	}, nil
+}
+
+// eventData reads an event's data into out: the text itself for a string,
+// else JSON.
+func eventData[T any](data string, out *T) error {
+	if p, ok := any(out).(*string); ok {
+		*p = data
+
+		return nil
+	}
+
+	return json.Unmarshal([]byte(data), out)
 }
 
 // discard drains and closes resp's body.

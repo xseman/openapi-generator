@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"maps"
 	"sort"
 	"strings"
 
@@ -48,6 +49,10 @@ func (p *Parser) responseToCodegen(code string, resp *openapi3.Response) *codege
 	for _, ct := range respContentTypes {
 		mediaType := resp.Content[ct]
 		if mediaType.Schema == nil {
+			if mediaType.ItemSchema != nil && cr.VendorExtensions["x-stream"] == nil {
+				p.streamItem(cr, ct, mediaType.ItemSchema)
+			}
+
 			continue
 		}
 
@@ -162,4 +167,30 @@ func ptrString(s *string) string {
 	}
 
 	return *s
+}
+
+// streamItem records a response that streams its items (3.2's itemSchema,
+// which FastAPI writes for a yield endpoint): x-stream is its media type,
+// x-stream-item the property of one item, of a server-sent event its data's
+// contentSchema, or else the data itself, a string when the event schema
+// does not say. The response keeps no DataType, so a generator that does not
+// read them sees one without a body.
+func (p *Parser) streamItem(cr *codegen.CodegenResponse, mediaType string, item *openapi3.SchemaRef) {
+	if strings.HasPrefix(mediaType, "text/event-stream") && item.Value != nil {
+		item = item.Value.Properties["data"]
+		if item == nil {
+			item = openapi3.NewStringSchema().NewRef()
+		} else if item.Value != nil && item.Value.ContentSchema != nil {
+			item = item.Value.ContentSchema
+		}
+	}
+
+	// convertExtensions hands out the document's own map: copy it.
+	cr.VendorExtensions = maps.Clone(cr.VendorExtensions)
+	if cr.VendorExtensions == nil {
+		cr.VendorExtensions = map[string]any{}
+	}
+
+	cr.VendorExtensions["x-stream"] = mediaType
+	cr.VendorExtensions["x-stream-item"] = p.schemaRefToProperty("item", item, true)
 }

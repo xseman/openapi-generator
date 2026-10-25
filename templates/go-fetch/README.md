@@ -62,6 +62,32 @@ requires. So is a 2xx whose body is of another type than the result (a 202
 `Problem` next to a 201 `Order`): `Xxx` returns it as a `*ResponseError`
 with that body in `Model`, `XxxRaw` as the response.
 
+A response that streams its items, described by 3.2's `itemSchema` (FastAPI
+writes it for a `yield` endpoint, in a 3.1 document), makes `Xxx` return an
+`iter.Seq2[T, error]` that yields each item as it arrives: a JSON value per
+line for JSON Lines, a `ServerSentEvent[T]` (`Data`, `Event`, `ID`, `Retry`)
+per event for `text/event-stream`, `T` being the `contentSchema` of its
+`data`, or the text itself. A range stops at the first error. The response
+stays open until the range ends, a `break` or `ctx` is cancelled: range the
+result, or cancel `ctx`. JSON Lines (`application/jsonl`,
+`application/x-ndjson`) and `text/event-stream` are read; another streamed
+media type has only `XxxRaw`.
+
+```go
+events, err := api.Chat(ctx, petstore.ChatParams{Body: petstore.ChatBody{Prompt: "hi"}})
+if err != nil {
+	return err
+}
+
+for e, err := range events {
+	if err != nil {
+		return err
+	}
+
+	fmt.Println(e.Event, e.Data)
+}
+```
+
 | `Configuration` | Use                                                                    |
 | --------------- | ---------------------------------------------------------------------- |
 | `BasePath`      | replaces the spec's first server URL                                   |

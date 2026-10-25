@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"iter"
 	"mime/multipart"
 	"net/http"
 	"net/url"
@@ -262,6 +263,11 @@ func (a *{{classname}}) {{x-go-name}}(ctx context.Context{{#x-go-has-params}}, p
 	return decodeBytes(a.{{x-go-name}}Raw(ctx{{#x-go-has-params}}, p{{/x-go-has-params}}, editors...))
 }
 {{/x-go-decode-bytes}}
+{{#x-go-stream}}
+func (a *{{classname}}) {{x-go-name}}(ctx context.Context{{#x-go-has-params}}, p {{x-go-params}}{{/x-go-has-params}}, editors ...RequestEditorFn) (iter.Seq2[{{{item}}}, error], error) {
+	return {{{decode}}}(a.{{x-go-name}}Raw(ctx{{#x-go-has-params}}, p{{/x-go-has-params}}, editors...))
+}
+{{/x-go-stream}}
 {{#x-go-discard}}
 func (a *{{classname}}) {{x-go-name}}(ctx context.Context{{#x-go-has-params}}, p {{x-go-params}}{{/x-go-has-params}}, editors ...RequestEditorFn) error {
 	return discard(a.{{x-go-name}}Raw(ctx{{#x-go-has-params}}, p{{/x-go-has-params}}, editors...))

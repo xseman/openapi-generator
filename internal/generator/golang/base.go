@@ -31,7 +31,7 @@ var TypeMapping = map[string]string{
 var RuntimeNames = map[string]bool{
 	"BasePath": true, "Doer": true, "RequestEditorFn": true, "Configuration": true,
 	"ResponseError": true, "Opt": true, "Some": true, "Null": true, "Ptr": true,
-	"Date": true, "DateTime": true, "File": true,
+	"Date": true, "DateTime": true, "File": true, "ServerSentEvent": true,
 }
 
 // keywords are Go's reserved words, for the package name.

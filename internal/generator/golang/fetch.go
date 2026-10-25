@@ -1086,7 +1086,10 @@ func (g *FetchGenerator) responseExtensions(op *codegen.CodegenOperation, ext ma
 		ext["x-go-decode-bytes"] = true
 
 	case op.ReturnType == "":
-		ext["x-go-discard"] = true
+		if !g.streamExtensions(op, ext, base) {
+			ext["x-go-discard"] = true
+		}
+
 	case op.ReturnProperty == nil:
 		t = op.ReturnType
 		if g.nullable[t] && !g.containers[t] {
@@ -1094,24 +1097,7 @@ func (g *FetchGenerator) responseExtensions(op *codegen.CodegenOperation, ext ma
 		}
 
 	default:
-		named := ""
-
-		typeName := g.opTypeNamer(op.OperationId)
-
-		if obj := inlineObject(op.ReturnProperty); obj != nil {
-			named = typeName(base + "Response")
-			g.opInline(ext)(g.inlineStructs(named, "the response of "+base, obj.Description, obj.Vars, typeName))
-		}
-
-		if u := inlineUnion(op.ReturnProperty); u != nil {
-			named = typeName(base + "Response")
-			g.opInline(ext)(g.unionDecl(named, "the response of "+base, u.Description, u.ComposedSchemas, typeName))
-		}
-
-		t = GoType(op.ReturnProperty, named)
-		if op.ReturnProperty.IsNullable && t != "string" && !isContainer(t) && !g.containers[t] {
-			t = "*" + t
-		}
+		t = g.resultType(op, op.ReturnProperty, base+"Response", "the response of "+base, ext)
 	}
 
 	if t != "" && t != "string" && !isContainer(t) && !g.containers[t] {
@@ -1175,6 +1161,66 @@ func (g *FetchGenerator) modelKeys(t string) string {
 	}
 
 	return "nil"
+}
+
+// resultType is the Go type of a result or a streamed item, prop: an
+// inline object or union is a type named name, declared for the operation;
+// a nullable one is a pointer.
+func (g *FetchGenerator) resultType(op *codegen.CodegenOperation, prop *codegen.CodegenProperty, name, what string, ext map[string]any) string {
+	named := ""
+
+	typeName := g.opTypeNamer(op.OperationId)
+
+	if obj := inlineObject(prop); obj != nil {
+		named = typeName(name)
+		g.opInline(ext)(g.inlineStructs(named, what, obj.Description, obj.Vars, typeName))
+	}
+
+	if u := inlineUnion(prop); u != nil {
+		named = typeName(name)
+		g.opInline(ext)(g.unionDecl(named, what, u.Description, u.ComposedSchemas, typeName))
+	}
+
+	t := GoType(prop, named)
+	if prop.IsNullable && t != "string" && !isContainer(t) && !g.containers[t] {
+		t = "*" + t
+	}
+
+	return t
+}
+
+// streamExtensions types an operation whose 2xx response streams its items
+// (x-stream, see the parser's streamItem) and reports whether it does: JSON
+// Lines as an iter.Seq2 of the item type, server-sent events as one of
+// ServerSentEvent of it. Another streamed media type (json-seq, multipart)
+// has only its Raw method.
+func (g *FetchGenerator) streamExtensions(op *codegen.CodegenOperation, ext map[string]any, base string) bool {
+	for _, r := range op.Responses {
+		item, _ := r.VendorExtensions["x-stream-item"].(*codegen.CodegenProperty)
+		mediaType, _ := r.VendorExtensions["x-stream"].(string)
+		mediaType, _, _ = strings.Cut(mediaType, ";")
+
+		decode := map[string]string{"application/jsonl": "decodeStream", "application/x-ndjson": "decodeStream", "text/event-stream": "decodeEvents"}[mediaType]
+		if !r.Is2xx || item == nil || decode == "" {
+			continue
+		}
+
+		t := g.resultType(op, item, base+"Item", "an item of "+base, ext)
+
+		yields := t
+		if decode == "decodeEvents" {
+			yields = "ServerSentEvent[" + t + "]"
+		}
+
+		ext["x-go-stream"] = map[string]any{"item": yields, "decode": decode + "[" + t + "]"}
+
+		doc, _ := ext["x-go-doc"].([]string)
+		ext["x-go-doc"] = append(doc, "//", "// Range the result to its end, break or cancel ctx: until then the response stays open.")
+
+		return true
+	}
+
+	return false
 }
 
 // other2xx lists the 2xx statuses whose body is of another type than the
