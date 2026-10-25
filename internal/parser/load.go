@@ -10,12 +10,14 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
 
 	"github.com/getkin/kin-openapi/openapi2"
 	"github.com/getkin/kin-openapi/openapi2conv"
 	"github.com/getkin/kin-openapi/openapi3"
+	"github.com/oasdiff/yaml"
 )
 
 // LoadFromFile loads an OpenAPI spec from a file.
@@ -124,24 +126,35 @@ func (p *Parser) LoadFromData(data []byte) error {
 
 // isSwagger2 checks if the data represents a Swagger 2.0 specification.
 func isSwagger2(data []byte) bool {
-	// Simple check: look for "swagger": "2.0" in the JSON/YAML
 	var temp struct {
-		Swagger string `json:"swagger" yaml:"swagger"`
+		Swagger string `json:"swagger"`
 	}
 
-	// Try JSON first
 	if err := json.Unmarshal(data, &temp); err == nil {
 		return strings.HasPrefix(temp.Swagger, "2.")
 	}
 
-	return false
+	return swagger2YAML.Match(data)
 }
+
+// swagger2YAML finds a top-level swagger: "2.x" key in a YAML document,
+// without converting a large OpenAPI 3 one to JSON to look.
+var swagger2YAML = regexp.MustCompile(`(?m)^["']?swagger["']?[ \t]*:[ \t]*["']?2\.`)
 
 // loadSwagger2FromData loads a Swagger 2.0 spec and converts it to OpenAPI 3.
 func (p *Parser) loadSwagger2FromData(data []byte) error {
 	var doc2 openapi2.T
 
-	if err := json.Unmarshal(data, &doc2); err != nil {
+	// YAMLToJSON sorts the keys: the property order reads data itself.
+	js := data
+	if !json.Valid(data) {
+		var err error
+		if js, err = yaml.YAMLToJSON(data); err != nil {
+			return fmt.Errorf("failed to parse Swagger 2.0 spec: %w", err)
+		}
+	}
+
+	if err := json.Unmarshal(js, &doc2); err != nil {
 		return fmt.Errorf("failed to parse Swagger 2.0 spec: %w", err)
 	}
 
