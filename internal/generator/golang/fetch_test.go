@@ -215,10 +215,29 @@ paths:
       responses:
         "200": {description: ok, content: {application/json: {schema: {type: array, items: {type: string}}}}}
         "204": {description: none}
+  /records:
+    post:
+      operationId: setRecords
+      responses:
+        "200": {description: ok, content: {application/json: {schema: {type: object, properties: {total: {type: integer}}}}}}
+        "201": {description: new, content: {application/json: {schema: {type: object, properties: {total: {type: integer}}}}}}
+        "206": {description: some, content: {application/json: {schema: {type: array, items: {type: object, properties: {id: {type: string}}}}}}}
+        "207": {description: partly, content: {application/json: {schema: {type: object, properties: {errors: {type: array, items: {type: string}}}}}}}
+  /maybe:
+    get:
+      operationId: getMaybe
+      responses:
+        "200": {description: ok, content: {application/json: {schema: {$ref: "#/components/schemas/Maybe"}}}}
+        "204": {description: none}
+    put:
+      operationId: listMaybe
+      responses:
+        "200": {description: ok, content: {application/json: {schema: {type: array, items: {$ref: "#/components/schemas/Maybe"}}}}}
 components:
   schemas:
     Pet: {type: object, properties: {name: {type: string}}}
     GetPetParams: {type: object, properties: {id: {type: string}}}
+    Maybe: {type: object, nullable: true, properties: {name: {type: string}}}
 `)
 
 	byTag, err := p.GetOperations()
@@ -228,7 +247,8 @@ components:
 
 	want := map[string]string{
 		"getPet": "Pet", "listPets": "[]Pet", "getPhoto": "[]byte", "ping": "",
-		"startJob": "*Pet", "listJobs": "[]string",
+		"startJob": "*Pet", "listJobs": "[]string", "setRecords": "SetRecordsResponse",
+		"getMaybe": "*Maybe", "listMaybe": "[]*Maybe",
 	}
 
 	// The GetPetParams schema takes the name of getPet's Params type.
@@ -246,6 +266,19 @@ components:
 
 		if params := op.VendorExtensions["x-go-params"]; op.OperationId == "getPet" && params != "GetPetParams2" {
 			t.Errorf("getPet params = %v, want GetPetParams2 next to the GetPetParams model", params)
+		}
+
+		// Another inline object of a 2xx is a type of its own, not the result;
+		// one of the result's shape is the result.
+		if other, _ := op.VendorExtensions["x-go-other-2xx"].(map[string]any); op.OperationId == "setRecords" {
+			codes, _ := other["codes"].([]map[string]any)
+			if got := fmt.Sprint(codes); len(codes) != 2 || codes[0]["type"] != "[]SetRecords206Response" || codes[1]["type"] != "SetRecords207Response" {
+				t.Errorf("setRecords other 2xx = %s, want 206 of []SetRecords206Response and 207 of SetRecords207Response", got)
+			}
+		}
+
+		if doc := fmt.Sprint(op.VendorExtensions["x-go-doc"]); op.OperationId == "getMaybe" && !strings.Contains(doc, "nil for a 204") {
+			t.Errorf("getMaybe doc = %s, want the 204 that leaves it nil", doc)
 		}
 
 		if op.OperationId == "getPet" {
@@ -452,6 +485,42 @@ paths:
 		fs, _ := op.VendorExtensions["x-go-fields"].([]map[string]any)
 		if got := fs[0]["type"]; got != "[]SharedPoints" {
 			t.Errorf("tag %s: points %v, want []SharedPoints", tag, got)
+		}
+	}
+}
+
+// TestBodyNamedBlob: a model named Blob, the parser's name for binary, is
+// still a JSON body; only a binary body is an io.Reader.
+func TestBodyNamedBlob(t *testing.T) {
+	g, p := parse(t, `openapi: 3.0.0
+info: {title: t, version: "1"}
+paths:
+  /blob:
+    post:
+      operationId: putBlob
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/Blob"}}}}
+      responses: {"204": {description: ok}}
+  /raw:
+    post:
+      operationId: putRaw
+      requestBody: {required: true, content: {application/octet-stream: {schema: {type: string, format: binary}}}}
+      responses: {"204": {description: ok}}
+components:
+  schemas:
+    Blob: {type: object, properties: {data: {type: string}}}
+`)
+
+	byTag, err := p.GetOperations()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	want := map[string]string{"putBlob": "Blob", "putRaw": "io.Reader"}
+
+	for _, op := range g.PostProcessOperations(byTag["default"]) {
+		fs, _ := op.VendorExtensions["x-go-fields"].([]map[string]any)
+		if got := fs[0]["type"]; got != want[op.OperationId] {
+			t.Errorf("%s body = %v, want %s", op.OperationId, got, want[op.OperationId])
 		}
 	}
 }

@@ -315,9 +315,10 @@ func (p *Parser) schemaToProperty(name string, schema *openapi3.Schema, required
 		case schema.Items != nil && schema.Items.Ref != "":
 			modelName := p.toModelName(extractRefName(schema.Items.Ref))
 			prop.Items = &codegen.CodegenProperty{
-				DataType: modelName,
-				Datatype: modelName,
-				IsModel:  true,
+				DataType:   modelName,
+				Datatype:   modelName,
+				IsModel:    true,
+				IsNullable: schema.Items.Value != nil && schema.Items.Value.Nullable && !schema.Items.Value.Type.Is(openapi3.TypeArray),
 			}
 			prop.DataType = "Array<" + modelName + ">"
 			prop.Datatype = "Array<" + modelName + ">"

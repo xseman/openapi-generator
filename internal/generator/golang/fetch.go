@@ -3,6 +3,7 @@ package golang
 import (
 	"fmt"
 	"maps"
+	"reflect"
 	"slices"
 	"strconv"
 	"strings"
@@ -42,6 +43,10 @@ type FetchGenerator struct {
 	// runtime sends as a scalar.
 	enums map[string]bool
 
+	// nullable are the nullable models by class: a result that refers to
+	// one is a pointer, nil for a null body.
+	nullable map[string]bool
+
 	// required are the quoted required properties of each struct model, which
 	// a union's As method checks a value for; pinned its properties an enum
 	// of one value fixes (see pinned).
@@ -51,7 +56,7 @@ type FetchGenerator struct {
 
 // NewFetchGenerator creates a new go-fetch generator.
 func NewFetchGenerator() *FetchGenerator {
-	g := &FetchGenerator{BaseGenerator: NewBaseGenerator(), containers: map[string]bool{}, types: maps.Clone(RuntimeNames), opTypes: map[string]string{}, refs: map[string]string{}, enums: map[string]bool{}, required: map[string]string{}, pinned: map[string][]map[string]any{}}
+	g := &FetchGenerator{BaseGenerator: NewBaseGenerator(), containers: map[string]bool{}, types: maps.Clone(RuntimeNames), opTypes: map[string]string{}, refs: map[string]string{}, enums: map[string]bool{}, nullable: map[string]bool{}, required: map[string]string{}, pinned: map[string][]map[string]any{}}
 	g.ApiTemplateFiles["api.mustache"] = ".go"
 	g.ModelTemplateFiles["model.mustache"] = ".go"
 
@@ -150,6 +155,7 @@ func (g *FetchGenerator) PostProcessModels(models []*codegen.CodegenModel) []*co
 		}
 
 		g.enums[m.Classname] = kind == "enum"
+		g.nullable[m.Classname] = m.IsNullable
 
 		g.required[m.Classname] = requiredKeys(m.AllVars)
 		g.pinned[m.Classname] = pinned(m.Classname, m.AllVars)
@@ -944,7 +950,7 @@ func (g *FetchGenerator) paramExtensions(op *codegen.CodegenOperation, ext map[s
 		}
 
 		t := GoParamType(p, named)
-		if p.IsBodyParam && p.DataType == "Blob" {
+		if p.IsBodyParam && p.DataType == "Blob" && !p.IsModel {
 			t = "io.Reader"
 		}
 
@@ -1083,6 +1089,10 @@ func (g *FetchGenerator) responseExtensions(op *codegen.CodegenOperation, ext ma
 		ext["x-go-discard"] = true
 	case op.ReturnProperty == nil:
 		t = op.ReturnType
+		if g.nullable[t] && !g.containers[t] {
+			t = "*" + t
+		}
+
 	default:
 		named := ""
 
@@ -1104,7 +1114,7 @@ func (g *FetchGenerator) responseExtensions(op *codegen.CodegenOperation, ext ma
 		}
 	}
 
-	if t != "" && t != "string" && !strings.HasPrefix(t, "*") && !isContainer(t) && !g.containers[t] {
+	if t != "" && t != "string" && !isContainer(t) && !g.containers[t] {
 		var empty []string
 
 		for _, r := range op.Responses {
@@ -1114,7 +1124,7 @@ func (g *FetchGenerator) responseExtensions(op *codegen.CodegenOperation, ext ma
 		}
 
 		if len(empty) > 0 {
-			t = "*" + t
+			t = "*" + strings.TrimPrefix(t, "*")
 			doc, _ := ext["x-go-doc"].([]string)
 			ext["x-go-doc"] = append(doc, "//", "// The result is nil for a "+strings.Join(empty, " or ")+" response, which has no body.")
 		}
@@ -1123,7 +1133,7 @@ func (g *FetchGenerator) responseExtensions(op *codegen.CodegenOperation, ext ma
 	ext["x-go-type"] = t
 	if t != "" && !op.IsResponseBinary {
 		ext["x-go-decode-json"] = t
-		g.other2xx(op, ext)
+		g.other2xx(op, ext, base)
 	}
 
 	var codes, ranges []map[string]any
@@ -1169,17 +1179,32 @@ func (g *FetchGenerator) modelKeys(t string) string {
 
 // other2xx lists the 2xx statuses whose body is of another type than the
 // result (a 201 Order next to a 202 Problem): the typed method returns
-// them as a *ResponseError holding that body, which the result cannot.
-func (g *FetchGenerator) other2xx(op *codegen.CodegenOperation, ext map[string]any) {
-	if ext["x-go-type"] == "any" {
+// them as a *ResponseError holding that body, which the result cannot. An
+// inline object body gets a type named after the operation and status.
+func (g *FetchGenerator) other2xx(op *codegen.CodegenOperation, ext map[string]any, base string) {
+	result, _ := ext["x-go-type"].(string)
+	if result == "any" {
 		return // any holds every body
 	}
 
 	var codes []map[string]any
 
 	for _, r := range op.Responses {
+		// An inline body of the result's shape is the result (a 200 and 201
+		// of one schema); the parser gives each its own property.
+		if _, err := strconv.Atoi(r.Code); err != nil || !r.Is2xx || r.DataType == "" || r.ReturnProperty != nil && reflect.DeepEqual(r.ReturnProperty, op.ReturnProperty) {
+			continue
+		}
+
 		rt := responseType(r)
-		if _, err := strconv.Atoi(r.Code); err != nil || !r.Is2xx || r.DataType == "" || r.DataType == op.ReturnType || rt == "" || rt == "any" || rt == "[]byte" {
+		if obj := inlineObject(r.ReturnProperty); obj != nil {
+			typeName := g.opTypeNamer(op.OperationId)
+			named := typeName(base + r.Code + "Response")
+			g.opInline(ext)(g.inlineStructs(named, "the "+r.Code+" response of "+base, obj.Description, obj.Vars, typeName))
+			rt = GoType(r.ReturnProperty, named)
+		}
+
+		if rt == "" || rt == "any" || rt == "[]byte" || rt == strings.TrimPrefix(result, "*") {
 			continue
 		}
 
