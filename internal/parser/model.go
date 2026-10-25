@@ -126,7 +126,8 @@ func (p *Parser) schemaToModel(name string, schema *openapi3.Schema) *codegen.Co
 		case "array":
 			model.IsArray = true
 			if schema.Items != nil && schema.Items.Value != nil {
-				model.Items = p.schemaToProperty("items", schema.Items.Value, false)
+				// By reference, so a $ref item keeps its model name.
+				model.Items = p.schemaRefToProperty("items", schema.Items, false)
 				model.ArrayModelType = model.Items.DataType
 			}
 
