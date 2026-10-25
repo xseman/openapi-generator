@@ -1,0 +1,6 @@
+spec: ../../specs/feature/security-http.yaml
+skip: { dart-fetch: "does not compile: lib/src/apis/default_api.dart:20: Expected an identifier." }
+auth: { username: u, password: "p:w", bearer: jwt }
+cases:
+  - { op: getWithBasicAuth, request: { header: { Authorization: "Basic dTpwOnc=" } }, response: { status: 200 } }
+  - { op: getWithBearerAuth, request: { header: { Authorization: Bearer jwt } }, response: { status: 200 } }

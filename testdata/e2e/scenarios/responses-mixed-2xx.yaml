@@ -1,0 +1,13 @@
+spec: ../../specs/feature/responses-mixed-2xx.yaml
+skip: { dart-fetch: "does not compile: lib/src/apis/default_api.dart:23: Expected an identifier." }
+cases:
+  - { name: 201 result, op: placeOrder, response: { status: 201, json: { id: 7 } }, result: { id: 7 } }
+  - name: 202 with another body is an error with its model
+    op: placeOrder
+    response: { status: 202, json: { title: queued, status: 202 } }
+    error: { status: 202, model: { title: queued, status: 202 } }
+    skip: { typescript-fetch: "a 2xx with another body decodes as the result type" }
+  - { name: ndjson as text, op: streamLines, response: { header: { Content-Type: application/x-ndjson }, text: "{\"i\":0}\n" }, result: "{\"i\":0}\n", skip: { typescript-fetch: "an any result is parsed as JSON whatever its media type" } }
+  - { name: nullable result null, op: latestOrder, response: { json: null }, result: null }
+  - { name: nullable text, op: greeting, response: { text: hello }, result: hello }
+  - { name: any holds another 2xx, op: anything, response: { status: 201, json: { id: 1 } }, result: { id: 1 } }

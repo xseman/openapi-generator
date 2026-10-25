@@ -1,0 +1,14 @@
+[project]
+name = "e2e-fastapi"
+version = "0"
+description = "The FastAPI backend of the e2e tests (internal/e2e)."
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi==0.162.0",
+    "pydantic[email]==2.14.1",
+    "python-multipart",
+    "uvicorn",
+]
+
+[tool.uv]
+package = false

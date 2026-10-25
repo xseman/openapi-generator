@@ -1,0 +1,9 @@
+spec: ../../specs/feature/additional-properties-with-properties.yaml
+cases:
+  - name: extra keys both ways
+    op: recordEvent
+    args: { body: { kind: click, at: "2024-01-02T03:04:05Z", x: 1, tags: [a] } }
+    request: { body: { kind: click, at: "2024-01-02T03:04:05Z", x: 1, tags: [a] } }
+    response: { json: { player: p, round1: 3, round2: 5 } }
+    result: { player: p, round1: 3, round2: 5 }
+    skip: { dart-fetch: "drops the keys next to the declared properties (additionalProperties); a DateTime goes out with .000Z", typescript-fetch: "drops the keys next to the declared properties (additionalProperties); a Date goes out with .000Z" }

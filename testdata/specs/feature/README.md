@@ -17,5 +17,9 @@ make regress REF=master   # or any branch, tag or commit
 Run it before committing a template or parser change. No diff means the change
 reached nothing else; a diff shows exactly which generated files it changed.
 
+They are also the input of the end-to-end tests: `testdata/e2e/scenarios`
+calls their operations through each generated client against a validating
+mock (`make e2e`).
+
 A new spec covers one feature and passes `openapi-generator validate -i <spec>`.
 A new boolean generator option goes into `flipped` in `scripts/regress.sh`.

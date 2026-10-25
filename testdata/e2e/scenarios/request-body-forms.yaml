@@ -1,0 +1,26 @@
+spec: ../../specs/feature/request-body-form-encoding.yaml
+skip: { dart-fetch: "does not compile: lib/src/apis/default_api.dart:20: Expected to find '}'." }
+cases:
+  - name: urlencoded fields by their encoding
+    op: createCustomer
+    args:
+      name: Ann
+      address: { city: Oslo, lines: [a, b] }
+      metadata: { plan: gold }
+      expand: [x, y]
+      tags: [t1, t2]
+      ids: [1, 2]
+    request:
+      header: { Content-Type: application/x-www-form-urlencoded }
+      body:
+        name: Ann
+        "address[city]": Oslo
+        "address[lines][0]": a
+        "address[lines][1]": b
+        "metadata[plan]": gold
+        "expand[0]": x
+        "expand[1]": y
+        tags: "t1,t2"
+        ids: ["1", "2"]
+    response: { status: 204 }
+    skip: { typescript-fetch: "the form encoding (deepObject, explode) is ignored" }

@@ -1,4 +1,4 @@
-.PHONY: help test cover cover-html lint fmt vet build install clean tidy update samples-dart-fetch samples-go-fetch regress all
+.PHONY: help test cover cover-html lint fmt vet build install clean tidy update samples-dart-fetch samples-go-fetch regress e2e e2e-update all
 
 GOFUMPT ?= go run mvdan.cc/gofumpt@v0.12.0
 GOLANGCI ?= go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.13.0
@@ -18,6 +18,14 @@ help:
 test:
 	go vet ./...
 	go test -race ./...
+
+## e2e: generated clients against a validating mock and the FastAPI backend (needs uv), testdata/e2e
+e2e:
+	E2E=1 go test -count=1 -v ./internal/e2e
+
+## e2e-update: e2e, rewriting the snapshot of the backend's spec
+e2e-update:
+	E2E=1 E2E_UPDATE=1 go test -count=1 -v ./internal/e2e
 
 ## cover: Run tests with coverage
 cover:

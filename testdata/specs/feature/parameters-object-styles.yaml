@@ -19,7 +19,7 @@ paths:
         - { name: X-Color, in: header, schema: { $ref: "#/components/schemas/Color" } }
         - { name: X-Color-Exploded, in: header, explode: true, schema: { $ref: "#/components/schemas/Color" } }
         - { name: X-Tags, in: header, schema: { type: array, items: { type: string } } }
-        - { name: prefs, in: cookie, schema: { type: array, items: { type: string } } }
+        - { name: prefs, in: cookie, explode: false, schema: { type: array, items: { type: string } } }
       responses:
         "204":
           description: painted

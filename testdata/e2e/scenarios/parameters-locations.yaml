@@ -1,0 +1,20 @@
+spec: ../../specs/feature/parameters-locations.yaml
+skip: { dart-fetch: "does not compile: lib/src/apis/default_api.dart:76: Expected to find '>'." }
+cases:
+  - name: path, query, header and cookie
+    op: getItem
+    args: { orgId: "acme/eu", itemId: 42, verbose: false, X-Request-Id: r-1, sessionId: s-1 }
+    request:
+      path: /orgs/acme/eu/items/42
+      query: { verbose: "false" }
+      header: { X-Request-Id: r-1 }
+      cookie: { sessionId: s-1 }
+    response: { json: { id: "42" } }
+    result: { id: "42" }
+    skip: { typescript-fetch: "no cookie parameters" }
+  - name: optional ones left out
+    op: getItem
+    args: { orgId: o, itemId: 1 }
+    request: { query: { verbose: $absent }, header: { X-Request-Id: $absent }, cookie: { sessionId: $absent } }
+    response: { json: {} }
+    result: {}

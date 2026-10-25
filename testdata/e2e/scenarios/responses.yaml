@@ -1,0 +1,21 @@
+spec: ../../specs/feature/responses-status-codes.yaml
+cases:
+  - { name: 200 model, op: getTask, args: { id: "1" }, response: { json: { id: "1", title: t } }, result: { id: "1", title: t } }
+  - name: 404 error model
+    op: getTask
+    args: { id: "2" }
+    response: { status: 404, json: { message: nope, code: 4 } }
+    error: { status: 404, model: { message: nope, code: 4 } }
+  - name: default error model for a 500
+    op: getTask
+    args: { id: "3" }
+    response: { status: 500, json: { message: boom } }
+    error: { status: 500, model: { message: boom } }
+  - { name: 204 no body, op: deleteTask, args: { id: "1" }, response: { status: 204 } }
+  - { name: 201 with a body, op: createTask, args: { id: "1" }, response: { status: 201, json: { id: "1" } }, result: { id: "1" } }
+  - { name: 202 without a body, op: createTask, args: { id: "1" }, response: { status: 202 }, result: null, skip: { typescript-fetch: "fails on a 2xx without a body next to one with a body" } }
+  - name: undeclared status keeps the text body
+    op: deleteTask
+    args: { id: "1" }
+    response: { status: 409, text: conflict, offSpec: true }
+    error: { status: 409, model: null, body: conflict }

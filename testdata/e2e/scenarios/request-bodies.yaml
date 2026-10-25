@@ -1,0 +1,18 @@
+spec: ../../specs/feature/request-body-json.yaml
+cases:
+  - name: model body and result
+    op: createItem
+    args: { body: { name: box, quantity: 2 } }
+    request: { method: POST, header: { Content-Type: application/json }, body: { name: box, quantity: 2 } }
+    response: { json: { name: box, quantity: 2 } }
+    result: { name: box, quantity: 2 }
+  - name: array body
+    op: createItems
+    args: { body: [{ name: a }, { name: b, quantity: 0 }] }
+    request: { body: [{ name: a }, { name: b, quantity: 0 }] }
+    response: { status: 200 }
+  - name: integer body
+    op: setRawCount
+    args: { body: 7 }
+    request: { body: 7 }
+    response: { status: 200 }

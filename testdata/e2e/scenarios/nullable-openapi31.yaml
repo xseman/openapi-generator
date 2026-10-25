@@ -1,0 +1,16 @@
+spec: ../../specs/feature/nullable-openapi31.yaml
+skip: { dart-fetch: "does not compile: lib/src/models/maybe_name.dart:13: Expected an identifier." }
+cases:
+  - name: 3.1 null members, a nullable query and an enum array
+    op: listPets
+    args: { q: mi, size: [1, 3] }
+    request: { query: { q: mi, size: ["1", "3"] } }
+    response: { json: [{ kind: pet, name: Mia, size: null, owner: null, born: "2020-05-17", nickname: null, tags: null, mood: happy }] }
+    result: [{ kind: pet, name: Mia, size: null, owner: null, born: "2020-05-17", nickname: null, tags: null, mood: happy }]
+    skip: { typescript-fetch: "null and absent are one to it for an optional nullable array" }
+  - name: contentMediaType file and multipart arrays
+    op: uploadPhoto
+    args: { id: "1", file: { $file: { name: p.png, base64: iVBORw== } }, caption: hi, tags: [a, b], labels: [x, y] }
+    request: { body: { file: [{ filename: p.png, base64: iVBORw== }], caption: [hi], tags: [a, b], labels: ["x,y"] } }
+    response: { status: 204 }
+    skip: { typescript-fetch: "a multipart array goes comma-joined in one part" }
