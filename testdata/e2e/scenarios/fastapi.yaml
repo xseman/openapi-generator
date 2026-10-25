@@ -77,12 +77,11 @@ cases:
     op: echoLiterals
     args: { body: { retry: 0, pin: x, order: null, mode: 1, size: 50 } }
     result: { retry: 0, pin: x, order: null, mode: 1, tag: a, size: 50 }
-    skip: { go-fetch: "an enum without a type (members of two JSON types) is a Go string: a number can be neither sent nor decoded" }
   - name: literals, null as an enum member
     op: echoLiterals
     args: { body: { retry: 1, pin: null, order: desc, tag: null } }
     result: { retry: 1, pin: null, order: desc, tag: null, mode: auto, size: 25 }
-    skip: { typescript-fetch: "an explicit null of an optional nullable enum goes out as absent, so the server applies its default", go-fetch: "an enum without a type is a Go string (no number); enum [x, null] has no null: required sends \"\", optional drops it" }
+    skip: { typescript-fetch: "an explicit null of an optional nullable enum goes out as absent, so the server applies its default" }
   - name: required nullables all null, optional nullables left out
     op: echoNulls
     args: { body: { note: null, due: null, color: null, dims: null, lines: null, payment: null } }
@@ -129,7 +128,7 @@ cases:
       span: "-PT1.5S"
       days: ["2024-01-31", "2024-12-31"]
       seen: { a: "2024-03-01T10:00:00Z" }
-    skip: { typescript-fetch: "a naive date-time is read as local time and sent in UTC with Z (422 timezone_naive)", go-fetch: "a time.Time holds no naive date-time: it can neither send nor decode one" }
+    skip: { typescript-fetch: "a naive date-time is read as local time and sent in UTC with Z (422 timezone_naive)" }
   - name: an offset on a naive field is refused by the server
     op: echoStamps
     args: { body: { naive: "2024-03-01T10:00:00Z", aware: "2024-03-01T10:00:00Z", clock: "10:00:00", span: PT0S } }
@@ -138,7 +137,7 @@ cases:
     op: stampsQuery
     args: { days: ["2024-01-31", "2024-02-29"], since: "2024-03-01T10:00:00" }
     result: { naive: "2024-03-01T10:00:00", aware: "2024-03-01T10:00:00Z", clock: "13:45:30.250000", span: "-PT1.5S", days: ["2024-01-31", "2024-02-29"] }
-    skip: { typescript-fetch: "a date array in the query goes out as Date.toString() (Wed Jan 31 2024 ...); a naive date-time as UTC with Z", go-fetch: "a time.Time holds no naive date-time: it can neither send nor decode one" }
+    skip: { typescript-fetch: "a date array in the query goes out as Date.toString() (Wed Jan 31 2024 ...); a naive date-time as UTC with Z" }
   - name: containers, empty and null
     op: echoContainers
     args:
@@ -506,17 +505,14 @@ cases:
     op: clashLocations
     args: { tenant: acme, item_id: 7, Item-Id: h-7, Version: "2", version: 3 }
     result: { tenant: acme, path: 7, header: h-7, hversion: "2", qversion: 3 }
-    skip: { typescript-fetch: "parameters of one camelCase name (item_id and Item-Id, Version and version) collapse into one field: the parser's deduplicateParams keys on the name, so the other is never sent", go-fetch: "parameters of one camelCase name (item_id and Item-Id, Version and version) collapse into one field: the parser's deduplicateParams keys on the name, so the other is never sent" }
   - name: a snake and a camel alias of one query parameter
     op: clashAliases
     args: { tenant: acme, sort_by: a, sortBy: b }
     result: { sort_by: a, sortBy: b }
-    skip: { typescript-fetch: "sort_by and sortBy collapse into one field (parser deduplicateParams): one is never sent", go-fetch: "sort_by and sortBy collapse into one field (parser deduplicateParams): one is never sent" }
   - name: a query parameter and a form field of one camel name
     op: clashForm
     args: { tenant: acme, folder_name: q, folderName: f }
     result: { query: q, form: f }
-    skip: { typescript-fetch: "a query parameter and a form field of one camel name collapse into one (parser deduplicateParams)", go-fetch: "a query parameter and a form field of one camel name collapse into one (parser deduplicateParams)" }
   - name: query parameters named like a client's locals
     op: clashLocals
     args: { url: "https://x.example/?a=1", headers: h, path: p, query: q }
