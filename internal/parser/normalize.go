@@ -154,6 +154,13 @@ func (p *Parser) normalizeSchemaRef(ref *openapi3.SchemaRef, seen map[*openapi3.
 		}
 	}
 
+	// A member that takes null makes its union take it too.
+	for _, m := range slices.Concat(s.OneOf, s.AnyOf) {
+		if m.Value != nil && m.Value.Nullable {
+			s.Nullable = true
+		}
+	}
+
 	for _, prop := range s.Properties {
 		p.normalizeSchemaRef(prop, seen)
 	}

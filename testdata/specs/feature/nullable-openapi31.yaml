@@ -2,7 +2,7 @@ openapi: 3.1.0
 info:
   title: OpenAPI 3.1 nullability
   version: 1.0.0
-  description: The 3.1 spellings of null (a null member of anyOf/oneOf, a type list with null) and of a binary string (contentMediaType), and of a single value (const) or a choice of them, a null among enum values, as FastAPI and pydantic write them; multipart arrays, exploded by default.
+  description: The 3.1 spellings of null (a null member of anyOf/oneOf, a type list with null) and of a binary string (contentMediaType), and of a single value (const) or a choice of them, a null among enum values, a union with a member that takes null, as FastAPI and pydantic write them; multipart arrays, exploded by default.
 paths:
   /pets:
     get:
@@ -89,5 +89,7 @@ components:
         tag:
           type: string
           enum: [a, null]
+        expires:
+          oneOf: [{ type: [string, "null"], format: date }, { type: integer }]
     MaybeName:
       anyOf: [{ type: string }, { type: "null" }]
