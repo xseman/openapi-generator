@@ -1,0 +1,9 @@
+# The FastAPI backend streams with \n line ends; these cases the mock serves.
+spec: ../../specs/feature/responses-stream.yaml
+skip: { dart-fetch: "does not compile: lib/src/apis/default_api.dart:70: Expected an identifier." }
+cases:
+  - name: server-sent events with CRLF line ends, an id that stays
+    op: rawEvents
+    # offSpec: the validator reads no text/event-stream
+    response: { header: { Content-Type: text/event-stream }, text: "event: tick\r\nid: 1\r\ndata: a\r\n\r\ndata: b\r\n\r\n", offSpec: true }
+    result: [{ event: tick, id: "1", data: a }, { id: "1", data: b }]

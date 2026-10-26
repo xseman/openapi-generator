@@ -3,8 +3,8 @@ skip: { dart-fetch: "does not compile: lib/src/apis/default_api.dart:82: Expecte
 cases:
   - name: inline union body, property and items
     op: admit
-    args: { id: s1, body: { kind: dog, barkVolume: 1.5 } }
-    request: { path: /shelters/s1/pets, body: { kind: dog, barkVolume: 1.5 } }
-    response: { json: { favourite: { kind: cat, lives: 3 }, location: { lat: 1, lon: 2 }, residents: [{ kind: dog, barkVolume: 2 }] } }
-    result: { favourite: { kind: cat, lives: 3 }, location: { lat: 1, lon: 2 }, residents: [{ kind: dog, barkVolume: 2 }] }
-  - { name: inline union response, op: randomPet, response: { json: { kind: cat, lives: 9 } }, result: { kind: cat, lives: 9 } }
+    args: { id: s1, body: { pet_kind: dog, bark_volume: 1.5 } }
+    request: { path: /shelters/s1/pets, body: { pet_kind: dog, bark_volume: 1.5 } }
+    response: { json: { favourite: { pet_kind: cat, lives: 3 }, location: { lat: 1, lon: 2 }, residents: [{ pet_kind: dog, bark_volume: 2 }] } }
+    result: { favourite: { pet_kind: cat, lives: 3 }, location: { lat: 1, lon: 2 }, residents: [{ pet_kind: dog, bark_volume: 2 }] }
+  - { name: inline union response, op: randomPet, response: { json: { pet_kind: cat, lives: 9 } }, result: { pet_kind: cat, lives: 9 } }

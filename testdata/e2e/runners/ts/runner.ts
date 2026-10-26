@@ -276,13 +276,35 @@ function fits(decls: Record<string, Decl>, t: string, v: any, at: string, scalar
     return "";
 }
 
-const nullable = (t: string): string => t.replace(/ \| null$/, "").replace(/ \| undefined$/, "");
+// nullable is type t without its null and undefined members.
+const nullable = (t: string): string =>
+    members(t)
+        .filter((x) => x !== "null" && x !== "undefined")
+        .join(" | ");
 
 // fromWire turns a wire value into what the client takes for type t.
-function fromWire(client: any, t: string, v: any): any {
+function fromWire(client: any, decls: Record<string, Decl>, t: string, v: any): any {
     t = nullable(t);
     if (v === null || v === undefined) {
         return v;
+    }
+
+    // An inline union: the member model whose JSON names hold all of the
+    // value's keys, else the value as the scenario has it.
+    const alts = members(t).filter((x) => x !== "null" && x !== "undefined");
+    if (alts.length > 1) {
+        const wire = (x: string): string[] => {
+            const out: string[] = [];
+            for (let d: Decl | undefined = decls[x]; d?.fields; d = d.base ? decls[d.base] : undefined) {
+                out.push(...Object.keys(d.fields).map((f) => d!.wire?.[f] ?? f));
+            }
+
+            return out;
+        };
+
+        const alt = typeof v === "object" && !Array.isArray(v) ? alts.find((x) => decls[x]?.fields && Object.keys(v).every((k) => wire(x).includes(k))) : undefined;
+
+        return alt === undefined ? v : fromWire(client, decls, alt, v);
     }
 
     if (v && typeof v === "object" && (v.$file || v.$bytes)) {
@@ -294,11 +316,11 @@ function fromWire(client: any, t: string, v: any): any {
 
     let m: RegExpExecArray | null;
     if ((m = /^Array<(.+)>$/.exec(t)) && Array.isArray(v)) {
-        return v.map((x) => fromWire(client, m![1], x));
+        return v.map((x) => fromWire(client, decls, m![1], x));
     }
 
     if ((m = /^\{ \[key: string\]: (.+); \}$/.exec(t)) && typeof v === "object") {
-        return Object.fromEntries(Object.entries(v).map(([k, x]) => [k, fromWire(client, m![1], x)]));
+        return Object.fromEntries(Object.entries(v).map(([k, x]) => [k, fromWire(client, decls, m![1], x)]));
     }
 
     // A day as its users make one: local midnight.
@@ -317,6 +339,14 @@ async function toWire(client: any, decls: Record<string, Decl>, t: string, v: an
     t = nullable(t);
     if (v === null || v === undefined) {
         return v ?? null;
+    }
+
+    // An inline union has no ToJSON: its member the value is one of does.
+    const alts = members(t).filter((x) => x !== "null" && x !== "undefined");
+    if (alts.length > 1) {
+        const alt = alts.find((x) => shape(decls, x, v, "", true) === "");
+
+        return alt === undefined ? v : toWire(client, decls, alt, v, day);
     }
 
     if (v instanceof Blob) {
@@ -474,7 +504,7 @@ async function callCase(client: Client, info: ReturnType<typeof methods>, decls:
         }
 
         used.add(name);
-        params[field] = fromWire(client.module, type, args[name]);
+        params[field] = fromWire(client.module, decls, type, args[name]);
 
         const bad = shape(decls, type, params[field], "arg " + name, false);
         if (bad) {

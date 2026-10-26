@@ -277,7 +277,7 @@ func valueCases(item *openapi3.PathItem, op *openapi3.Operation, is31 bool) ([]k
 				break
 			}
 
-			k := kase{Name: fmt.Sprintf("response %d %s", status, v.name), Op: op.OperationID, Args: mustJSON(args), Response: r, Exact: true, Request: mustJSON(sent)}
+			k := kase{Name: fmt.Sprintf("%s response %d %s", op.OperationID, status, v.name), Op: op.OperationID, Args: mustJSON(args), Response: r, Exact: true, Request: mustJSON(sent)}
 			if isResult {
 				k.Result = v.raw
 			} else {
@@ -304,7 +304,7 @@ func valueCases(item *openapi3.PathItem, op *openapi3.Operation, is31 bool) ([]k
 		}
 
 		cases = append(cases, kase{
-			Name: "request " + b.name, Op: op.OperationID, Args: mustJSON(a), Exact: true,
+			Name: op.OperationID + " request " + b.name, Op: op.OperationID, Args: mustJSON(a), Exact: true,
 			Request: mustJSON(want), Response: answer,
 		})
 	}

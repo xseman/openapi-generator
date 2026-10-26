@@ -2,7 +2,7 @@ openapi: 3.0.3
 info:
   title: Inline oneOf
   version: 1.0.0
-  description: oneOf and anyOf written in place, in a property, an array item, a request body and a response, not as a schema of their own; the members tell themselves apart by a kind of one value, or are objects of their own.
+  description: oneOf and anyOf written in place, in a property, an array item, a request body and a response, not as a schema of their own; the members tell themselves apart by a pet_kind of one value, or are objects of their own.
 paths:
   /shelters/{id}/pets:
     post:
@@ -42,16 +42,16 @@ components:
   schemas:
     Cat:
       type: object
-      required: [kind, lives]
+      required: [pet_kind, lives]
       properties:
-        kind: { type: string, enum: [cat] }
+        pet_kind: { type: string, enum: [cat] }
         lives: { type: integer }
     Dog:
       type: object
-      required: [kind, barkVolume]
+      required: [pet_kind, bark_volume]
       properties:
-        kind: { type: string, enum: [dog] }
-        barkVolume: { type: number }
+        pet_kind: { type: string, enum: [dog] }
+        bark_volume: { type: number }
     Shelter:
       type: object
       required: [favourite]
