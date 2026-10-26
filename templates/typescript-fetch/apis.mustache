@@ -279,6 +279,12 @@ export class {{classname}} extends runtime.BaseAPI {
             throw new runtime.ResponseError(response, `HTTP ${response.status}: another body than the result's`);
         }
 {{/vendorExtensions.x-ts-other-2xx}}
+{{#vendorExtensions.x-ts-no-body}}
+        // A 2xx without a body (a 204 beside a 200, the answer to a HEAD) is null.
+        if ({{{.}}}.includes(response.status)) {
+            return { raw: response, value: async () => null } as any;
+        }
+{{/vendorExtensions.x-ts-no-body}}
 
 {{#returnType}}
 {{#vendorExtensions.x-ts-stream}}

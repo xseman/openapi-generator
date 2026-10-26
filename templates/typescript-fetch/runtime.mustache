@@ -634,13 +634,8 @@ export interface ResponseTransformer<T> {
 export class JSONApiResponse<T> {
     constructor(public raw: Response, private transformer: ResponseTransformer<T> = (jsonValue: any) => jsonValue) {}
 
-    /**
-     * The body parsed and converted; null when there is none, as a 204 next to a 200 with a body
-     * or the answer to a HEAD has.
-     */
     async value(): Promise<T> {
-        const text = await this.raw.text();
-        return text === "" ? (null as T) : this.transformer(JSON.parse(text));
+        return this.transformer(await this.raw.json());
     }
 }
 

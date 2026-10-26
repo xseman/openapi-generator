@@ -637,8 +637,9 @@ func (g *FetchGenerator) stream(op *codegen.CodegenOperation, from *converter) {
 // may come as text (a string, or any body the server does not send as
 // JSON), x-ts-any when it may also come as a file (an any the server
 // sends as an image or as octets), x-ts-other-2xx the statuses whose body is of another type than the
-// result, isResponseOptional when a 2xx comes without a body (a 204 beside
-// a 200, the answer to a HEAD), which reads as null.
+// result, isResponseOptional and x-ts-no-body the statuses that come without
+// a body (a 204 beside a 200, every 2xx of a HEAD), which read as null. An
+// empty body of any other status stays a parse error.
 func (g *FetchGenerator) responseKinds(op *codegen.CodegenOperation) {
 	if op.ReturnType == "" || op.VendorExtensions["x-ts-stream"] != nil {
 		return
@@ -646,9 +647,8 @@ func (g *FetchGenerator) responseKinds(op *codegen.CodegenOperation) {
 
 	op.VendorExtensions["x-ts-text"] = op.ReturnType == "string" || op.ReturnType == "any"
 	op.VendorExtensions["x-ts-any"] = op.ReturnType == "any"
-	op.IsResponseOptional = op.HttpMethod == "HEAD"
 
-	var other []string
+	var other, none []string
 
 	for _, r := range op.Responses {
 		if _, err := strconv.Atoi(r.Code); err != nil || !r.Is2xx {
@@ -656,8 +656,8 @@ func (g *FetchGenerator) responseKinds(op *codegen.CodegenOperation) {
 		}
 
 		switch {
-		case r.DataType == "":
-			op.IsResponseOptional = true
+		case r.DataType == "" || op.HttpMethod == "HEAD":
+			none = append(none, r.Code)
 		case op.ReturnType != "any" && r.DataType != op.ReturnType && (r.ReturnProperty == nil || !reflect.DeepEqual(r.ReturnProperty, op.ReturnProperty)):
 			other = append(other, r.Code)
 		}
@@ -665,6 +665,11 @@ func (g *FetchGenerator) responseKinds(op *codegen.CodegenOperation) {
 
 	if len(other) > 0 {
 		op.VendorExtensions["x-ts-other-2xx"] = "[" + strings.Join(other, ", ") + "]"
+	}
+
+	if len(none) > 0 {
+		op.IsResponseOptional = true
+		op.VendorExtensions["x-ts-no-body"] = "[" + strings.Join(none, ", ") + "]"
 	}
 }
 

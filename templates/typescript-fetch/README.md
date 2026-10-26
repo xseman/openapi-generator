@@ -225,7 +225,8 @@ of lists of models, a map of dates, a map of lists of models.
 
 | Response                                             | Result                                                                                                 |
 | ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| a 2xx without a body (a 204, a HEAD)                 | `null`                                                                                                 |
+| a 2xx the spec declares without a body (a 204), HEAD | `null`                                                                                                 |
+| an empty body where the spec declares one            | a JSON parse error, not `null`                                                                         |
 | a 2xx of another body than the result's              | a `ResponseError`, its body unread                                                                     |
 | a string or `any` the server sends as text           | the text; a number or boolean sent as text is parsed; an `any` sent as an image or as octets is a file |
 | JSON Lines, `text/event-stream` (3.2's `itemSchema`) | `AsyncIterable<T>`, of `ServerSentEvent<T>` (`data`, `event`, `id`, `retry`) for events                |
