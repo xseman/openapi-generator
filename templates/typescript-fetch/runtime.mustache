@@ -856,7 +856,7 @@ async function* serverSentEvents(raw: Response, transformer: (value: any) => any
  * an image or as octets is a file, not text.
  */
 export function isTextMime(mime: string | null | undefined): boolean {
-    return !mime || /^text\/|json|xml|yaml|csv|javascript|x-www-form-urlencoded/i.test(mime);
+    return !mime || /^text\/|[/+-](json|ndjson|jsonl|xml|yaml|csv|javascript|x-www-form-urlencoded)\b/i.test(mime);
 }
 
 export class TextApiResponse {

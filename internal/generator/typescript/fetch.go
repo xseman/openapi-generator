@@ -200,6 +200,14 @@ func (g *FetchGenerator) convertVars(cm *codegen.CodegenModel, models []*codegen
 	for _, v := range cm.Vars {
 		textBinary(v)
 
+		// A $ref to a union is typed as the union model, not its members
+		// joined: the model is what converts it, its tag included.
+		if v.Ref != "" && !v.IsContainer {
+			if m := g.modelOf(v); m != "" && m != v.Datatype {
+				v.DatatypeWithEnum, from.used[m] = m, true
+			}
+		}
+
 		v.VendorExtensions = own(v.VendorExtensions)
 
 		v.VendorExtensions["x-ts-from-json"] = key(v.Name) + ": " + from.varFromJSON(v)
@@ -243,20 +251,8 @@ func (g *FetchGenerator) convertVars(cm *codegen.CodegenModel, models []*codegen
 // and x-ts-alias-to the conversions. A property of that schema is typed as
 // the value already; a body or a result is typed as the model.
 func (g *FetchGenerator) alias(cm *codegen.CodegenModel) {
-	if cm.HasVars || cm.HasOneOf || cm.IsEnum || len(cm.AllOf) > 0 || len(cm.AnyOf) > 0 || cm.Discriminator != nil {
-		return
-	}
-
-	var value *codegen.CodegenProperty
-
-	switch {
-	case cm.IsArray && cm.Items != nil:
-		value = &codegen.CodegenProperty{IsArray: true, IsContainer: true, Items: cm.Items, DataType: "Array<" + cm.Items.DataType + ">"}
-	case cm.AdditionalProperties != nil:
-		value = &codegen.CodegenProperty{IsMap: true, IsContainer: true, Items: cm.AdditionalProperties, DataType: "{ [key: string]: " + cm.AdditionalProperties.DataType + "; }"}
-	case cm.IsPrimitiveType && cm.DataType != "" && cm.DataType != "any":
-		value = &codegen.CodegenProperty{DataType: cm.DataType, IsDateType: cm.IsDate && cm.DataType == "Date", IsDateTimeType: cm.IsDateTime && cm.DataType == "Date"}
-	default:
+	value := aliasOf(cm)
+	if value == nil {
 		return
 	}
 
@@ -277,6 +273,25 @@ func (g *FetchGenerator) alias(cm *codegen.CodegenModel) {
 
 	delete(from.used, cm.Classname)
 	cm.Imports = addImports(cm.Imports, from.used)
+}
+
+// aliasOf is the value cm stands for when it only names an array, a map or
+// a scalar, or nil.
+func aliasOf(cm *codegen.CodegenModel) *codegen.CodegenProperty {
+	if cm.HasVars || cm.HasOneOf || cm.IsEnum || len(cm.AllOf) > 0 || len(cm.AnyOf) > 0 || cm.Discriminator != nil {
+		return nil
+	}
+
+	switch {
+	case cm.IsArray && cm.Items != nil:
+		return &codegen.CodegenProperty{IsArray: true, IsContainer: true, Items: cm.Items, DataType: "Array<" + cm.Items.DataType + ">"}
+	case cm.AdditionalProperties != nil:
+		return &codegen.CodegenProperty{IsMap: true, IsContainer: true, Items: cm.AdditionalProperties, DataType: "{ [key: string]: " + cm.AdditionalProperties.DataType + "; }"}
+	case cm.IsPrimitiveType && cm.DataType != "" && cm.DataType != "any":
+		return &codegen.CodegenProperty{DataType: cm.DataType, IsDateType: cm.IsDate && cm.DataType == "Date", IsDateTimeType: cm.IsDateTime && cm.DataType == "Date"}
+	}
+
+	return nil
 }
 
 // descendants are the models that extend cm through allOf, at any depth.
@@ -382,7 +397,16 @@ func (g *FetchGenerator) fitMembers(cm *codegen.CodegenModel) {
 			continue
 		}
 
-		members = append(members, fit{parts: parts})
+		f, ok := g.fitOf(parts[0])
+		if len(parts) > 1 {
+			f, ok = fit{parts: parts}, !slices.ContainsFunc(parts, func(m *codegen.CodegenModel) bool { return aliasOf(m) != nil })
+		}
+
+		if !ok {
+			continue
+		}
+
+		members = append(members, f)
 
 		for _, m := range parts {
 			if !slices.Contains(cm.OneOfModels, m.Classname) {

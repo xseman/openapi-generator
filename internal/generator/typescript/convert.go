@@ -193,7 +193,13 @@ func (c *converter) bestFit(members []*codegen.CodegenProperty, x string) string
 			return x
 		}
 
-		models = append(models, fit{parts: []*codegen.CodegenModel{model}, array: array})
+		f, ok := c.g.fitOf(model)
+		if !ok || array && f.array {
+			continue
+		}
+
+		f.array = f.array || array
+		models = append(models, f)
 	}
 
 	if len(models) == 0 {
@@ -208,6 +214,24 @@ func (c *converter) bestFit(members []*codegen.CodegenProperty, x string) string
 type fit struct {
 	parts []*codegen.CodegenModel
 	array bool
+}
+
+// fitOf is model m as a member for bestFit: a model as itself, an alias of
+// a list of models as that list; false for another alias (a scalar or a
+// map), whose value bestFit cannot tell.
+func (g *FetchGenerator) fitOf(m *codegen.CodegenModel) (fit, bool) {
+	v := aliasOf(m)
+	if v == nil {
+		return fit{parts: []*codegen.CodegenModel{m}}, true
+	}
+
+	if v.IsArray && v.Items != nil {
+		if item := g.byName[g.modelOf(v.Items)]; item != nil && aliasOf(item) == nil {
+			return fit{parts: []*codegen.CodegenModel{item}, array: true}, true
+		}
+	}
+
+	return fit{}, false
 }
 
 // fits lists members for the runtime's bestFit: each one's required keys,
@@ -298,9 +322,11 @@ func pinned(m *codegen.CodegenModel, key string, to bool) *pin {
 		var text []string
 
 		for _, value := range values {
-			switch value.(type) {
-			case string, float64, int, int64:
-				text = append(text, fmt.Sprint(value))
+			switch v := value.(type) {
+			case float64: // as JavaScript writes it: 1000000, not 1e+06
+				text = append(text, strconv.FormatFloat(v, 'f', -1, 64))
+			case string, int, int64:
+				text = append(text, fmt.Sprint(v))
 			}
 		}
 

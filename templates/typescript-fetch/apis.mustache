@@ -324,7 +324,7 @@ export class {{classname}} extends runtime.BaseAPI {
     {{^useSingleRequestParameter}}
     async {{nickname}}({{#allParams}}{{paramName}}{{^required}}?{{/required}}: {{#isEnum}}{{{datatypeWithEnum}}}{{/isEnum}}{{^isEnum}}{{{dataType}}}{{#isNullable}} | null{{/isNullable}}{{/isEnum}}, {{/allParams}}initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<{{>apisReturnType}}{{#returnType}}{{#isResponseOptional}} | null | undefined {{/isResponseOptional}}{{/returnType}}{{^returnType}}void{{/returnType}}> {
         {{#returnType}}
-        // No local variable: a parameter may be named like one.
+        {{! No local variable: a parameter may be named like one. }}
         return await (await this.{{nickname}}Raw({{#hasAllParams}}{ {{#allParams}}{{paramName}}: {{paramName}}{{^-last}}, {{/-last}}{{/allParams}} }, {{/hasAllParams}}initOverrides)).value();
         {{/returnType}}
         {{^returnType}}

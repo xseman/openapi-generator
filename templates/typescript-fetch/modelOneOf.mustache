@@ -31,7 +31,7 @@ export function {{classname}}FromJSONTyped(json: any, ignoreDiscriminator: boole
     switch (String(json["{{discriminator.propertyBaseName}}"])) {
 {{#discriminator.mappedModels}}
             case "{{mappingName}}":
-                    return {{modelName}}FromJSONTyped(json, true);
+                    return Object.assign({ "{{discriminator.propertyName}}": json["{{discriminator.propertyBaseName}}"] }, {{modelName}}FromJSONTyped(json, true));
 {{/discriminator.mappedModels}}
             default:
                     return json;
@@ -161,10 +161,10 @@ export function {{classname}}ToJSONTyped(value?: {{classname}} | null, ignoreDis
             return value;
     }
 {{#discriminator}}
-    switch (String(value["{{discriminator.propertyName}}"])) {
+    switch (String((value as any)["{{discriminator.propertyName}}"])) {
 {{#discriminator.mappedModels}}
             case "{{mappingName}}":
-                    return {{modelName}}ToJSON(value);
+                    return Object.assign({ "{{discriminator.propertyBaseName}}": (value as any)["{{discriminator.propertyName}}"] }, {{modelName}}ToJSON(value));
 {{/discriminator.mappedModels}}
             default:
                     return value;
