@@ -52,6 +52,7 @@ type kase struct {
 	Response *mockResponse     `json:"response"`
 	Result   json.RawMessage   `json:"result"` // null is a null result, absent is unchecked
 	Error    json.RawMessage   `json:"error"`
+	Fails    bool              `json:"fails"` // the client cannot read the answer: the call fails, not as an HTTP error
 
 	// Exact compares the result, the error and the request's body with no
 	// other keys allowed: a generated case (values_test.go) sets it.

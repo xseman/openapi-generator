@@ -61,6 +61,7 @@ cases:
     response: { status: 200, json: { id: "42" } }   # mock only; or text, base64, header
     result: { id: "42" }              # the client's result as wire JSON; null is null
     error: { status: 404, model: {...}, body: "..." }
+    fails: true                       # the client cannot read the answer (not an HTTP error)
     save: { token: access_token }     # ${token} in later args and auth
     skip: { go-fetch: why it fails }  # a known gap; fails once it passes
 ```

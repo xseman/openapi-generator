@@ -310,6 +310,11 @@ func caseDiffs(k kase, o outcome, m *mock, i int, r rules) []string {
 	}
 
 	switch {
+	case k.Fails:
+		if o.Fail == "" {
+			diffs = append(diffs, "call: want it to fail, got result "+string(o.Result))
+		}
+
 	case o.Fail != "":
 		diffs = append(diffs, "call failed: "+o.Fail)
 	case k.Error != nil:
