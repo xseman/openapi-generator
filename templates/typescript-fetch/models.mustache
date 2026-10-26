@@ -13,8 +13,14 @@
 
 {{/hasOneOf}}
 {{^hasOneOf}}
+{{#vendorExtensions.x-ts-alias}}
+{{>modelAlias}}
+
+{{/vendorExtensions.x-ts-alias}}
+{{^vendorExtensions.x-ts-alias}}
 {{>modelGeneric}}
 
+{{/vendorExtensions.x-ts-alias}}
 {{/hasOneOf}}
 {{/isEnum}}
 {{/model}}

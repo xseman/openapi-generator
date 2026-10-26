@@ -92,7 +92,7 @@ func modelUsesDateHelpers(model *generator.CodegenModel) bool {
 	}
 
 	for _, ext := range exts {
-		for _, k := range []string{"x-ts-from-json", "x-ts-to-json", "x-ts-rest-from", "x-ts-rest-to"} {
+		for _, k := range []string{"x-ts-from-json", "x-ts-to-json", "x-ts-rest-from", "x-ts-rest-to", "x-ts-alias-from", "x-ts-alias-to"} {
 			if e, _ := ext[k].(string); strings.Contains(e, "parseDate") || strings.Contains(e, "serializeDate") {
 				return true
 			}

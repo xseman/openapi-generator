@@ -170,6 +170,27 @@ func (p *Parser) applyMemberType(prop *codegen.CodegenProperty, ref *openapi3.Sc
 	return true
 }
 
+// applyComposition types prop as the member, or the union or intersection
+// of the members, its allOf, oneOf or anyOf names; false when it has none.
+func (p *Parser) applyComposition(prop *codegen.CodegenProperty, schema *openapi3.Schema) bool {
+	switch {
+	case len(schema.AllOf) == 1:
+		return p.applyMemberType(prop, schema.AllOf[0])
+	case len(schema.AllOf) > 1:
+		return p.applyCompositeType(prop, schema.AllOf, " & ")
+	case len(schema.OneOf) == 1:
+		return p.applyMemberType(prop, schema.OneOf[0])
+	case len(schema.OneOf) > 1:
+		return p.applyCompositeType(prop, schema.OneOf, " | ")
+	case len(schema.AnyOf) == 1:
+		return p.applyMemberType(prop, schema.AnyOf[0])
+	case len(schema.AnyOf) > 1:
+		return p.applyCompositeType(prop, schema.AnyOf, " | ")
+	}
+
+	return false
+}
+
 // applyCompositeType builds a union ("|") or intersection ("&") type from the
 // composition members and registers the member models for import. No single
 // (de)serializer exists for a union/intersection, so the value is passed through.
@@ -371,6 +392,8 @@ func (p *Parser) schemaToProperty(name string, schema *openapi3.Schema, required
 
 	case "object":
 		switch {
+		case len(schema.Properties) == 0 && len(schema.AllOf) > 1 && p.applyComposition(prop, schema):
+			// type: object over an allOf of models is their intersection.
 		case len(schema.Properties) > 0:
 			// For inline objects with properties, we don't generate a model
 			// so treat them as "any" for simplicity
@@ -486,24 +509,7 @@ func (p *Parser) schemaToProperty(name string, schema *openapi3.Schema, required
 	default:
 		// No explicit "type": resolve composition (allOf/oneOf/anyOf) to the
 		// member type(s) that are available instead of collapsing to `any`.
-		resolved := false
-
-		switch {
-		case len(schema.AllOf) == 1:
-			resolved = p.applyMemberType(prop, schema.AllOf[0])
-		case len(schema.AllOf) > 1:
-			resolved = p.applyCompositeType(prop, schema.AllOf, " & ")
-		case len(schema.OneOf) == 1:
-			resolved = p.applyMemberType(prop, schema.OneOf[0])
-		case len(schema.OneOf) > 1:
-			resolved = p.applyCompositeType(prop, schema.OneOf, " | ")
-		case len(schema.AnyOf) == 1:
-			resolved = p.applyMemberType(prop, schema.AnyOf[0])
-		case len(schema.AnyOf) > 1:
-			resolved = p.applyCompositeType(prop, schema.AnyOf, " | ")
-		}
-
-		if !resolved {
+		if resolved := p.applyComposition(prop, schema); !resolved {
 			prop.DataType = p.getSchemaType(schemaType, schema.Format)
 			if prop.DataType != "any" && prop.DataType != "" {
 				prop.IsModel = true

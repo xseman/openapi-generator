@@ -1,0 +1,53 @@
+{{! A schema that only names an array, a map or a scalar: a type alias that converts as its value does. }}
+{{^withoutRuntimeChecks}}
+import {
+    bestFit,
+    discriminate,
+    mapValues,
+{{#usesDateHelpers}}
+    parseDate,
+    parseDateTime,
+    serializeDate,
+    serializeDateTime,
+{{/usesDateHelpers}}
+} from '../runtime{{importFileExtension}}';
+{{/withoutRuntimeChecks}}
+{{#hasImports}}
+{{#tsImports}}
+import type { {{{classname}}} } from './{{filename}}{{importFileExtension}}';
+{{^withoutRuntimeChecks}}
+import {
+    {{classname}}FromJSON,
+    {{classname}}ToJSON,
+} from './{{filename}}{{importFileExtension}}';
+{{/withoutRuntimeChecks}}
+{{/tsImports}}
+{{/hasImports}}
+
+/**{{#unescapedDescription}}
+ * {{#lambda.indented_star_1}}{{{.}}}{{/lambda.indented_star_1}}{{/unescapedDescription}}
+ * @export
+ */
+export type {{classname}} = {{{vendorExtensions.x-ts-alias}}};
+{{^withoutRuntimeChecks}}
+
+export function instanceOf{{classname}}(value: any): value is {{classname}} {
+    return true;
+}
+
+export function {{classname}}FromJSON(json: any): {{classname}} {
+    return {{classname}}FromJSONTyped(json, false);
+}
+
+export function {{classname}}FromJSONTyped(json: any, ignoreDiscriminator: boolean): {{classname}} {
+    return json == null ? json : {{{vendorExtensions.x-ts-alias-from}}};
+}
+
+export function {{classname}}ToJSON(value?: {{classname}} | null): any {
+    return {{classname}}ToJSONTyped(value, false);
+}
+
+export function {{classname}}ToJSONTyped(value?: {{classname}} | null, ignoreDiscriminator: boolean = false): any {
+    return value == null ? value : {{{vendorExtensions.x-ts-alias-to}}};
+}
+{{/withoutRuntimeChecks}}

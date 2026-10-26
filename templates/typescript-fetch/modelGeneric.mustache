@@ -137,8 +137,6 @@ export function {{classname}}ToJSONTyped(value?: {{#hasReadOnly}}Omit<{{classnam
             case "{{mappingName}}":
                 return {{modelName}}ToJSONTyped(value as {{modelName}}, ignoreDiscriminator);
         {{/discriminator.mappedModels}}
-            default:
-                return value;
         }
     }
     {{/discriminator}}

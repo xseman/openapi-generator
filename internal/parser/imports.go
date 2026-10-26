@@ -2,6 +2,7 @@ package parser
 
 import (
 	"sort"
+	"strings"
 
 	"github.com/xseman/openapi-generator/internal/codegen"
 )
@@ -43,10 +44,13 @@ func (p *Parser) collectImports(model *codegen.CodegenModel) []string {
 	// AdditionalProperties, which is otherwise never visited above.
 	collectPropertyImports(model.AdditionalProperties, model.Classname, imports)
 
-	for _, ref := range model.OneOf {
-		// Skip self-references to avoid circular imports
-		if ref != model.Classname && !isPrimitiveType(ref) {
-			imports[ref] = true
+	for _, member := range model.OneOf {
+		// Each model of an intersection; skip self-references to avoid
+		// circular imports
+		for ref := range strings.SplitSeq(member, " & ") {
+			if ref != model.Classname && !isPrimitiveType(ref) {
+				imports[ref] = true
+			}
 		}
 	}
 

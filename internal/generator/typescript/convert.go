@@ -170,7 +170,7 @@ func (c *converter) discriminated(members []*codegen.CodegenProperty, x string) 
 // and the fewest it does not. A scalar member (Stripe's id next to the
 // object it expands to) takes a value that is no object.
 func (c *converter) bestFit(members []*codegen.CodegenProperty, x string) string {
-	var models []*codegen.CodegenModel
+	var models [][]*codegen.CodegenModel
 
 	for _, m := range members {
 		model := c.g.byName[c.g.modelOf(m)]
@@ -182,7 +182,7 @@ func (c *converter) bestFit(members []*codegen.CodegenProperty, x string) string
 			return x
 		}
 
-		models = append(models, model)
+		models = append(models, []*codegen.CodegenModel{model})
 	}
 
 	if len(models) == 0 {
@@ -192,49 +192,69 @@ func (c *converter) bestFit(members []*codegen.CodegenProperty, x string) string
 	return c.rt + "bestFit(" + x + ", " + c.fits(models) + ") ?? " + x
 }
 
-// fits lists models for the runtime's bestFit: each one's required keys,
-// its keys and its converter, in JSON (from) or in TypeScript (to).
-func (c *converter) fits(models []*codegen.CodegenModel) string {
-	cases := make([]string, 0, len(models))
+// fits lists members for the runtime's bestFit: each one's required keys,
+// its keys and its converter, in JSON (from) or in TypeScript (to). A
+// member is a model, or the intersection of several (an allOf), converted
+// by each and merged.
+func (c *converter) fits(members [][]*codegen.CodegenModel) string {
+	cases := make([]string, 0, len(members))
 
-	for _, m := range models {
-		var required, known []string
+	for _, parts := range members {
+		var required, known, fns []string
 
-		// A union model declares the keys of its members, none required.
-		vars := m.AllVars
-		if len(vars) == 0 {
-			vars = m.Vars
-		}
+		for _, m := range parts {
+			for _, v := range c.keyVars(m) {
+				name := strconv.Quote(v.BaseName)
+				if c.to {
+					name = strconv.Quote(v.Name)
+				}
 
-		if m.HasOneOf {
-			vars = nil
+				if !slices.Contains(known, name) {
+					known = append(known, name)
+				}
 
-			for _, name := range m.OneOfModels {
-				if member := c.g.byName[name]; member != nil && !member.HasOneOf {
-					for _, v := range member.Vars {
-						vars = append(vars, &codegen.CodegenProperty{Name: v.Name, BaseName: v.BaseName})
-					}
+				if v.Required && !slices.Contains(required, name) {
+					required = append(required, name)
 				}
 			}
+
+			c.used[m.Classname] = true
+			fns = append(fns, m.Classname+c.fn())
 		}
 
-		for _, v := range vars {
-			name := strconv.Quote(v.BaseName)
-			if c.to {
-				name = strconv.Quote(v.Name)
-			}
-
-			known = append(known, name)
-			if v.Required {
-				required = append(required, name)
-			}
+		fn := fns[0]
+		if len(fns) > 1 {
+			fn = "(v: any) => ({ ..." + strings.Join(fns, "(v), ...") + "(v) })"
 		}
 
-		c.used[m.Classname] = true
-		cases = append(cases, "[["+strings.Join(required, ", ")+"], ["+strings.Join(known, ", ")+"], "+m.Classname+c.fn()+"]")
+		cases = append(cases, "[["+strings.Join(required, ", ")+"], ["+strings.Join(known, ", ")+"], "+fn+"]")
 	}
 
 	return "[" + strings.Join(cases, ", ") + "]"
+}
+
+// keyVars are the properties whose keys tell a value of m: its own and
+// inherited ones, or for a union model those of its members, none required.
+func (c *converter) keyVars(m *codegen.CodegenModel) []*codegen.CodegenProperty {
+	if !m.HasOneOf {
+		if len(m.AllVars) > 0 {
+			return m.AllVars
+		}
+
+		return m.Vars
+	}
+
+	var vars []*codegen.CodegenProperty
+
+	for _, name := range m.OneOfModels {
+		if member := c.g.byName[name]; member != nil && !member.HasOneOf {
+			for _, v := range member.Vars {
+				vars = append(vars, &codegen.CodegenProperty{Name: v.Name, BaseName: v.BaseName})
+			}
+		}
+	}
+
+	return vars
 }
 
 type pin struct {

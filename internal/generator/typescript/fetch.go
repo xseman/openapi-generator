@@ -180,6 +180,7 @@ func (g *FetchGenerator) PostProcessModels(models []*codegen.CodegenModel) []*co
 
 	for _, cm := range models {
 		g.processCodeGenModel(cm)
+		g.alias(cm)
 		g.convertVars(cm, models)
 		g.mapDescendants(cm, models)
 		g.fitMembers(cm)
@@ -231,6 +232,41 @@ func (g *FetchGenerator) convertVars(cm *codegen.CodegenModel, models []*codegen
 		cm.VendorExtensions["x-ts-rest-from"] = rest(from, "json", wire)
 		cm.VendorExtensions["x-ts-rest-to"] = rest(to, "value", names)
 	}
+
+	delete(from.used, cm.Classname)
+	cm.Imports = addImports(cm.Imports, from.used)
+}
+
+// alias makes cm, a schema that only names an array, a map or a scalar
+// (`Pets: {type: array, items: Pet}`, `Day: {format: date}`), a type alias
+// that converts as its value does: x-ts-alias is the type, x-ts-alias-from
+// and x-ts-alias-to the conversions. A property of that schema is typed as
+// the value already; a body or a result is typed as the model.
+func (g *FetchGenerator) alias(cm *codegen.CodegenModel) {
+	if cm.HasVars || cm.HasOneOf || cm.IsEnum || len(cm.AllOf) > 0 || len(cm.AnyOf) > 0 || cm.Discriminator != nil {
+		return
+	}
+
+	var value *codegen.CodegenProperty
+
+	switch {
+	case cm.IsArray && cm.Items != nil:
+		value = &codegen.CodegenProperty{IsArray: true, IsContainer: true, Items: cm.Items, DataType: "Array<" + cm.Items.DataType + ">"}
+	case cm.AdditionalProperties != nil:
+		value = &codegen.CodegenProperty{IsMap: true, IsContainer: true, Items: cm.AdditionalProperties, DataType: "{ [key: string]: " + cm.AdditionalProperties.DataType + "; }"}
+	case cm.IsPrimitiveType && cm.DataType != "" && cm.DataType != "any":
+		value = &codegen.CodegenProperty{DataType: cm.DataType, IsDateType: cm.IsDate && cm.DataType == "Date", IsDateTimeType: cm.IsDateTime && cm.DataType == "Date"}
+	default:
+		return
+	}
+
+	from := &converter{g: g, used: map[string]bool{}}
+	to := &converter{g: g, to: true, used: from.used}
+
+	cm.VendorExtensions = own(cm.VendorExtensions)
+	cm.VendorExtensions["x-ts-alias"] = value.DataType
+	cm.VendorExtensions["x-ts-alias-from"] = from.expr(value, "json")
+	cm.VendorExtensions["x-ts-alias-to"] = to.expr(value, "value")
 
 	delete(from.used, cm.Classname)
 	cm.Imports = addImports(cm.Imports, from.used)
@@ -322,13 +358,33 @@ func (g *FetchGenerator) fitMembers(cm *codegen.CodegenModel) {
 		return
 	}
 
-	var members []*codegen.CodegenModel
+	// A member is a model, or the intersection of an allOf ("A & B"), whose
+	// models all import.
+	var members [][]*codegen.CodegenModel
 
-	for _, name := range cm.OneOfModels {
-		if m := g.byName[name]; m != nil {
-			members = append(members, m)
+	for _, member := range cm.OneOf {
+		var parts []*codegen.CodegenModel
+
+		for name := range strings.SplitSeq(member, " & ") {
+			if m := g.byName[name]; m != nil {
+				parts = append(parts, m)
+			}
+		}
+
+		if len(parts) == 0 || strings.Count(member, " & ")+1 != len(parts) {
+			continue
+		}
+
+		members = append(members, parts)
+
+		for _, m := range parts {
+			if !slices.Contains(cm.OneOfModels, m.Classname) {
+				cm.OneOfModels = append(cm.OneOfModels, m.Classname)
+			}
 		}
 	}
+
+	slices.Sort(cm.OneOfModels)
 
 	from := &converter{g: g, used: map[string]bool{}}
 	to := &converter{g: g, to: true, used: from.used}
