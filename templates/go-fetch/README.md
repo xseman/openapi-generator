@@ -45,11 +45,11 @@ if errors.As(err, &rerr) {
 }
 ```
 
-| Method       | Does                                                                                                                       |
-| ------------ | -------------------------------------------------------------------------------------------------------------------------- |
-| `Xxx`        | sends and decodes the body (JSON, text for a string or for an `any` the server does not send as JSON, `[]byte` for binary) |
-| `XxxRaw`     | sends; returns a 2xx `*http.Response` with its body unread                                                                 |
-| `XxxRequest` | builds the `*http.Request` without sending it                                                                              |
+| Method       | Does                                                                                                                                                              |
+| ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Xxx`        | sends and decodes the body (JSON, text for a string or for an `any` the server sends as text, `[]byte` for binary and for an `any` sent as an image or as octets) |
+| `XxxRaw`     | sends; returns a 2xx `*http.Response` with its body unread                                                                                                        |
+| `XxxRequest` | builds the `*http.Request` without sending it                                                                                                                     |
 
 When a 2xx status has no body next to one that has (a 204 beside a 200), or
 the result is nullable, the result is a pointer, nil for the bodiless status

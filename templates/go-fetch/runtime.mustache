@@ -404,12 +404,16 @@ func other2xx(resp *http.Response, err error, model func(status int) (any, []str
 	return nil, responseError(resp, model)
 }
 
-var jsonMime = regexp.MustCompile(`(?i)^(application/json|[^;/ \t]+/[^;/ \t]+[+]json)[ \t]*(;.*)?$`)
+var (
+	jsonMime = regexp.MustCompile(`(?i)^(application/json|[^;/ \t]+/[^;/ \t]+[+]json)[ \t]*(;.*)?$`)
+	textMime = regexp.MustCompile(`(?i)^text/|json|xml|yaml|csv|javascript|x-www-form-urlencoded`)
+)
 
 // decodeJSON reads and closes resp's body into a T: JSON, or the text itself
 // for a string, or an any, the server does not send as JSON (an any typed
-// only by an empty schema next to a text media type). An empty body is T's
-// zero, nil for a pointer.
+// only by an empty schema next to a text media type), the bytes for an any
+// the server sends as an image or as octets. An empty body is T's zero, nil
+// for a pointer.
 func decodeJSON[T any](resp *http.Response, err error) (T, error) {
 	var out T
 	if err != nil {
@@ -430,8 +434,13 @@ func decodeJSON[T any](resp *http.Response, err error) (T, error) {
 
 			return out, nil
 		case *any:
-			if ct != "" {
+			switch {
+			case textMime.MatchString(ct):
 				*p = string(body)
+
+				return out, nil
+			case ct != "":
+				*p = body
 
 				return out, nil
 			}
