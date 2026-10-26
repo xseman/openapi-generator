@@ -30,6 +30,7 @@ components:
       type: object
       required: [B, G, R]
       properties:
+        A: { type: number }
         B: { type: integer }
         G: { type: integer }
         R: { type: integer }

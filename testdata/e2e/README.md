@@ -140,7 +140,9 @@ what the program prints with the scenarios.
 | `runners/dart` | dart-fetch, on the VM with `dart:mirrors`: named parameters, `fromJson`/`toJson`; a client that does not compile fails only its own suite                                                                                                       |
 
 Runners run with `TZ=Europe/Bratislava`, so a client that reads or writes
-local time shows it.
+local time shows it. The typescript-fetch clients of the feature specs also
+compile, strict, with each of its boolean options flipped
+(`TestTypeScriptOptions`).
 
 typescript-fetch sends an OAuth2 token as the whole `Authorization` header,
 so its runner returns `Bearer <token>` for an OAuth2 scheme (`schemes` in the

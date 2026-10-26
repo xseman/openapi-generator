@@ -106,3 +106,59 @@ func runTypeScript(t *testing.T, suites []suite) map[string]map[int]outcome {
 
 	return outcomes
 }
+
+// TestTypeScriptOptions compiles the client of every feature spec with each
+// boolean option of typescript-fetch flipped, strict: an option the
+// scenarios do not run must still give a client that builds.
+func TestTypeScriptOptions(t *testing.T) {
+	requireE2E(t)
+
+	if only := os.Getenv("E2E_GENERATOR"); only != "" && only != "typescript-fetch" {
+		t.Skip("only " + only)
+	}
+
+	tsc, err := exec.LookPath("tsc")
+	if err != nil {
+		t.Fatal("the typescript-fetch runner compiles with tsc (npm i -g typescript)")
+	}
+
+	specs, err := filepath.Glob("../../testdata/specs/feature/*.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	dir := t.TempDir()
+
+	options := []string{
+		"withInterfaces=true", "useSingleRequestParameter=false", "prefixParameterInterfaces=true",
+		"withoutRuntimeChecks=true", "stringEnums=true", "validationAttributes=true",
+	}
+
+	for _, opt := range options {
+		name, _, _ := strings.Cut(opt, "=")
+
+		for _, spec := range specs {
+			err := gen.Generate(gen.Options{
+				InputSpec:            spec,
+				OutputDir:            filepath.Join(dir, name, strings.TrimSuffix(filepath.Base(spec), ".yaml")),
+				GeneratorName:        "typescript-fetch",
+				TemplateDir:          "../../templates/typescript-fetch",
+				AdditionalProperties: []string{opt},
+				SkipValidation:       true,
+			})
+			if err != nil {
+				t.Fatalf("generate %s with %s: %v", spec, opt, err)
+			}
+		}
+	}
+
+	write(t, filepath.Join(dir, "tsconfig.json"), `{"compilerOptions": {"target": "ES2022", "module": "commonjs", "lib": ["ES2022", "DOM"],
+ "strict": true, "skipLibCheck": true, "noEmit": true}, "include": ["**/*.ts"]}`)
+
+	build := exec.Command(tsc, "-p", ".")
+	build.Dir = dir
+
+	if out, err := build.CombinedOutput(); err != nil {
+		t.Errorf("tsc: %v\n%s", err, out)
+	}
+}

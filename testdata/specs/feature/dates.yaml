@@ -67,6 +67,19 @@ paths:
                 items:
                   type: string
                   format: date-time
+  /day:
+    put:
+      operationId: putDay
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: string
+              format: date
+      responses:
+        "204":
+          description: stored
   /holidays:
     put:
       operationId: putHolidays
