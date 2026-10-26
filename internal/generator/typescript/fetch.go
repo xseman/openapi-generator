@@ -611,7 +611,8 @@ func (g *FetchGenerator) stream(op *codegen.CodegenOperation, from *converter) {
 
 // responseKinds marks how op reads its result: x-ts-text when the result
 // may come as text (a string, or any body the server does not send as
-// JSON), x-ts-other-2xx the statuses whose body is of another type than the
+// JSON), x-ts-any when it may also come as a file (an any the server
+// sends as an image or as octets), x-ts-other-2xx the statuses whose body is of another type than the
 // result, isResponseOptional when a 2xx comes without a body (a 204 beside
 // a 200, the answer to a HEAD), which reads as null.
 func (g *FetchGenerator) responseKinds(op *codegen.CodegenOperation) {
@@ -620,6 +621,7 @@ func (g *FetchGenerator) responseKinds(op *codegen.CodegenOperation) {
 	}
 
 	op.VendorExtensions["x-ts-text"] = op.ReturnType == "string" || op.ReturnType == "any"
+	op.VendorExtensions["x-ts-any"] = op.ReturnType == "any"
 	op.IsResponseOptional = op.HttpMethod == "HEAD"
 
 	var other []string

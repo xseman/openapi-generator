@@ -123,12 +123,14 @@ func (c *converter) union(p *codegen.CodegenProperty, x string) string {
 	return c.bestFit(members, x)
 }
 
-// discriminated converts x by a property every member of the union pins to
-// a string of its own, or is "".
+// discriminated converts x by a property every member of the union pins
+// to values of its own (a Literal, a string or an int, of one value or
+// several), or is "".
 func (c *converter) discriminated(members []*codegen.CodegenProperty, x string) string {
 	var (
 		key   string
 		cases []string
+		seen  = map[string]bool{}
 	)
 
 	used := map[string]bool{}
@@ -146,14 +148,16 @@ func (c *converter) discriminated(members []*codegen.CodegenProperty, x string) 
 
 		key = pin.key
 
-		value := strconv.Quote(fmt.Sprint(pin.value))
+		for _, v := range pin.values {
+			if seen[v] {
+				return ""
+			}
 
-		if slices.ContainsFunc(cases, func(s string) bool { return strings.HasPrefix(s, value+":") }) {
-			return ""
+			seen[v] = true
+			cases = append(cases, strconv.Quote(v)+": "+model.Classname+c.fn())
 		}
 
 		used[model.Classname] = true
-		cases = append(cases, value+": "+model.Classname+c.fn())
 	}
 
 	if len(cases) == 0 {
@@ -276,21 +280,28 @@ func (c *converter) keyVars(m *codegen.CodegenModel) []*codegen.CodegenProperty 
 }
 
 type pin struct {
-	key   string
-	value any
+	key    string
+	values []string
 }
 
-// pinned finds the property of m that holds one string value, named key
-// in JSON (to false) or in TypeScript (to true) when key is not "".
+// pinned finds the required property of m that holds a string or a number
+// of its own (an enum of one value or a few), named key in JSON (to false)
+// or in TypeScript (to true) when key is not "". The values are as the
+// runtime's discriminate looks them up: as text.
 func pinned(m *codegen.CodegenModel, key string, to bool) *pin {
 	for _, v := range m.Vars {
 		values, _ := v.AllowableValues["values"].([]any)
-		if !v.IsEnum || !v.Required || v.IsNullable || len(values) != 1 {
+		if !v.IsEnum || !v.Required || v.IsNullable || len(values) == 0 {
 			continue
 		}
 
-		if _, ok := values[0].(string); !ok {
-			continue
+		var text []string
+
+		for _, value := range values {
+			switch value.(type) {
+			case string, float64, int, int64:
+				text = append(text, fmt.Sprint(value))
+			}
 		}
 
 		name := v.BaseName
@@ -298,8 +309,8 @@ func pinned(m *codegen.CodegenModel, key string, to bool) *pin {
 			name = v.Name
 		}
 
-		if key == "" || key == name {
-			return &pin{name, values[0]}
+		if len(text) == len(values) && (key == "" || key == name) {
+			return &pin{name, text}
 		}
 	}
 

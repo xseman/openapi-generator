@@ -851,6 +851,14 @@ async function* serverSentEvents(raw: Response, transformer: (value: any) => any
     }
 }
 
+/**
+ * Whether a body of the media type is text (of no media type too): an any result the server sends as
+ * an image or as octets is a file, not text.
+ */
+export function isTextMime(mime: string | null | undefined): boolean {
+    return !mime || /^text\/|json|xml|yaml|csv|javascript|x-www-form-urlencoded/i.test(mime);
+}
+
 export class TextApiResponse {
     constructor(public raw: Response) {}
 

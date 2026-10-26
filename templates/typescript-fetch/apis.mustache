@@ -296,6 +296,10 @@ export class {{classname}} extends runtime.BaseAPI {
 {{#vendorExtensions.x-ts-text}}
         if (this.isJsonMime(response.headers.get('content-type'))) {
             return new runtime.JSONApiResponse<{{{returnType}}}>(response);
+{{#vendorExtensions.x-ts-any}}
+        } else if (!runtime.isTextMime(response.headers.get('content-type'))) {
+            return new runtime.BlobApiResponse(response) as any;
+{{/vendorExtensions.x-ts-any}}
         } else {
             return new runtime.TextApiResponse(response) as any;
         }

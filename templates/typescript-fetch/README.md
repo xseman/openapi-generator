@@ -207,14 +207,14 @@ export function PetFromJSON(json: any): Pet {
 With runtime checks, `FromJSON` and `ToJSON` convert at every depth: a list
 of lists of models, a map of dates, a map of lists of models.
 
-| Schema                                    | TypeScript                                                                                                                                   |
-| ----------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| `date` / `date-time`                      | `Date`: a day at local midnight; an instant to the millisecond, sent in UTC (a time without an offset is read as local time)                 |
-| optional and nullable                     | `T \| null`: `null` is sent and read as `null`, a property left out stays out                                                                |
-| `additionalProperties` next to properties | an index signature; the other keys go through both ways, converted as their schema says                                                      |
-| `binary` property of a JSON model         | `string`: JSON holds no bytes, a server writes their text                                                                                    |
-| a schema of an array, a map or a scalar   | a type alias that converts as its value does: `type Pets = Array<Pet>`, `type Day = Date`                                                    |
-| `oneOf` / `anyOf`                         | the member the discriminator names (its mapping, else the schema's name), one every member pins a property for, else the member it fits best |
+| Schema                                    | TypeScript                                                                                                                                                                                 |
+| ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `date` / `date-time`                      | `Date`: a day at local midnight; an instant to the millisecond, sent in UTC (a time without an offset is read as local time)                                                               |
+| optional and nullable                     | `T \| null`: `null` is sent and read as `null`, a property left out stays out                                                                                                              |
+| `additionalProperties` next to properties | an index signature; the other keys go through both ways, converted as their schema says                                                                                                    |
+| `binary` property of a JSON model         | `string`: JSON holds no bytes, a server writes their text                                                                                                                                  |
+| a schema of an array, a map or a scalar   | a type alias that converts as its value does: `type Pets = Array<Pet>`, `type Day = Date`                                                                                                  |
+| `oneOf` / `anyOf`                         | the member the discriminator names (its mapping, else the schema's name), one every member pins a property for (a string or an int, of one value or several), else the member it fits best |
 
 | Request                     | Sent                                                                                                                                                        |
 | --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -223,12 +223,12 @@ of lists of models, a map of dates, a map of lists of models.
 | urlencoded form field       | by its `encoding`: a list a field per item (or joined by its delimiter with `explode: false`), `deepObject` key by key (`a[b][0]=x`)                        |
 | multipart field             | a list a part per item, an object as a JSON part (a file named `blob`: `FormData` gives a part a type only as a file); a form with a file goes as multipart |
 
-| Response                                             | Result                                                                                  |
-| ---------------------------------------------------- | --------------------------------------------------------------------------------------- |
-| a 2xx without a body (a 204, a HEAD)                 | `null`                                                                                  |
-| a 2xx of another body than the result's              | a `ResponseError`, its body unread                                                      |
-| a string or `any` the server sends as text           | the text; a number or boolean sent as text is parsed                                    |
-| JSON Lines, `text/event-stream` (3.2's `itemSchema`) | `AsyncIterable<T>`, of `ServerSentEvent<T>` (`data`, `event`, `id`, `retry`) for events |
+| Response                                             | Result                                                                                                 |
+| ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| a 2xx without a body (a 204, a HEAD)                 | `null`                                                                                                 |
+| a 2xx of another body than the result's              | a `ResponseError`, its body unread                                                                     |
+| a string or `any` the server sends as text           | the text; a number or boolean sent as text is parsed; an `any` sent as an image or as octets is a file |
+| JSON Lines, `text/event-stream` (3.2's `itemSchema`) | `AsyncIterable<T>`, of `ServerSentEvent<T>` (`data`, `event`, `id`, `retry`) for events                |
 
 ```typescript
 for await (const event of await api.chat({ prompt: { text: "hi" } })) {

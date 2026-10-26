@@ -96,12 +96,12 @@ export function {{classname}}FromJSONTyped(json: any, ignoreDiscriminator: boole
 {{#discriminator}}
     if (!ignoreDiscriminator) {
 {{#discriminator.mappedModels}}
-        if (json["{{discriminator.propertyBaseName}}"] === "{{mappingName}}") {
+        if (String(json["{{discriminator.propertyBaseName}}"]) === "{{mappingName}}") {
             return {{modelName}}FromJSONTyped(json, ignoreDiscriminator);
         }
 {{/discriminator.mappedModels}}
     {{#hasSelfReferencingDiscriminatorMapping}}
-        if (json["{{discriminator.propertyBaseName}}"] === "{{selfReferencingDiscriminatorMapping.mappingName}}") {
+        if (String(json["{{discriminator.propertyBaseName}}"]) === "{{selfReferencingDiscriminatorMapping.mappingName}}") {
             return {{selfReferencingDiscriminatorMapping.modelName}}FromJSONTyped(json, true);
         }
     {{/hasSelfReferencingDiscriminatorMapping}}
@@ -136,7 +136,7 @@ export function {{classname}}ToJSONTyped(value?: {{#hasReadOnly}}Omit<{{classnam
     }
     {{#discriminator}}
     if (!ignoreDiscriminator) {
-        switch (value["{{discriminator.propertyName}}"]) {
+        switch (String(value["{{discriminator.propertyName}}"])) {
         {{#discriminator.mappedModels}}
             case "{{mappingName}}":
                 return {{modelName}}ToJSONTyped(value as {{modelName}}, ignoreDiscriminator);
