@@ -129,6 +129,22 @@ cases:
     op: echoStamps
     args: { body: { naive: "2024-03-01T10:00:00Z", aware: "2024-03-01T10:00:00Z", clock: "10:00:00", span: PT0S } }
     error: { status: 422, model: { detail: [{ type: timezone_naive }] } }
+  - name: a union tagged by an int, the second member
+    op: echoRev
+    args: { body: { rev: 2, at: "2024-01-02" } }
+    result: { rev: 2, at: "2024-01-02" }
+  - name: a union tagged by an int as a schema of its own
+    op: echoRevs
+    args: { body: { rev: 2, at: "2024-01-02" } }
+    result: { rev: 2, at: "2024-01-02" }
+  - name: a union tag of several values, the other member
+    op: echoChange
+    args: { body: { kind: closed, at: "2024-01-02" } }
+    result: { kind: closed, at: "2024-01-02" }
+  - name: a union tag of several values, its second value
+    op: echoChange
+    args: { body: { kind: reopened, at: "2024-01-02T03:04:05Z" } }
+    result: { kind: reopened, at: "2024-01-02T03:04:05Z" }
   - name: a naive time in the response and the query, a date list in the query
     op: stampsQuery
     args: { days: ["2024-01-31", "2024-02-29"], since: "2024-03-01T10:00:00" }
@@ -434,6 +450,9 @@ cases:
     op: downloadFile
     args: { name: docs/ž.bin }
     result: AP8=
+  - name: a binary response without a schema, next to JSON
+    op: getLogo
+    result: iVBORw0KGgoAAAANSUhEUv8=
   - name: text/csv response
     op: exportCsv
     result: "sku,name\nABC-0001,Box\nABC-0002,Bag\n"

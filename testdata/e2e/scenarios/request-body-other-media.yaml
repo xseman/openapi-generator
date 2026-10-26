@@ -14,6 +14,12 @@ cases:
     request: { header: { Content-Type: application/octet-stream }, body: { $base64: AAH/ } }
     response: { base64: /wEA }
     result: /wEA
+  - name: a +json body and result
+    op: patchNote
+    args: { id: n1, body: { author: bo } }
+    request: { header: { Content-Type: application/merge-patch+json }, body: { author: bo } }
+    response: { header: { Content-Type: application/problem+json }, text: '{"author":"bo","pages":1}' }
+    result: { author: bo, pages: 1 }
   - name: multipart with an object part
     op: postReport
     args: { title: q3, meta: { author: ann, pages: 3 }, attachments: [{ $file: { name: a.txt, text: a } }] }

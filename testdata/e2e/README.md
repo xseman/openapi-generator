@@ -145,16 +145,16 @@ compile, strict, with each of its boolean options flipped
 (`TestTypeScriptOptions`).
 
 typescript-fetch sends an OAuth2 token as the whole `Authorization` header,
-so its runner returns `Bearer <token>` for an OAuth2 scheme (`schemes` in the
-input). Its error has no decoded model: the runner reports the error body
-parsed as JSON where the spec declares a body for the status (`bodies` in
-the input). A converted round trip hides a `FromJSON` and a `ToJSON` that
-both leave a value alone, so the runner also checks each argument and
-result against the client's types: a model holds its TypeScript property
-names, a `Date` stands where the interface says, and a day (`format:
-date`) is at local midnight, which a day parsed as UTC is not east of UTC,
-where the runners run. The runner makes a day argument as its users do,
-with the client's `parseDate`, and puts back the read-only properties a
+so its runner returns `Bearer <token>` for an OAuth2 scheme (`schemes` in
+the input). Its error has no decoded model: the runner reports the error
+body parsed as JSON where the spec declares a body for the status (`bodies`
+in the input). A converted round trip hides a `FromJSON` and a `ToJSON` that
+both leave a value alone, so the runner also checks each argument and result
+against the client's types: a model holds its TypeScript property names, an
+enum one of its values, a `Date` stands where the interface says, and a day
+(`format: date`) is at local midnight, which a day parsed as UTC is not east
+of UTC, where the runners run. The runner makes a day argument as its users
+do, with the client's `parseDate`, and puts back the read-only properties a
 model's `ToJSON` leaves out of a result.
 
 A case one generator cannot pass has `skip: { <generator>: why }`. A spec

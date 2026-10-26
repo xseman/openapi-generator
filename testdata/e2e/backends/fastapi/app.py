@@ -54,6 +54,7 @@ from pydantic import (
     Field,
     HttpUrl,
     NaiveDatetime,
+    RootModel,
     SecretStr,
     Tag,
     computed_field,
@@ -551,6 +552,54 @@ def echo_stamps(body: Stamps) -> Stamps:
     return body
 
 
+# Unions told apart by an int Literal and by a Literal of several values:
+# pydantic writes their discriminator with a mapping, and a member alone
+# cannot be told from the other by its keys.
+class Rev1(Strict):
+    rev: Literal[1]
+    at: dt.datetime
+
+
+class Rev2(Strict):
+    rev: Literal[2]
+    at: dt.date
+
+
+Rev = Annotated[Union[Rev1, Rev2], Field(discriminator="rev")]
+
+
+class Revs(RootModel[Rev]):
+    pass
+
+
+class Opened(Strict):
+    kind: Literal["opened", "reopened"]
+    at: dt.datetime
+
+
+class Closed(Strict):
+    kind: Literal["closed"]
+    at: dt.date
+
+
+Change = Annotated[Union[Opened, Closed], Field(discriminator="kind")]
+
+
+@app.post("/echo/rev", tags=["echo"], operation_id="echoRev")
+def echo_rev(body: Annotated[Rev, Body()]) -> Rev:
+    return body
+
+
+@app.post("/echo/revs", tags=["echo"], operation_id="echoRevs")
+def echo_revs(body: Revs) -> Revs:
+    return body
+
+
+@app.post("/echo/change", tags=["echo"], operation_id="echoChange")
+def echo_change(body: Annotated[Change, Body()]) -> Change:
+    return body
+
+
 @app.get("/stamps", tags=["echo"], operation_id="stampsQuery")
 def stamps_query(
     days: Annotated[list[dt.date], Query()] = [],
@@ -848,6 +897,16 @@ def download_file(name: str):
     if name not in FILES:
         return problem(404, "Not found", name)
     return Response(FILES[name], media_type="application/octet-stream")
+
+
+# FastAPI's documented binary response: a media type without a schema, next
+# to the JSON of its default response class. The bytes are no UTF-8.
+LOGO = bytes.fromhex("89504e470d0a1a0a0000000d49484452ff")
+
+
+@app.get("/logo.png", tags=["files"], operation_id="getLogo", responses={200: {"content": {"image/png": {}}}})
+def get_logo() -> Response:
+    return Response(LOGO, media_type="image/png")
 
 
 @app.get("/export.csv", tags=["files"], operation_id="exportCsv", response_class=PlainTextResponse,

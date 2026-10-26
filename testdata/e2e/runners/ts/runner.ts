@@ -75,6 +75,7 @@ type Decl = {
     readonly?: Set<string>;
     days?: Set<string>;
     day?: boolean;
+    values?: string[];
 };
 
 // models reads the models' interfaces and type aliases from the sources.
@@ -110,6 +111,12 @@ function models(dir: string): Record<string, Decl> {
             // An interface without properties, as TypeScript's {}, takes any object.
             const open = /^    \[key: string\]/m.test(m[3]) || (Object.keys(fields).length === 0 && !m[2]);
             out[m[1]] = { fields, base: m[2], open, wire, readonly, days };
+        }
+
+        // An enum's values, as text: a union member is told by them too.
+        for (const m of src.matchAll(/^export const (\w+) = \{\n([\s\S]*?)\n\} as const;$/gm)) {
+            // A value is a TypeScript literal ('it\'s', 1): evaluated, as text.
+            out[m[1]] = { values: [...m[2].matchAll(/^\s+\w+: (.+?),?$/gm)].map((v) => String(new Function("return " + v[1])())) };
         }
 
         for (const m of src.matchAll(/^export type (\w+) = (.+);$/gm)) {
@@ -218,6 +225,11 @@ function shape(decls: Record<string, Decl>, t: string, v: any, at: string, scala
         return "";
     }
 
+    // An enum: one of its values.
+    if (d.values !== undefined) {
+        return d.values.includes(String(v)) ? "" : `${at}: want one of ${d.values.join(", ")}, got ${show(v)}`;
+    }
+
     if (d.alias !== undefined) {
         return d.alias.startsWith("typeof ") ? "" : shape(decls, d.alias, v, at, scalars, day || !!d.day);
     }
@@ -302,7 +314,10 @@ function fromWire(client: any, decls: Record<string, Decl>, t: string, v: any): 
             return out;
         };
 
-        const alt = typeof v === "object" && !Array.isArray(v) ? alts.find((x) => decls[x]?.fields && Object.keys(v).every((k) => wire(x).includes(k))) : undefined;
+        // Its keys, and its enums (a tag) once converted.
+        const fits = (x: string): boolean =>
+            !!decls[x]?.fields && Object.keys(v).every((k) => wire(x).includes(k)) && shape(decls, x, fromWire(client, decls, x, v), "", false) === "";
+        const alt = typeof v === "object" && !Array.isArray(v) ? alts.find(fits) : undefined;
 
         return alt === undefined ? v : fromWire(client, decls, alt, v);
     }
@@ -506,7 +521,9 @@ async function callCase(client: Client, info: ReturnType<typeof methods>, decls:
         used.add(name);
         params[field] = fromWire(client.module, decls, type, args[name]);
 
-        const bad = shape(decls, type, params[field], "arg " + name, false);
+        // A union argument is checked as its member is picked; one that fits
+        // no member goes as the scenario has it (a body the server refuses).
+        const bad = members(nullable(type)).length > 1 ? "" : shape(decls, type, params[field], "arg " + name, false);
         if (bad) {
             return { fail: "FromJSON: " + bad };
         }
