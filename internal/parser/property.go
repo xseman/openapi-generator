@@ -225,6 +225,12 @@ func (p *Parser) memberTypeNames(refs openapi3.SchemaRefs) ([]string, []string) 
 			}
 		}
 
+		// A member typed any that says something (an inline object, not {})
+		// makes the union any: without it, string | object reads as string.
+		if t == "any" && m.Value != nil && !m.Value.IsEmpty() {
+			return []string{"any"}, models
+		}
+
 		if t == "" || t == "any" || seen[t] {
 			continue
 		}
@@ -567,7 +573,7 @@ func isObjectSchema(schema *openapi3.Schema) bool {
 func enumVars(values []any, isString bool) []map[string]any {
 	vars := make([]map[string]any, 0, len(values))
 	seen := make(map[string]int)
-	quote := strings.NewReplacer(`\`, `\\`, "'", `\'`) // for a single-quoted string literal
+	quote := strings.NewReplacer(`\`, `\\`, "'", `\'`, "\n", `\n`, "\r", `\r`, "\u2028", `\u2028`, "\u2029", `\u2029`) // for a single-quoted string literal
 
 	for _, v := range values {
 		// null is no member: a nullable enum lists it, the property carries it.

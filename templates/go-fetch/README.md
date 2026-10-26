@@ -119,7 +119,8 @@ for e, err := range events {
 | other multipart field                     | its own part: a list of scalars a part per item (comma-joined with `explode: false`), an object as JSON                                                                  |
 | urlencoded form field                     | sent as its `encoding` says: form and exploded by default, `deepObject` key by key (`a[b][0]=x`); a form with a file goes as multipart                                   |
 
-Not covered: server code, XML, server variables, validation, a discriminator
-without `oneOf` (the parent stays a plain struct), `additionalProperties`
-next to the properties of an inline object (it stays a map) or inherited
-through `allOf` (the extra keys are dropped).
+Not covered: server code, XML, server variables other than their defaults
+(which `BasePath` holds), validation, a discriminator without `oneOf` (the
+parent stays a plain struct), `additionalProperties` next to the properties
+of an inline object (it stays a map) or inherited through `allOf` (the extra
+keys are dropped).

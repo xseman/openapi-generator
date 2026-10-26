@@ -6,14 +6,14 @@ import (
 	"unicode"
 )
 
-// unsafeCommentChars maps comment delimiters in spec description text to
+// escapeUnsafeChars maps comment delimiters in spec description text to
 // harmless variants so they cannot terminate a generated doc comment early
 // (e.g. a Kubernetes description containing "'*/scale'"), mirroring upstream
-// AbstractTypeScriptClientCodegen.escapeUnsafeCharacters.
-var unsafeCommentChars = strings.NewReplacer("*/", "*_/", "/*", "/_*")
-
+// AbstractTypeScriptClientCodegen.escapeUnsafeCharacters: one replacement
+// after the other, as one pass would turn "/*/*" into "/_*/_*", which holds
+// a "*/" again.
 func escapeUnsafeChars(s string) string {
-	return unsafeCommentChars.Replace(s)
+	return strings.ReplaceAll(strings.ReplaceAll(s, "*/", "*_/"), "/*", "/_*")
 }
 
 func toCamelCase(s string) string {

@@ -297,6 +297,7 @@ func (p *Parser) addFormParams(co *codegen.CodegenOperation, schema *openapi3.Sc
 			IsContainer:      prop.IsContainer,
 			IsPrimitiveType:  prop.IsPrimitiveType,
 			IsModel:          prop.IsModel,
+			IsFreeFormObject: prop.IsFreeFormObject,
 			IsString:         prop.IsString,
 			IsNumber:         prop.IsNumber,
 			IsInteger:        prop.IsInteger,

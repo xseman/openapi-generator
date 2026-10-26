@@ -64,8 +64,8 @@ components:
 }
 
 // TestMapOfArraysResponseImportsItemModel guards the return import of a map of arrays:
-// { [key: string]: Array<Pet>; } imports Pet, not a non-existent ArrayPet, and a map of
-// arrays of primitives or of nested arrays imports nothing and needs no mapper.
+// { [key: string]: Array<Pet>; } imports Pet, not a non-existent ArrayPet, a map of
+// arrays of primitives imports nothing, and one of nested arrays its innermost model.
 func TestMapOfArraysResponseImportsItemModel(t *testing.T) {
 	spec := []byte(`
 openapi: 3.1.0
@@ -115,7 +115,7 @@ components:
 		t.Fatalf("GetOperations: %v", err)
 	}
 
-	want := map[string][]string{"getPets": {"Pet"}, "getTags": {}, "getGrid": {}}
+	want := map[string][]string{"getPets": {"Pet"}, "getTags": {}, "getGrid": {"Pet"}}
 
 	for _, group := range ops {
 		for _, op := range group {

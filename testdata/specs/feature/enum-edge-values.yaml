@@ -34,7 +34,7 @@ components:
     # values that name alike get a count suffix; quotes and backslashes are escaped
     Severity:
       type: string
-      enum: [low, LOW, "it's", 'a\b']
+      enum: [low, LOW, "it's", 'a\b', "two\nlines"]
     # no type: values are strings
     State:
       enum: [placed, approved]

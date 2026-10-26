@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"maps"
 	"slices"
 	"sort"
 
@@ -163,6 +164,17 @@ func (p *Parser) schemaToModel(name string, schema *openapi3.Schema) *codegen.Co
 			if ref.Ref != "" {
 				model.AnyOf = append(model.AnyOf, extractRefName(ref.Ref))
 			}
+		}
+
+		// AnyOf names the $ref members only; x-any-of-inline says there are
+		// others. A copy: the extensions are the document's own map.
+		if len(model.AnyOf) < len(schema.AnyOf) {
+			model.VendorExtensions = maps.Clone(model.VendorExtensions)
+			if model.VendorExtensions == nil {
+				model.VendorExtensions = map[string]any{}
+			}
+
+			model.VendorExtensions["x-any-of-inline"] = true
 		}
 	}
 
