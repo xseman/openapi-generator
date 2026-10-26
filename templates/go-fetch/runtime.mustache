@@ -406,7 +406,7 @@ func other2xx(resp *http.Response, err error, model func(status int) (any, []str
 
 var (
 	jsonMime = regexp.MustCompile(`(?i)^(application/json|[^;/ \t]+/[^;/ \t]+[+]json)[ \t]*(;.*)?$`)
-	textMime = regexp.MustCompile(`(?i)^text/|json|xml|yaml|csv|javascript|x-www-form-urlencoded`)
+	textMime = regexp.MustCompile(`(?i)^text/|[/+-](json|ndjson|jsonl|xml|yaml|csv|javascript|x-www-form-urlencoded)\b`)
 )
 
 // decodeJSON reads and closes resp's body into a T: JSON, or the text itself
