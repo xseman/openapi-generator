@@ -17,7 +17,11 @@ minimal dependencies.
 - Fast generation times without JVM overhead
 - Load specs from local files or remote URLs
 - Command-line interface compatible with the original OpenAPI Generator
-- Supports OpenAPI 3.x and Swagger 2.0 specifications (auto-converts 2.0 -> 3.x)
+- Supports OpenAPI 3.x and Swagger 2.0 specifications, JSON or YAML
+  (auto-converts 2.0 -> 3.x); a 3.1 `null` member of `anyOf`/`oneOf`, a `type`
+  list with `null`, a `const` and a `contentMediaType` binary string read as
+  their 3.0 forms, as the upstream normalizer's defaults do; 3.2's `itemSchema`
+  of a streamed response is accepted in a 3.1 document, as FastAPI writes it
 
 ## Installation
 
@@ -47,6 +51,7 @@ go install github.com/xseman/openapi-generator/cmd/openapi-generator@latest
 
 - [typescript-fetch](./templates/typescript-fetch/README.md)
 - [dart-fetch](./samples/dart-fetch/README.md)
+- [go-fetch](./templates/go-fetch/README.md)
 
 ### Server
 
@@ -75,16 +80,16 @@ openapi-generator validate -i openapi.yaml --recommend
 
 ### `generate`
 
-| Option                      | Short | Description                                      |
-| --------------------------- | ----- | ------------------------------------------------ |
-| `--input-spec`              | `-i`  | Location of the OpenAPI spec (file or URL)       |
-| `--generator-name`          | `-g`  | Generator to use: typescript-fetch, dart-fetch   |
-| `--output`                  | `-o`  | Output directory                                 |
-| `--config`                  | `-c`  | Configuration file (JSON/YAML)                   |
-| `--template-dir`            | `-t`  | Custom template directory                        |
-| `--additional-properties`   | `-p`  | Key=value pairs for generator options            |
-| `--skip-validate-spec`      |       | Skip OpenAPI spec validation                     |
-| `--verbose`                 | `-v`  | Enable verbose output                            |
+| Option                    | Short | Description                                          |
+| ------------------------- | ----- | ---------------------------------------------------- |
+| `--input-spec`            | `-i`  | Location of the OpenAPI spec (file or URL)           |
+| `--generator-name`        | `-g`  | typescript-fetch, dart-fetch, go-fetch               |
+| `--output`                | `-o`  | Output directory                                     |
+| `--config`                | `-c`  | Configuration file (JSON/YAML)                       |
+| `--template-dir`          | `-t`  | Custom template directory                            |
+| `--additional-properties` | `-p`  | `key=value` generator options, `a=1,b=2` or repeated |
+| `--skip-validate-spec`    |       | Skip OpenAPI spec validation                         |
+| `--verbose`               | `-v`  | Enable verbose output                                |
 
 ### `validate`
 
@@ -163,6 +168,7 @@ sequenceDiagram
 
     CLI->>Parser: Load Spec (YAML/JSON)
     Parser-->>Parser: Convert Swagger 2.0 to OpenAPI 3.x
+    Parser-->>Parser: Normalize 3.1 null and binary schemas
     Parser-->>CLI: Parsed Spec
 
     CLI->>Config: Merge CLI + File Config

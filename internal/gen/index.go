@@ -9,8 +9,14 @@ import (
 )
 
 // writeIndexFiles writes the per-folder barrel (index) file for models, and
-// for APIs, when there is at least one model or operation respectively.
+// for APIs, when there is at least one model or operation respectively; Go
+// gets none.
 func (r *renderer) writeIndexFiles(models []*generator.CodegenModel, operationsByTag map[string][]*generator.CodegenOperation) ([]string, error) {
+	// A Go package is one directory: nothing to re-export.
+	if r.goGen != nil {
+		return nil, nil
+	}
+
 	indexExt := ".ts"
 	if r.dartGen != nil {
 		indexExt = ".dart"

@@ -56,9 +56,16 @@ class {{classname}} extends BaseApi {
             if (apiKey != null) {
                 final v = apiKey('{{keyParamName}}');
                 if (v.isNotEmpty) {
-{{#isKeyInHeader}}          headers['{{keyParamName}}'] = v;
-{{/isKeyInHeader}}{{#isKeyInQuery}}          queryParams['{{keyParamName}}'] = <String>[v];
-{{/isKeyInQuery}}        }
+{{#isKeyInHeader}}
+                    headers['{{keyParamName}}'] = v;
+{{/isKeyInHeader}}
+{{#isKeyInQuery}}
+                    queryParams['{{keyParamName}}'] = <String>[v];
+{{/isKeyInQuery}}
+{{#isKeyInCookie}}
+                    headers.update('Cookie', (c) => '$c; {{keyParamName}}=$v', ifAbsent: () => '{{keyParamName}}=$v');
+{{/isKeyInCookie}}
+                }
             }
         }
 {{/isApiKey}}

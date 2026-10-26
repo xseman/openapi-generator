@@ -11,6 +11,7 @@ import (
 
 	"github.com/xseman/openapi-generator/internal/generator"
 	"github.com/xseman/openapi-generator/internal/generator/dart"
+	"github.com/xseman/openapi-generator/internal/generator/golang"
 	"github.com/xseman/openapi-generator/internal/generator/typescript"
 	"github.com/xseman/openapi-generator/internal/template"
 	"github.com/xseman/openapi-generator/templates"
@@ -112,6 +113,7 @@ type renderer struct {
 	cg           generator.CodegenConfig
 	tsGen        *typescript.FetchGenerator
 	dartGen      *dart.FetchGenerator
+	goGen        *golang.FetchGenerator
 	engine       *template.Engine
 	outputDir    string
 	apiPackage   string
@@ -283,6 +285,7 @@ func (r *renderer) renderAPIs(baseData map[string]any, operationsByTag map[strin
 	var generatedFiles []string
 
 	apiTemplates := r.cg.GetApiTemplateFiles()
+	goParams := make(map[string]bool)
 
 	for _, tag := range sortedTags(operationsByTag) {
 		ops := operationsByTag[tag]
@@ -291,6 +294,10 @@ func (r *renderer) renderAPIs(baseData map[string]any, operationsByTag map[strin
 		// Convert operations to maps and preprocess for Mustache compatibility
 		opMaps := template.ConvertSliceToMaps(ops)
 		opMaps = template.PreprocessOperationData(opMaps)
+
+		if r.goGen != nil {
+			goDeclareParams(opMaps, goParams)
+		}
 
 		for tmplFile, ext := range apiTemplates {
 			data := copyMap(baseData)

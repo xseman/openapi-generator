@@ -1,0 +1,21 @@
+openapi: "3.0.0"
+info:
+  title: Scalar parameter formats
+  version: 1.0.0
+  description: Query parameters of each scalar type and format, as their text on the wire.
+paths:
+  /search:
+    get:
+      operationId: search
+      parameters:
+        - { name: f32, in: query, schema: { type: number, format: float } }
+        - { name: f64, in: query, schema: { type: number, format: double } }
+        - { name: n, in: query, schema: { type: number } }
+        - { name: i64, in: query, schema: { type: integer, format: int64 } }
+        - { name: ok, in: query, schema: { type: boolean } }
+        - { name: day, in: query, schema: { type: string, format: date } }
+        - { name: at, in: query, schema: { type: string, format: date-time } }
+        - { name: raw, in: query, schema: { type: string, format: byte } }
+      responses:
+        "204":
+          description: ok

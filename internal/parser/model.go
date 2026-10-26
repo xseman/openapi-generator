@@ -76,7 +76,7 @@ func (p *Parser) schemaToModel(name string, schema *openapi3.Schema) *codegen.Co
 		// Try to infer type
 		if len(schema.Enum) > 0 {
 			model.IsEnum = true
-		} else if schema.Properties != nil {
+		} else if len(schema.Properties) > 0 {
 			schemaType = &openapi3.Types{"object"}
 		}
 	}
@@ -126,7 +126,8 @@ func (p *Parser) schemaToModel(name string, schema *openapi3.Schema) *codegen.Co
 		case "array":
 			model.IsArray = true
 			if schema.Items != nil && schema.Items.Value != nil {
-				model.Items = p.schemaToProperty("items", schema.Items.Value, false)
+				// By reference, so a $ref item keeps its model name.
+				model.Items = p.schemaRefToProperty("items", schema.Items, false)
 				model.ArrayModelType = model.Items.DataType
 			}
 

@@ -2,6 +2,7 @@ package parser
 
 import (
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/getkin/kin-openapi/openapi3"
@@ -224,8 +225,9 @@ func (p *Parser) operationToCodegen(path, method string, op *openapi3.Operation,
 					Name:   name,
 					Scopes: make([]map[string]any, len(scopes)),
 				}
+				// -last for {{^-last}}, which the mustache engine lacks.
 				for i, scope := range scopes {
-					sec.Scopes[i] = map[string]any{"scope": scope}
+					sec.Scopes[i] = map[string]any{"scope": scope, "-last": i == len(scopes)-1}
 				}
 
 				co.AuthMethods = append(co.AuthMethods, sec)
@@ -265,7 +267,7 @@ func (p *Parser) operationToCodegen(path, method string, op *openapi3.Operation,
 // CodegenParameter per property, appending them to the operation's FormParams and
 // AllParams. This mirrors upstream openapi-generator, which surfaces form fields (e.g. an
 // uploaded `file`) as individual parameters rather than a single opaque body.
-func (p *Parser) addFormParams(co *codegen.CodegenOperation, schema *openapi3.Schema, contentType string) {
+func (p *Parser) addFormParams(co *codegen.CodegenOperation, schema *openapi3.Schema, contentType string, encoding map[string]*openapi3.Encoding) {
 	requiredSet := make(map[string]bool)
 	for _, r := range schema.Required {
 		requiredSet[r] = true
@@ -306,11 +308,21 @@ func (p *Parser) addFormParams(co *codegen.CodegenOperation, schema *openapi3.Sc
 			IsDateTime:       prop.IsDateTime,
 			IsDateTimeType:   prop.IsDateTimeType,
 			IsEnum:           prop.IsEnum,
+			IsNullable:       prop.IsNullable,
 			Items:            prop.Items,
 			AllowableValues:  prop.AllowableValues,
 			EnumName:         prop.EnumName,
 			UniqueItems:      prop.UniqueItems,
+			Vars:             prop.Vars,
 		}
+
+		// The property's encoding with its defaults filled in: form style,
+		// exploded. go-fetch reads it for urlencoded and multipart bodies.
+		sm := encoding[name].SerializationMethod()
+		fp.Style = sm.Style
+		fp.IsExplode = sm.Explode
+		fp.IsDeepObject = sm.Style == openapi3.SerializationDeepObject
+
 		if fp.IsArray {
 			fp.CollectionFormat = "csv"
 			// An array of files must be sent as FormData with one append per
@@ -342,37 +354,77 @@ func (p *Parser) addFormParams(co *codegen.CodegenOperation, schema *openapi3.Sc
 	}
 }
 
-// deduplicateParams removes duplicate parameters by name, keeping the last occurrence.
-// This is useful when path-level and operation-level parameters have the same name.
+// deduplicateParams drops a parameter that a later one of the same location
+// and name replaces (an operation's over its path item's). A parameter whose
+// ParamName another one already has (path item_id next to header Item-Id,
+// query sort_by next to sortBy) is renamed itemId2, as upstream's
+// ensureUniqueParams does, so that both stay and are sent.
 func deduplicateParams(params []*codegen.CodegenParameter) []*codegen.CodegenParameter {
-	if len(params) == 0 {
-		return params
-	}
-
 	seen := make(map[string]int)
 
 	var result []*codegen.CodegenParameter
 
-	// Iterate through parameters and track positions
-	for i, param := range params {
+	for _, param := range params {
 		if param == nil {
 			continue
 		}
 
-		key := param.ParamName
-		if idx, exists := seen[key]; exists {
-			// Replace previous occurrence
+		key := paramLocation(param) + " " + param.BaseName
+		if idx, ok := seen[key]; ok {
 			result[idx] = param
-		} else {
-			// First occurrence
-			seen[key] = len(result)
-			result = append(result, param)
+
+			continue
 		}
 
-		_ = i // unused
+		seen[key] = len(result)
+		result = append(result, param)
+	}
+
+	names := make(map[string]bool, len(result))
+
+	for _, param := range result {
+		for names[param.ParamName] {
+			param.ParamName = nextName(param.ParamName)
+		}
+
+		names[param.ParamName] = true
 	}
 
 	return result
+}
+
+// paramLocation is where a parameter goes: path, query, header, cookie,
+// form or body.
+func paramLocation(p *codegen.CodegenParameter) string {
+	switch {
+	case p.IsPathParam:
+		return "path"
+	case p.IsQueryParam:
+		return "query"
+	case p.IsHeaderParam:
+		return "header"
+	case p.IsCookieParam:
+		return "cookie"
+	case p.IsFormParam:
+		return "form"
+	}
+
+	return "body"
+}
+
+// nextName counts a name up: id becomes id2, id2 becomes id3.
+func nextName(name string) string {
+	i := len(name)
+	for i > 0 && name[i-1] >= '0' && name[i-1] <= '9' {
+		i--
+	}
+
+	n, err := strconv.Atoi(name[i:])
+	if err != nil {
+		return name + "2"
+	}
+
+	return name[:i] + strconv.Itoa(n+1)
 }
 
 // requestBody turns the first content type of a request body, in sorted
@@ -403,7 +455,7 @@ func (p *Parser) requestBody(co *codegen.CodegenOperation, body *openapi3.Reques
 		isForm := strings.HasPrefix(contentType, "multipart/") ||
 			contentType == "application/x-www-form-urlencoded"
 		if isForm && isObjectSchema(schema) && len(schema.Properties) > 0 {
-			p.addFormParams(co, schema, contentType)
+			p.addFormParams(co, schema, contentType, mediaType.Encoding)
 
 			if strings.HasPrefix(contentType, "multipart/") {
 				co.IsMultipart = true
@@ -469,6 +521,10 @@ func (p *Parser) inlineBody(bodyParam *codegen.CodegenParameter, schema *openapi
 	// bare type. Without this an array body renders as `Array` and an
 	// undefined `ArrayToJSON` helper.
 	prop := p.schemaToProperty("body", schema, required)
+	p.inlineVars(prop, schema)
+	p.inlineMembers(prop, schema)
+	bodyParam.Vars = prop.Vars
+	bodyParam.ComposedSchemas = prop.ComposedSchemas
 	bodyParam.DataType = prop.DataType
 	bodyParam.BaseType = prop.BaseType
 	bodyParam.IsArray = prop.IsArray

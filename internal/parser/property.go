@@ -61,6 +61,16 @@ func (p *Parser) schemaRefToProperty(name string, ref *openapi3.SchemaRef, requi
 	}
 
 	prop := p.schemaToProperty(name, ref.Value, required)
+	if ref.Ref == "" {
+		p.inlineVars(prop, ref.Value)
+		p.inlineMembers(prop, ref.Value)
+	}
+
+	// A $ref sets them; an `allOf: [$ref]` wrapper has them from its member.
+	if ref.Ref != "" {
+		prop.Ref = ref.Ref
+		prop.IsEnumRef = prop.IsEnum
+	}
 
 	// Only object-like targets need the override: arrays, enums and primitives are
 	// already typed correctly by schemaToProperty, and clobbering them with the
@@ -81,6 +91,46 @@ func (p *Parser) schemaRefToProperty(name string, ref *openapi3.SchemaRef, requi
 	}
 
 	return prop
+}
+
+// inlineVars gives a property typed from an inline object schema, one with
+// properties and no $ref, those properties as Vars, for a generator that
+// declares a type for it. The TypeScript generators type it any and read none.
+// An object that also takes additionalProperties gets none: a type of its
+// properties alone would drop the other keys.
+func (p *Parser) inlineVars(prop *codegen.CodegenProperty, schema *openapi3.Schema) {
+	extra := schema.AdditionalProperties.Schema != nil ||
+		(schema.AdditionalProperties.Has != nil && *schema.AdditionalProperties.Has)
+
+	if !isObjectSchema(schema) || len(schema.Properties) == 0 || extra ||
+		len(schema.AllOf) > 0 || len(schema.OneOf) > 0 || len(schema.AnyOf) > 0 {
+		return
+	}
+
+	for _, name := range p.orderedPropertyNames(schema) {
+		prop.Vars = append(prop.Vars, p.schemaRefToProperty(name, schema.Properties[name], slices.Contains(schema.Required, name)))
+	}
+}
+
+// inlineMembers gives a property typed from an inline oneOf/anyOf of two or
+// more members those members as ComposedSchemas, for a generator that
+// declares a type for it. The TypeScript generators read the union from
+// DataType instead.
+func (p *Parser) inlineMembers(prop *codegen.CodegenProperty, schema *openapi3.Schema) {
+	if len(schema.OneOf)+len(schema.AnyOf) < 2 || len(schema.AllOf) > 0 || len(schema.Properties) > 0 {
+		return
+	}
+
+	members := func(refs openapi3.SchemaRefs) []*codegen.CodegenProperty {
+		var out []*codegen.CodegenProperty
+		for _, ref := range refs {
+			out = append(out, p.schemaRefToProperty(prop.BaseName, ref, true))
+		}
+
+		return out
+	}
+
+	prop.ComposedSchemas = &codegen.CodegenComposedSchemas{OneOf: members(schema.OneOf), AnyOf: members(schema.AnyOf)}
 }
 
 // applyMemberType resolves a single composition member ($ref or inline schema)
@@ -106,6 +156,16 @@ func (p *Parser) applyMemberType(prop *codegen.CodegenProperty, ref *openapi3.Sc
 	prop.Items = member.Items
 	prop.AllowableValues = member.AllowableValues
 	prop.EnumName = member.EnumName
+	prop.Ref = member.Ref
+	prop.IsEnumRef = member.IsEnumRef
+
+	// A wrapper of an enum model (`allOf: [$ref]`, a nullable 3.1 $ref) is
+	// typed as that model, as upstream types it, not as a copy of its values.
+	if member.IsEnumRef {
+		name := p.toModelName(extractRefName(member.Ref))
+		prop.DataType, prop.BaseType, prop.ComplexType, prop.DatatypeWithEnum = name, name, name, name
+		prop.IsEnum, prop.IsModel, prop.IsPrimitiveType = false, true, false
+	}
 
 	return true
 }
@@ -255,9 +315,10 @@ func (p *Parser) schemaToProperty(name string, schema *openapi3.Schema, required
 		case schema.Items != nil && schema.Items.Ref != "":
 			modelName := p.toModelName(extractRefName(schema.Items.Ref))
 			prop.Items = &codegen.CodegenProperty{
-				DataType: modelName,
-				Datatype: modelName,
-				IsModel:  true,
+				DataType:   modelName,
+				Datatype:   modelName,
+				IsModel:    true,
+				IsNullable: schema.Items.Value != nil && schema.Items.Value.Nullable && !schema.Items.Value.Type.Is(openapi3.TypeArray),
 			}
 			prop.DataType = "Array<" + modelName + ">"
 			prop.Datatype = "Array<" + modelName + ">"
@@ -266,6 +327,8 @@ func (p *Parser) schemaToProperty(name string, schema *openapi3.Schema, required
 
 		case schema.Items != nil && schema.Items.Value != nil:
 			prop.Items = p.schemaToProperty(name+"Item", schema.Items.Value, false)
+			p.inlineVars(prop.Items, schema.Items.Value)
+			p.inlineMembers(prop.Items, schema.Items.Value)
 			prop.DataType = "Array<" + prop.Items.DataType + ">"
 			prop.Datatype = "Array<" + prop.Items.DataType + ">"
 

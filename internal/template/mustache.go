@@ -248,6 +248,18 @@ func (e *Engine) RenderToFile(templateName string, data any, outputPath string) 
 		result = normalizeTypeScript(result)
 	}
 
+	// Go sources go through go/format. One that does not parse is still
+	// written, unformatted, so the error can be read against the file.
+	var formatErr error
+
+	if strings.HasSuffix(outputPath, ".go") {
+		if formatted, err := formatGo([]byte(result)); err != nil {
+			formatErr = fmt.Errorf("failed to format %s: %w", outputPath, err)
+		} else {
+			result = string(formatted)
+		}
+	}
+
 	// Create output directory if needed
 	dir := filepath.Dir(outputPath)
 	if err := os.MkdirAll(dir, 0o755); err != nil {
@@ -257,6 +269,10 @@ func (e *Engine) RenderToFile(templateName string, data any, outputPath string) 
 	// Write file
 	if err := os.WriteFile(outputPath, []byte(result), 0o600); err != nil {
 		return fmt.Errorf("failed to write file %s: %w", outputPath, err)
+	}
+
+	if formatErr != nil {
+		return formatErr
 	}
 
 	if e.Verbose {

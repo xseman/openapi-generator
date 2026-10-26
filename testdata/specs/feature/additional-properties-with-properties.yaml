@@ -1,0 +1,49 @@
+openapi: "3.0.0"
+info:
+  title: Additional properties next to properties
+  version: 1.0.0
+  description: Objects that declare some properties and take any other key too (pydantic extra="allow"), or only keys of one type.
+paths:
+  /events:
+    post:
+      operationId: recordEvent
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Event"
+      responses:
+        "200":
+          description: the event as stored
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Scores"
+components:
+  schemas:
+    Event:
+      type: object
+      required: [kind]
+      properties:
+        kind:
+          type: string
+        at:
+          type: string
+          format: date-time
+      additionalProperties: true
+    Notes:
+      type: object
+      properties:
+        title:
+          type: string
+      additionalProperties:
+        type: string
+    Scores:
+      type: object
+      required: [player]
+      properties:
+        player:
+          type: string
+      additionalProperties:
+        type: integer

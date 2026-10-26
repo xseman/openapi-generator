@@ -1,0 +1,118 @@
+openapi: 3.1.0
+info:
+  title: Streamed responses
+  version: 1.0.0
+  description: Responses that stream their items, as FastAPI describes a yield endpoint with 3.2's itemSchema in a 3.1 document; JSON Lines of a model and of strings, server-sent events with JSON data of a union, with raw data and without a data schema; a JSON text sequence, which only its Raw method reads.
+paths:
+  /ticks:
+    get:
+      operationId: streamTicks
+      responses:
+        "200":
+          description: one tick per line
+          content:
+            application/jsonl:
+              itemSchema: { $ref: "#/components/schemas/Tick" }
+  /words:
+    get:
+      operationId: streamWords
+      responses:
+        "200":
+          description: one word per line
+          content:
+            application/jsonl:
+              itemSchema: { type: string }
+  /chat:
+    post:
+      operationId: chat
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [prompt], properties: { prompt: { type: string } } }
+      responses:
+        "200":
+          description: a delta per word, then done
+          content:
+            text/event-stream:
+              itemSchema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: string
+                    contentMediaType: application/json
+                    contentSchema:
+                      oneOf: [{ $ref: "#/components/schemas/Delta" }, { $ref: "#/components/schemas/Done" }]
+                      discriminator: { propertyName: kind }
+                  event: { type: string }
+                  id: { type: string }
+                  retry: { type: integer, minimum: 0 }
+  /events:
+    get:
+      operationId: rawEvents
+      responses:
+        "200":
+          description: events of any data
+          content:
+            text/event-stream:
+              itemSchema:
+                type: object
+                properties:
+                  data: { type: string }
+                  event: { type: string }
+                  id: { type: string }
+                  retry: { type: integer, minimum: 0 }
+  /pings:
+    get:
+      operationId: pings
+      responses:
+        "200":
+          description: events whose schema leaves out data
+          content:
+            text/event-stream:
+              itemSchema: { type: object, properties: { event: { type: string } } }
+  /maybe:
+    get:
+      operationId: maybeTicks
+      responses:
+        "200":
+          description: events of a tick or null, as pydantic writes Tick | None
+          content:
+            text/event-stream:
+              itemSchema:
+                type: object
+                properties:
+                  data:
+                    type: string
+                    contentMediaType: application/json
+                    contentSchema: { anyOf: [{ $ref: "#/components/schemas/Tick" }, { type: "null" }] }
+  /records:
+    get:
+      operationId: records
+      responses:
+        "200":
+          description: a JSON text sequence, not read
+          content:
+            application/json-seq:
+              itemSchema: { $ref: "#/components/schemas/Tick" }
+components:
+  schemas:
+    Tick:
+      type: object
+      required: [i]
+      properties:
+        i: { type: integer }
+        label: { type: string }
+    Delta:
+      type: object
+      required: [kind, text]
+      properties:
+        kind: { type: string, const: delta }
+        text: { type: string }
+    Done:
+      type: object
+      required: [kind, words]
+      properties:
+        kind: { type: string, const: done }
+        words: { type: integer }

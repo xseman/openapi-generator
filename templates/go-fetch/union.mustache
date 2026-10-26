@@ -1,0 +1,89 @@
+{{#vendorExtensions.x-go-doc}}
+{{{.}}}
+{{/vendorExtensions.x-go-doc}}
+type {{classname}} struct {
+	union json.RawMessage
+}
+
+// MarshalJSON returns the value as it is, null when unset.
+func (u {{classname}}) MarshalJSON() ([]byte, error) {
+	if u.union == nil {
+		return []byte("null"), nil
+	}
+
+	return u.union, nil
+}
+
+// UnmarshalJSON keeps a copy of b.
+func (u *{{classname}}) UnmarshalJSON(b []byte) error {
+	u.union = append(json.RawMessage(nil), b...)
+
+	return nil
+}
+{{#vendorExtensions.x-go-variants}}
+
+// As{{method}} decodes the value as a {{{type}}}{{#required}}, an error when it lacks
+// a property the {{{type}}} requires{{/required}}{{#pinned}}, or its {{key}} is not {{{literal}}}{{/pinned}}.
+func (u {{classname}}) As{{method}}() ({{{type}}}, error) {
+	var v {{{type}}}
+{{#required}}
+	if err := requireKeys(u.union, {{{.}}}); err != nil {
+		return v, err
+	}
+
+{{/required}}
+	err := json.Unmarshal(u.union, &v)
+{{#pinned}}
+	if err == nil && v.{{field}} != {{{literal}}} {
+		err = fmt.Errorf({{{mismatch}}}, v.{{field}})
+	}
+{{/pinned}}
+
+	return v, err
+}
+
+// From{{method}} sets the value to v{{#pinned}}, its {{key}} set to {{{literal}}}{{/pinned}}.
+func (u *{{classname}}) From{{method}}(v {{{type}}}) error {
+{{#pinned}}
+	v.{{field}} = {{{literal}}}
+{{/pinned}}
+	b, err := json.Marshal(v)
+	if err == nil {
+		u.union = b
+	}
+
+	return err
+}
+{{/vendorExtensions.x-go-variants}}
+{{#vendorExtensions.x-go-discriminator}}
+
+// Discriminator returns the value's {{name}} property.
+func (u {{classname}}) Discriminator() (string, error) {
+	var d struct {
+		Value string {{{tag}}}
+	}
+	err := json.Unmarshal(u.union, &d)
+
+	return d.Value, err
+}
+
+// ValueByDiscriminator decodes the value into a pointer to the model its
+// {{name}} property names.
+func (u {{classname}}) ValueByDiscriminator() (any, error) {
+	d, err := u.Discriminator()
+	if err != nil {
+		return nil, err
+	}
+
+	switch d {
+{{#mappings}}
+	case {{{value}}}:
+		v := new({{type}})
+
+		return v, json.Unmarshal(u.union, v)
+{{/mappings}}
+	}
+
+	return nil, errors.New("{{classname}}: unknown {{name}} " + strconv.Quote(d))
+}
+{{/vendorExtensions.x-go-discriminator}}

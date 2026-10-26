@@ -45,6 +45,34 @@ paths:
       responses:
         "200":
           description: ok
+  /items/{id}/patch:
+    put:
+      operationId: replaceItem
+      description: A required body that may be null, as GitHub's gists/update has it.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, nullable: true, properties: { name: { type: string } } }
+      responses:
+        "204":
+          description: replaced
+  /items/{id}/note:
+    put:
+      operationId: setNote
+      description: A required body of any JSON that may be null.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { nullable: true }
+      responses:
+        "204":
+          description: set
 components:
   schemas:
     Item:

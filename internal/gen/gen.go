@@ -17,6 +17,7 @@ import (
 	"github.com/xseman/openapi-generator/internal/config"
 	"github.com/xseman/openapi-generator/internal/generator"
 	"github.com/xseman/openapi-generator/internal/generator/dart"
+	"github.com/xseman/openapi-generator/internal/generator/golang"
 	"github.com/xseman/openapi-generator/internal/generator/typescript"
 	"github.com/xseman/openapi-generator/internal/template"
 )
@@ -28,8 +29,8 @@ type Options struct {
 	InputSpec string
 	// OutputDir is the directory generated files are written to.
 	OutputDir string
-	// GeneratorName selects the target generator: "typescript-fetch" or
-	// "dart-fetch".
+	// GeneratorName selects the target generator: "typescript-fetch",
+	// "dart-fetch" or "go-fetch".
 	GeneratorName string
 	// TemplateDir, if set, overrides the embedded templates with templates
 	// loaded from this filesystem directory.
@@ -68,8 +69,10 @@ func Generate(opts Options) error {
 		return errors.New("generator-name is required (use -g flag or generatorName in config file)")
 	}
 
-	if opts.GeneratorName != "typescript-fetch" && opts.GeneratorName != "dart-fetch" {
-		return fmt.Errorf("unsupported generator: %s (supported: 'typescript-fetch', 'dart-fetch')", opts.GeneratorName)
+	switch opts.GeneratorName {
+	case "typescript-fetch", "dart-fetch", "go-fetch":
+	default:
+		return fmt.Errorf("unsupported generator: %s (supported: 'typescript-fetch', 'dart-fetch', 'go-fetch')", opts.GeneratorName)
 	}
 
 	additionalProps := parseAdditionalProperties(opts.AdditionalProperties)
@@ -82,7 +85,7 @@ func Generate(opts Options) error {
 		AdditionalProperties: additionalProps,
 	}
 
-	// Construct the generator (TypeScript or Dart) and keep both the
+	// Construct the generator (TypeScript, Dart or Go) and keep both the
 	// abstract CodegenConfig (for parser/template plumbing) and the
 	// concrete generator (for language-specific helpers like index-file
 	// generation).
@@ -90,6 +93,7 @@ func Generate(opts Options) error {
 		cg      generator.CodegenConfig
 		tsGen   *typescript.FetchGenerator
 		dartGen *dart.FetchGenerator
+		goGen   *golang.FetchGenerator
 	)
 
 	switch opts.GeneratorName {
@@ -110,6 +114,15 @@ func Generate(opts Options) error {
 		dartGen.SetConfig(cfg)
 		dartGen.DartConfig = dartConfig
 		cg = dartGen
+
+	case "go-fetch":
+		goConfig := config.NewGoFetchConfig()
+		applyGoFetchAdditionalProperties(goConfig, additionalProps)
+
+		goGen = golang.NewFetchGenerator()
+		goGen.SetConfig(cfg)
+		goGen.GoConfig = goConfig
+		cg = goGen
 	}
 
 	if err := cg.ProcessOpts(); err != nil {
@@ -127,6 +140,10 @@ func Generate(opts Options) error {
 	case dartGen != nil:
 		apiPackage = dartGen.ApiPackage
 		modelPackage = dartGen.ModelPackage
+
+	case goGen != nil:
+		apiPackage = goGen.ApiPackage
+		modelPackage = goGen.ModelPackage
 	}
 
 	spec, err := assembleSpec(cg, opts)
@@ -156,6 +173,7 @@ func Generate(opts Options) error {
 		cg:           cg,
 		tsGen:        tsGen,
 		dartGen:      dartGen,
+		goGen:        goGen,
 		engine:       engine,
 		outputDir:    opts.OutputDir,
 		apiPackage:   apiPackage,
