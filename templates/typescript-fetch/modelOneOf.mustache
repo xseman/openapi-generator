@@ -4,16 +4,19 @@ import { bestFit, parseDate, parseDateTime, serializeDate, serializeDateTime } f
 {{#hasImports}}
 {{#oneOfImports}}
 import type { {{{classname}}} } from './{{filename}}{{importFileExtension}}';
+{{^withoutRuntimeChecks}}
 import {
     instanceOf{{{classname}}},
     {{{classname}}}FromJSON,
     {{{classname}}}FromJSONTyped,
     {{{classname}}}ToJSON,
 } from './{{filename}}{{importFileExtension}}';
+{{/withoutRuntimeChecks}}
 {{/oneOfImports}}
 
 {{/hasImports}}
 {{>modelOneOfInterfaces}}
+{{^withoutRuntimeChecks}}
 
 
 export function {{classname}}FromJSON(json: any): {{classname}} {
@@ -279,3 +282,4 @@ export function {{classname}}ToJSONTyped(value?: {{classname}} | null, ignoreDis
     return value;
 {{/discriminator}}
 }
+{{/withoutRuntimeChecks}}

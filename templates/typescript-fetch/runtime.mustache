@@ -370,7 +370,9 @@ export interface RequestOpts {
 }
 
 export function querystring(params: HTTPQuery, prefix: string = ""): string {
+    // A property left unset (an object's, deepObject style) is left out.
     return Object.keys(params)
+        .filter(key => params[key] !== undefined)
         .map(key => querystringSingleKey(key, params[key], prefix))
         .filter(part => part.length > 0)
         .join("&");
@@ -406,7 +408,7 @@ export function styleParam(name: string, value: any, style: string, explode: boo
     const items: string[] = Array.isArray(value)
         ? value.map((v) => encode(String(v)))
         : object
-            ? Object.entries(value).map(([k, v]) => encode(k) + (explode ? "=" : ",") + encode(String(v)))
+            ? Object.entries(value).filter(([, v]) => v !== undefined).map(([k, v]) => encode(k) + (explode ? "=" : ",") + encode(String(v)))
             : [encode(String(value))];
     switch (style) {
         case "label":
@@ -436,13 +438,15 @@ export function formFields(name: string, value: any, style: string, explode: boo
     if (value === null || typeof value !== "object") {
         return [[name, String(value)]];
     }
+    // A property left unset is left out.
+    const entries = Object.entries(value).filter(([, v]) => v !== undefined);
     if (explode) {
         return Array.isArray(value)
             ? value.map((v): [string, string] => [name, String(v)])
-            : Object.entries(value).map(([k, v]): [string, string] => [k, String(v)]);
+            : entries.map(([k, v]): [string, string] => [k, String(v)]);
     }
     const delimiter = style === "spaceDelimited" ? " " : style === "pipeDelimited" ? "|" : ",";
-    return [[name, (Array.isArray(value) ? value : Object.entries(value).flat()).join(delimiter)]];
+    return [[name, (Array.isArray(value) ? value : entries.flat()).join(delimiter)]];
 }
 
 function deepObjectFields(name: string, value: any): Array<[string, string]> {

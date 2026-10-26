@@ -268,6 +268,13 @@ func (g *FetchGenerator) alias(cm *codegen.CodegenModel) {
 	cm.VendorExtensions["x-ts-alias-from"] = from.expr(value, "json")
 	cm.VendorExtensions["x-ts-alias-to"] = to.expr(value, "value")
 
+	// The value's type names its models, converted or not.
+	for p := value; p != nil; p = p.Items {
+		if g.byName[p.DataType] != nil {
+			from.used[p.DataType] = true
+		}
+	}
+
 	delete(from.used, cm.Classname)
 	cm.Imports = addImports(cm.Imports, from.used)
 }
@@ -394,6 +401,15 @@ func (g *FetchGenerator) fitMembers(cm *codegen.CodegenModel) {
 	cm.VendorExtensions["x-ts-fit-to"] = to.fits(members)
 }
 
+// optional is 1 for an optional parameter, 0 for a required one.
+func optional(p *codegen.CodegenParameter) int {
+	if p.Required {
+		return 0
+	}
+
+	return 1
+}
+
 // key is name as the key of an object literal. "__proto__" would set the
 // prototype, not a property: it is computed.
 func key(name string) string {
@@ -420,6 +436,13 @@ func addImports(imports []string, used map[string]bool) []string {
 // PostProcessOperations post-processes operations for TypeScript-Fetch.
 func (g *FetchGenerator) PostProcessOperations(operations []*codegen.CodegenOperation) []*codegen.CodegenOperation {
 	for _, op := range operations {
+		// Positional arguments: no required one after an optional one.
+		if !g.UseSingleRequestParameter {
+			slices.SortStableFunc(op.AllParams, func(a, b *codegen.CodegenParameter) int {
+				return optional(a) - optional(b)
+			})
+		}
+
 		g.escapeOperationId(op)
 		g.updateOperationParameterForEnum(op)
 		g.addOperationObjectResponseInformation(op)

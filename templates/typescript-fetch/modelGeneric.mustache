@@ -12,18 +12,22 @@ import {
 {{/usesDateHelpers}}
 } from '../runtime{{importFileExtension}}';
 
+{{/withoutRuntimeChecks}}
 {{#hasImports}}
 {{#tsImports}}
 import type { {{{classname}}} } from './{{filename}}{{importFileExtension}}';
+{{^withoutRuntimeChecks}}
 import {
     {{classname}}FromJSON,
     {{classname}}FromJSONTyped,
     {{classname}}ToJSON,
     {{classname}}ToJSONTyped,
 } from './{{filename}}{{importFileExtension}}';
+{{/withoutRuntimeChecks}}
 {{/tsImports}}
 
 {{/hasImports}}
+{{^withoutRuntimeChecks}}
 {{#vendorExtensions.x-ts-mapped}}
 import { type {{modelName}}, {{modelName}}FromJSONTyped, {{modelName}}ToJSON, {{modelName}}ToJSONTyped } from './{{modelFilename}}{{importFileExtension}}';
 {{/vendorExtensions.x-ts-mapped}}
