@@ -1,0 +1,5 @@
+spec: ../../specs/feature/parameters-path-style.yaml
+cases:
+  - { op: getSimplePath, args: { id: [a, b] }, request: { path: "/simple/a,b" }, response: { status: 200 }, skip: { dart-fetch: "request.path: want \"/simple/a,b\", got \"/simple/[a, b]\"" } }
+  - { op: getMatrixPath, args: { id: [a, b] }, request: { path: "/matrix/;id=a,b" }, response: { status: 200 }, skip: { dart-fetch: "request: invalid for the spec: parameter \"id\" in path has an error: value %5Ba,%20b%5D: a value must be prefixed with \";id=\"", typescript-fetch: "no matrix path style" } }
+  - { op: getLabelPath, args: { id: [a, b] }, request: { path: "/label/.a.b" }, response: { status: 200 }, skip: { dart-fetch: "request: invalid for the spec: parameter \"id\" in path has an error: value %5Ba,%20b%5D: a value must be prefixed with \".\"", typescript-fetch: "no label path style" } }

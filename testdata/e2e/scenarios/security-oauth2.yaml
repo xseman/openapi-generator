@@ -1,0 +1,6 @@
+spec: ../../specs/feature/security-oauth2.yaml
+skip: { dart-fetch: "does not compile: lib/src/apis/default_api.dart:20: Expected an identifier." }
+auth: { bearer: tok }
+cases:
+  - { op: getWithOAuthCode, request: { header: { Authorization: Bearer tok } }, response: { status: 200 } }
+  - { op: getWithOAuthClientCredentials, request: { header: { Authorization: Bearer tok } }, response: { status: 200 } }

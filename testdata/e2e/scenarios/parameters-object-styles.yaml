@@ -1,0 +1,43 @@
+# Objects and arrays in every parameter style, against the OpenAPI
+# serialization table (color = {R: 100, G: 200, B: 150}).
+spec: ../../specs/feature/parameters-object-styles.yaml
+cases:
+  - name: every style
+    op: paint
+    args:
+      a: { R: 100, G: 200, B: 150 }
+      b: { R: 100, G: 200, B: 150 }
+      c: { R: 100, G: 200, B: 150 }
+      d: { R: 100, G: 200, B: 150 }
+      e: { R: 100, G: 200, B: 150 }
+      f: { R: 100, G: 200, B: 150 }
+      g: [blue, black]
+      q: { R: 100, G: 200, B: 150 }
+      X-Color: { R: 100, G: 200, B: 150 }
+      X-Color-Exploded: { R: 100, G: 200, B: 150 }
+      X-Tags: [x, y]
+      prefs: [p, q]
+    request:
+      method: GET
+      path: "/simple/B,150,G,200,R,100/B=150,G=200,R=100/label/.B,150,G,200,R,100/.B=150.G=200.R=100/matrix/;e=B,150,G,200,R,100/;B=150;G=200;R=100/;g=blue;g=black"
+      query: { q: "B,150,G,200,R,100" }
+      header: { X-Color: "B,150,G,200,R,100", X-Color-Exploded: "B=150,G=200,R=100", X-Tags: "x,y" }
+      cookie: { prefs: "p,q" }
+    response: { status: 204 }
+    skip: { dart-fetch: "request: invalid for the spec: parameter \"a\" in path has an error: value Instance%20of%20'Color': a value must be a list of object's properties in format \"name,", typescript-fetch: "no object parameters in a path or header, no matrix or label style" }
+  - name: optional ones left out
+    op: paint
+    args:
+      a: { R: 1, G: 2, B: 3 }
+      b: { R: 1, G: 2, B: 3 }
+      c: { R: 1, G: 2, B: 3 }
+      d: { R: 1, G: 2, B: 3 }
+      e: { R: 1, G: 2, B: 3 }
+      f: { R: 1, G: 2, B: 3 }
+      g: [a]
+    request:
+      query: { q: $absent }
+      header: { X-Color: $absent, X-Tags: $absent }
+      cookie: { prefs: $absent }
+    response: { status: 204 }
+    skip: { dart-fetch: "request: invalid for the spec: parameter \"a\" in path has an error: value Instance%20of%20'Color': a value must be a list of object's properties in format \"name,", typescript-fetch: "no object parameters in a path or header, no matrix or label style" }

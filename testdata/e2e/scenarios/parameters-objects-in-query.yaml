@@ -1,0 +1,8 @@
+spec: ../../specs/feature/parameters-explode-object.yaml
+skip: { dart-fetch: "does not compile: lib/src/apis/default_api.dart:21: Expected to find '}'." }
+cases:
+  - name: exploded map, free-form object, deepObject
+    op: listItems
+    args: { labels: { color: red, size: L }, extra: { a: "1" }, range: { min: 1, max: 5 } }
+    request: { query: { color: red, size: L, a: "1", "range[min]": "1", "range[max]": "5" } }
+    response: { status: 204 }
