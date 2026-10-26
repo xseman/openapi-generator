@@ -19,4 +19,4 @@ cases:
     args: { title: q3, meta: { author: ann, pages: 3 }, attachments: [{ $file: { name: a.txt, text: a } }] }
     request: { body: { title: [q3], meta: [{ json: { author: ann, pages: 3 } }], attachments: [{ filename: a.txt, text: a }] } }
     response: { status: 204 }
-    skip: { typescript-fetch: "an object multipart part goes as text, not application/json" }
+    skip: { typescript-fetch: "FormData gives a part a Content-Type only as a file: the JSON part goes as a file named blob" }

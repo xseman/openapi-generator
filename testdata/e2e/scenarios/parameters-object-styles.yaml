@@ -24,7 +24,7 @@ cases:
       header: { X-Color: "B,150,G,200,R,100", X-Color-Exploded: "B=150,G=200,R=100", X-Tags: "x,y" }
       cookie: { prefs: "p,q" }
     response: { status: 204 }
-    skip: { dart-fetch: "request: invalid for the spec: parameter \"a\" in path has an error: value Instance%20of%20'Color': a value must be a list of object's properties in format \"name,", typescript-fetch: "no object parameters in a path or header, no matrix or label style" }
+    skip: { dart-fetch: "request: invalid for the spec: parameter \"a\" in path has an error: value Instance%20of%20'Color': a value must be a list of object's properties in format \"name," }
   - name: optional ones left out
     op: paint
     args:
@@ -40,4 +40,4 @@ cases:
       header: { X-Color: $absent, X-Tags: $absent }
       cookie: { prefs: $absent }
     response: { status: 204 }
-    skip: { dart-fetch: "request: invalid for the spec: parameter \"a\" in path has an error: value Instance%20of%20'Color': a value must be a list of object's properties in format \"name,", typescript-fetch: "no object parameters in a path or header, no matrix or label style" }
+    skip: { dart-fetch: "request: invalid for the spec: parameter \"a\" in path has an error: value Instance%20of%20'Color': a value must be a list of object's properties in format \"name," }

@@ -6,4 +6,12 @@ cases:
     request:
       query: { f32: "0.1", f64: "1000000000000000000000", n: "0.30000000000000004", i64: "4611686018427387905", ok: "false", day: "2024-01-02", at: "2024-02-29T23:59:58.0000005-01:30", raw: "+/8=" }
     response: { status: 204 }
-    skip: { dart-fetch: "request: invalid for the spec: parameter \"day\" in query has an error: string doesn't match the format \"date\": string doesn't match pattern \"^[0-9]{4}-(0[1-9]|10", typescript-fetch: "JavaScript numbers and Date: no int64, 1e21 as 1e+21, times in UTC with milliseconds" }
+    skip: { dart-fetch: "request: invalid for the spec: parameter \"day\" in query has an error: string doesn't match the format \"date\": string doesn't match pattern \"^[0-9]{4}-(0[1-9]|10", typescript-fetch: "JavaScript numbers: no int64, 1e21 as 1e+21" }
+  - name: what a JavaScript number holds, dates in headers
+    op: search
+    args: { f32: 0.1, n: 0.30000000000000004, ok: true, day: "2024-01-02", at: "2024-02-29T23:59:58.5+01:30", X-Day: "2024-12-31", X-At: "2024-01-02T03:04:05Z" }
+    request:
+      query: { f32: "0.1", n: "0.30000000000000004", ok: "true", day: "2024-01-02", at: "2024-02-29T23:59:58.5+01:30" }
+      header: { X-Day: "2024-12-31", X-At: "2024-01-02T03:04:05Z" }
+    response: { status: 204 }
+    skip: { dart-fetch: "request: invalid for the spec: parameter \"day\" in query has an error: string doesn't match the format \"date\"" }

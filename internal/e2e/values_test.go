@@ -20,11 +20,6 @@ import (
 	"go.yaml.in/yaml/v3"
 )
 
-// valueLenient are the generators whose failing generated cases are
-// counted and skipped, not failed: they have known gaps a later change
-// fixes. Without an entry a generator is strict, as go-fetch is.
-var valueLenient = map[string]bool{"typescript-fetch": true, "dart-fetch": true}
-
 // valueScenarios generates a scenario for each feature spec, the FastAPI
 // spec (served by the mock) and each spec in E2E_SPECS (comma-separated
 // paths), and logs the operations it leaves out.

@@ -13,6 +13,19 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Inventory"
+    put:
+      operationId: putStocks
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties:
+                $ref: "#/components/schemas/Stock"
+      responses:
+        "204":
+          description: stored
 components:
   schemas:
     Inventory:
@@ -34,6 +47,18 @@ components:
             type: object
             additionalProperties:
               type: integer
+        byDayAndWarehouse:
+          type: object
+          additionalProperties:
+            type: object
+            additionalProperties:
+              $ref: "#/components/schemas/Stock"
+        snapshots:
+          type: array
+          items:
+            type: object
+            additionalProperties:
+              $ref: "#/components/schemas/Stock"
     Stock:
       type: object
       properties:
@@ -41,3 +66,5 @@ components:
           type: string
         quantity:
           type: integer
+        unit-price:
+          type: number

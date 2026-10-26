@@ -39,7 +39,9 @@ func runTypeScript(t *testing.T, suites []suite) map[string]map[int]outcome {
 
 	var main strings.Builder
 
-	main.WriteString("import { run } from \"./runner\";\n")
+	// Each client loads when its suite runs: one whose JavaScript does not
+	// even parse fails its own cases, not the program.
+	main.WriteString("import { run } from \"./runner\";\n\ndeclare const require: any;\n")
 
 	for i, s := range suites {
 		pkg := "c" + strconv.Itoa(i)
@@ -54,31 +56,53 @@ func runTypeScript(t *testing.T, suites []suite) map[string]map[int]outcome {
 		if err != nil {
 			t.Fatalf("generate %s: %v", s.Name, err)
 		}
-
-		fmt.Fprintf(&main, "import * as %s from \"./%s/index\";\n", pkg, pkg)
 	}
 
 	main.WriteString("\nrun({\n")
 
 	for i, s := range suites {
-		fmt.Fprintf(&main, "    %q: { module: c%d, dir: %q },\n", s.Name, i, filepath.Join(dir, "c"+strconv.Itoa(i)))
+		fmt.Fprintf(&main, "    %q: { load: () => require(\"./c%d/index\"), dir: %q },\n", s.Name, i, filepath.Join(dir, "c"+strconv.Itoa(i)))
 	}
 
 	main.WriteString("});\n")
 	write(t, filepath.Join(dir, "main.ts"), main.String())
 	write(t, filepath.Join(dir, "tsconfig.json"), `{"compilerOptions": {"target": "ES2022", "module": "commonjs", "lib": ["ES2022", "DOM"],
- "outDir": "dist", "strict": false, "skipLibCheck": true, "noEmitOnError": false}, "files": ["main.ts"]}`)
+ "outDir": "dist", "strict": true, "skipLibCheck": true, "noEmitOnError": false}, "include": ["**/*.ts"]}`)
 
-	// Type errors in a client are its generator's; the JavaScript is
-	// emitted anyway and the cases show what they break.
+	// A client must compile as its users compile it, strict. The JavaScript
+	// is emitted anyway, so the others run; a client with a type error fails
+	// its cases with the first one.
 	build := exec.Command(tsc, "-p", ".")
 	build.Dir = dir
 
-	if out, err := build.CombinedOutput(); err != nil {
-		t.Logf("tsc: %v\n%s", err, out)
+	out, _ := build.CombinedOutput()
+	broken := map[string]string{}
+
+	for _, line := range strings.Split(string(out), "\n") {
+		pkg, _, _ := strings.Cut(line, "/")
+		if _, seen := broken[pkg]; !strings.Contains(line, ": error TS") || seen {
+			continue
+		}
+
+		if !strings.HasPrefix(pkg, "c") {
+			t.Fatalf("tsc: the runner does not compile:\n%s", out)
+		}
+
+		broken[pkg] = line
 	}
 
 	writeInput(t, dir, suites)
 
-	return execRunner(t, exec.Command(node, filepath.Join(dir, "dist", "main.js"), filepath.Join(dir, "input.json")))
+	outcomes := execRunner(t, exec.Command(node, filepath.Join(dir, "dist", "main.js"), filepath.Join(dir, "input.json")))
+
+	for i, s := range suites {
+		if msg, ok := broken["c"+strconv.Itoa(i)]; ok {
+			outcomes[s.Name] = map[int]outcome{}
+			for j := range s.Cases {
+				outcomes[s.Name][j] = outcome{Suite: s.Name, Case: j, Fail: "the client does not compile: " + msg}
+			}
+		}
+	}
+
+	return outcomes
 }

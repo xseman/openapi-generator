@@ -24,12 +24,20 @@ import (
 type runner struct {
 	generator string
 	run       func(t *testing.T, suites []suite) map[string]map[int]outcome
+
+	// lenient counts its failing generated cases and skips them, until a
+	// later change fixes its known gaps.
+	lenient bool
+
+	// millis compares its date-times as instants to the millisecond: they
+	// are JavaScript Dates.
+	millis bool
 }
 
 var runners = []runner{
-	{"go-fetch", runGoFetch},
-	{"typescript-fetch", runTypeScript},
-	{"dart-fetch", runDart},
+	{generator: "go-fetch", run: runGoFetch},
+	{generator: "typescript-fetch", run: runTypeScript, millis: true},
+	{generator: "dart-fetch", run: runDart, lenient: true},
 }
 
 // forEachRunner runs fn per generator; E2E_GENERATOR=<name> picks one.
@@ -91,7 +99,7 @@ func TestMock(t *testing.T) {
 
 		for _, s := range suites {
 			t.Run(s.Name, func(t *testing.T) {
-				tally[s.Name] = checkCases(t, r.generator, byName[s.Name], outcomes[s.Name], mocks[s.Name])
+				tally[s.Name] = checkCases(t, r, byName[s.Name], outcomes[s.Name], mocks[s.Name])
 			})
 		}
 
@@ -160,7 +168,7 @@ func TestFastAPI(t *testing.T) {
 
 			var c *counts
 
-			t.Run(s.Name, func(t *testing.T) { c = checkCases(t, r.generator, s, outcomes[s.Name], nil) })
+			t.Run(s.Name, func(t *testing.T) { c = checkCases(t, r, s, outcomes[s.Name], nil) })
 			report(t, r.generator, map[string]*counts{s.Name: c})
 		}
 	})
@@ -174,7 +182,7 @@ func toSuite(t *testing.T, s *scenario, specPath, base string, isMock bool) suit
 		t.Fatal(err)
 	}
 
-	params := opParams(doc)
+	params, bodies := opParams(doc), opBodies(doc)
 
 	out := suite{Name: s.Name, Base: base, Mock: isMock, Auth: s.Auth, Spec: specPath, Schemes: map[string]string{}}
 
@@ -195,7 +203,7 @@ func toSuite(t *testing.T, s *scenario, specPath, base string, isMock bool) suit
 			t.Fatalf("%s %s: request and response are for the mock; a backend answers itself", s.Name, k.Op)
 		}
 
-		out.Cases = append(out.Cases, suiteCase{Op: k.Op, Params: params[k.Op], Args: k.Args, Auth: k.Auth, Save: k.Save})
+		out.Cases = append(out.Cases, suiteCase{Op: k.Op, Params: params[k.Op], Bodies: bodies[k.Op], Args: k.Args, Auth: k.Auth, Save: k.Save})
 	}
 
 	return out
@@ -204,7 +212,7 @@ func toSuite(t *testing.T, s *scenario, specPath, base string, isMock bool) suit
 // checkCases compares each case's outcome, and with a mock the request it
 // received, with the scenario. A case skipped for this generator must still
 // fail: one that passes has its skip left over.
-func checkCases(t *testing.T, generator string, s *scenario, outcomes map[int]outcome, m *mock) *counts {
+func checkCases(t *testing.T, r runner, s *scenario, outcomes map[int]outcome, m *mock) *counts {
 	t.Helper()
 
 	c := &counts{}
@@ -219,14 +227,14 @@ func checkCases(t *testing.T, generator string, s *scenario, outcomes map[int]ou
 			var diffs []string
 
 			if o, ok := outcomes[i]; ok {
-				diffs = caseDiffs(k, o, m, i)
+				diffs = caseDiffs(k, o, m, i, rules{exact: k.Exact, millis: r.millis})
 			} else {
 				diffs = []string{"the runner reported nothing for this case"}
 			}
 
-			reason, skipped := k.Skip[generator]
+			reason, skipped := k.Skip[r.generator]
 			if !skipped {
-				reason, skipped = s.Skip[generator]
+				reason, skipped = s.Skip[r.generator]
 			}
 
 			switch {
@@ -240,7 +248,7 @@ func checkCases(t *testing.T, generator string, s *scenario, outcomes map[int]ou
 
 				t.Skipf("%s (%s)", reason, strings.Join(diffs, "; "))
 
-			case len(diffs) > 0 && k.Exact && valueLenient[generator]:
+			case len(diffs) > 0 && k.Exact && r.lenient:
 				c.fail++
 
 				t.Skip("lenient until its gaps are fixed:\n" + strings.Join(diffs, "\n"))
@@ -259,7 +267,7 @@ func checkCases(t *testing.T, generator string, s *scenario, outcomes map[int]ou
 	return c
 }
 
-func caseDiffs(k kase, o outcome, m *mock, i int) []string {
+func caseDiffs(k kase, o outcome, m *mock, i int, r rules) []string {
 	var diffs []string
 
 	// With a mock every case's request must be valid for the spec, and the
@@ -283,10 +291,10 @@ func caseDiffs(k kase, o outcome, m *mock, i int) []string {
 				sent["body"] = b
 			}
 
-			diffs = append(diffs, match("request", decodeJSON(k.Request), sent, true)...)
+			diffs = append(diffs, match("request", decodeJSON(k.Request), sent, r)...)
 
 		case k.Request != nil:
-			diffs = append(diffs, match("request", decodeJSON(k.Request), got, false)...)
+			diffs = append(diffs, match("request", decodeJSON(k.Request), got, r)...)
 		}
 	}
 
@@ -305,12 +313,12 @@ func caseDiffs(k kase, o outcome, m *mock, i int) []string {
 			got["model"] = decodeJSON(o.Error.Model)
 		}
 
-		diffs = append(diffs, match("error", decodeJSON(k.Error), got, k.Exact)...)
+		diffs = append(diffs, match("error", decodeJSON(k.Error), got, r)...)
 
 	case o.Error != nil:
 		diffs = append(diffs, fmt.Sprintf("error: %d %s", o.Error.Status, o.Error.Body))
 	case k.Result != nil:
-		diffs = append(diffs, match("result", decodeJSON(k.Result), decodeJSON(o.Result), k.Exact)...)
+		diffs = append(diffs, match("result", decodeJSON(k.Result), decodeJSON(o.Result), r)...)
 	}
 
 	return diffs

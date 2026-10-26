@@ -2,7 +2,7 @@ openapi: "3.0.0"
 info:
   title: Scalar parameter formats
   version: 1.0.0
-  description: Query parameters of each scalar type and format, as their text on the wire.
+  description: Query and header parameters of each scalar type and format, as their text on the wire.
 paths:
   /search:
     get:
@@ -16,6 +16,8 @@ paths:
         - { name: day, in: query, schema: { type: string, format: date } }
         - { name: at, in: query, schema: { type: string, format: date-time } }
         - { name: raw, in: query, schema: { type: string, format: byte } }
+        - { name: X-Day, in: header, schema: { type: string, format: date } }
+        - { name: X-At, in: header, schema: { type: string, format: date-time } }
       responses:
         "204":
           description: ok

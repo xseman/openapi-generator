@@ -36,3 +36,7 @@ components:
           type: string
         trailingUnderscore_:
           type: string
+        __proto__:
+          type: string
+        constructor:
+          type: string

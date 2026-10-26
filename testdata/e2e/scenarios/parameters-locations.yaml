@@ -11,7 +11,6 @@ cases:
       cookie: { sessionId: s-1 }
     response: { json: { id: "42" } }
     result: { id: "42" }
-    skip: { typescript-fetch: "no cookie parameters" }
   - name: optional ones left out
     op: getItem
     args: { orgId: o, itemId: 1 }

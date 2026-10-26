@@ -11,7 +11,6 @@ cases:
     op: issueToken
     args: { username: alice, password: nope }
     error: { status: 400, model: null, body: '{"detail":"bad login"}' }
-    skip: { typescript-fetch: "no error models: the body is decoded as JSON whatever the status declares" }
   - name: password form with a scope
     op: issueToken
     args: { username: bob, password: secret, scope: "items:read" }
@@ -68,7 +67,7 @@ cases:
       color: light green
       priority: 10
       unit: lb
-    skip: { typescript-fetch: "binary in a JSON body: a Blob serializes as {}" }
+    skip: { typescript-fetch: "a JavaScript number loses integers past 2^53 (i64)" }
   - name: literals, string members and defaults
     op: echoLiterals
     args: { body: { retry: always, pin: x, order: asc } }
@@ -94,7 +93,6 @@ cases:
       retries: 3
       extras: null
       sent: [color, dims, due, lines, note, payment]
-    skip: { typescript-fetch: "null and absent are one to it for an optional nullable array: an explicit null decodes and encodes as absent" }
   - name: required nullables set, falsy values, explicit null over a default
     op: echoNulls
     args:
@@ -109,7 +107,6 @@ cases:
       retries: null
       extras: null
       sent: [color, dims, due, extras, lines, note, payment, retries]
-    skip: { typescript-fetch: "null and absent are one to it for an optional nullable array: an explicit null decodes and encodes as absent" }
   - name: naive, aware and contained times round trip
     op: echoStamps
     args:
@@ -136,7 +133,7 @@ cases:
     op: stampsQuery
     args: { days: ["2024-01-31", "2024-02-29"], since: "2024-03-01T10:00:00" }
     result: { naive: "2024-03-01T10:00:00", aware: "2024-03-01T10:00:00Z", clock: "13:45:30.250000", span: "-PT1.5S", days: ["2024-01-31", "2024-02-29"] }
-    skip: { typescript-fetch: "a date array in the query goes out as Date.toString() (Wed Jan 31 2024 ...); a naive date-time as UTC with Z" }
+    skip: { typescript-fetch: "a naive date-time is read as local time and sent in UTC with Z (422 timezone_naive)" }
   - name: containers, empty and null
     op: echoContainers
     args:
@@ -162,7 +159,6 @@ cases:
       by_name: { box: { widthCm: 1.5, heightCm: 2, depthCm: null } }
       maybe_list: null
       maybe_map: { k: null, v: "1" }
-    skip: { typescript-fetch: "a tuple (prefixItems) renders an undefined FromJSON" }
   - name: Go keywords and odd property names
     op: echoKeywords
     args:
@@ -172,7 +168,6 @@ cases:
     op: echoOpen
     args: { body: { kind: k, extra: 1, nested: { a: [true] } } }
     result: { kind: k, extra: 1, nested: { a: [true] } }
-    skip: { typescript-fetch: "drops the keys next to the declared properties (additionalProperties)" }
   - name: recursive tree
     op: echoTree
     args: { body: { name: root, children: [{ name: a, children: [{ name: a1 }] }], parent: { name: up } } }
@@ -295,7 +290,6 @@ cases:
       ratio: 0.1
       active: false
       old: null
-    skip: { typescript-fetch: "a Date comes back in UTC" }
   - name: query, optional ones left out
     op: queryParams
     args: { q: only }
@@ -310,7 +304,6 @@ cases:
       tenant: t1
       theme: dark
     result: { requestId: 0b5f0c6e-8e7b-4c8c-9d55-7f0f3c6f2a11, retry: 3, flags: [a], lang: "sk-SK,en;q=0.5", tenant: t1, theme: dark }
-    skip: { typescript-fetch: "no cookie parameters" }
   - name: list headers, one item each
     op: headerLists
     args: { x-tags: [a], x-ids: [7], x-colors: [dark-blue] }
@@ -356,7 +349,6 @@ cases:
       id: $any
       createdAt: $any
     save: { item: id }
-    skip: { typescript-fetch: "runner: ToJSON leaves out a result's readOnly properties" }
   - name: create a second item, price as a number
     op: createItem
     args: { body: { sku: ABC-0002, name: Bag, price: 5 } }
@@ -393,11 +385,9 @@ cases:
     op: patchItem
     args: { item_id: "${item}", if-match: 2, body: { name: null } }
     error: { status: 400, model: null, body: '{"detail":"name may not be null"}' }
-    skip: { typescript-fetch: "no error models: the body is decoded as JSON whatever the status declares" }
   - name: HEAD of an item that exists
     op: itemExists
     args: { item_id: "${item}" }
-    skip: { typescript-fetch: "fails on the empty body of a HEAD" }
   - name: HEAD of one that does not
     op: itemExists
     args: { item_id: 0b5f0c6e-8e7b-4c8c-9d55-7f0f3c6f2a11 }
@@ -412,7 +402,6 @@ cases:
       labels: [x, y]
       meta: '{"k":1}'
     result: [{ name: docs/a b.txt, size: 5, labels: "x|y", meta: '{"k":1}' }, { name: docs/ž.bin, size: 2 }]
-    skip: { typescript-fetch: "a multipart array goes comma-joined in one part" }
   - name: duplicate file is a 409
     op: uploadFiles
     args: { files: [{ $file: { name: a b.txt, text: again } }], folder: docs }
@@ -425,22 +414,18 @@ cases:
     op: submitForm
     args: { day: "2024-01-31", when: "2024-03-01T10:00:00Z", price: "19.99", color: light green, tags: [a, "b,c"], colors: [red, dark-blue], days: ["2024-01-31", "2024-02-29"], qty: 0, agree: true }
     result: { day: "2024-01-31", when: "2024-03-01T10:00:00Z", price: "19.99", color: light green, tags: [a, "b,c"], colors: [red, dark-blue], days: ["2024-01-31", "2024-02-29"], qty: 0, agree: true }
-    skip: { typescript-fetch: "a union form field (Decimal: number or string) renders JSON.stringify(number | stringToJSON(...)), which does not compile" }
   - name: typed form, defaults left out, a number for a Decimal
     op: submitForm
     args: { day: "2024-01-31", when: "2024-03-01T10:00:00Z", price: 5, color: red }
     result: { price: "5", tags: [], colors: [], days: [], qty: null, agree: false }
-    skip: { typescript-fetch: "a union form field (Decimal: number or string) renders JSON.stringify(number | stringToJSON(...)), which does not compile" }
   - name: a form model with files, declared url-encoded
     op: uploadModel
     args: { folder: docs, files: [{ $file: { name: a.txt, text: abc } }, { $file: { name: b.txt, text: de } }], labels: [x, y] }
     result: { folder: docs, files: { a.txt: 3, b.txt: 2 }, labels: [x, y], cover: null }
-    skip: { typescript-fetch: &urlFile "a form declared url-encoded goes as URLSearchParams even with a file, a Blob as text" }
   - name: a form model's optional file given
     op: uploadModel
     args: { folder: docs, files: [{ $file: { name: a.txt, text: abc } }], cover: { $file: { name: c.png, text: C } } }
     result: { files: { a.txt: 3 }, cover: c.png }
-    skip: { typescript-fetch: *urlFile }
   - name: optional file left out
     op: uploadAvatar
     args: { image: { $file: { name: i.png, text: "12345" } } }
@@ -480,7 +465,6 @@ cases:
         lines: [{ sku: ABC-0001, quantity: 500 }]
         payment: { method: card, last4: "4242", expires: "2030-01-01" }
     error: { status: 202, model: { title: Queued for review, status: 202 } }
-    skip: { typescript-fetch: "a 2xx with another body decodes as the result type" }
   - name: get the order
     op: getOrder
     args: { order_id: 1 }
@@ -492,7 +476,6 @@ cases:
   - name: 202 without a body, embedded body field
     op: cancelOrder
     args: { order_id: 1, body: { reason: changed my mind } }
-    skip: { typescript-fetch: "fails on a 2xx without a body" }
   - name: a bound on a path parameter is a 422
     op: getOrder
     args: { order_id: 0 }
@@ -522,21 +505,17 @@ cases:
     op: streamLines
     args: { n: 2 }
     result: "{\"i\":0}\n{\"i\":1}\n"
-    skip: { typescript-fetch: "an any result is parsed as JSON whatever its media type" }
   - name: JSON Lines of a model
     op: streamTicks
     args: { n: 2 }
     result: [{ i: 0, label: t0 }, { i: 1, label: t1 }]
-    skip: &noItems { typescript-fetch: "a response with only an itemSchema (3.2 streaming) is void: the items are dropped" }
   - name: JSON Lines, none
     op: streamTicks
     args: { n: 0 }
     result: []
-    skip: *noItems
   - name: JSON Lines of integers
     op: streamInts
     result: [0, 1, 2]
-    skip: *noItems
   - name: a bound on a stream's query is a 422
     op: streamTicks
     args: { n: 11 }
@@ -545,16 +524,13 @@ cases:
     op: streamEvents
     args: { n: 2 }
     result: [{ data: { i: 0, label: e0 } }, { data: { i: 1, label: e1 } }]
-    skip: *noItems
   - name: server-sent events over POST, a discriminated union per event
     op: chat
     args: { body: { prompt: hello world } }
     result: [{ data: { kind: delta, text: hello } }, { data: { kind: delta, text: world } }, { data: { kind: done, words: 2 } }]
-    skip: *noItems
   - name: server-sent events with names and ids, data as text
     op: streamRawEvents
     result: [{ event: tick, id: "1", data: '{"i": 1}' }, { event: end, id: "2", data: '"bye"' }]
-    skip: *noItems
   - name: float path parameter and an aliased query
     op: add
     args: { a: 2, b: 0.75, round: true }

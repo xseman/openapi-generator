@@ -5,19 +5,26 @@ import (
 	"fmt"
 	"maps"
 	"math/big"
+	"mime"
 	"slices"
 	"strings"
 	"testing"
+	"time"
 )
+
+// rules are how strictly match compares. Exact, for the generated cases,
+// allows no other keys and no string for a list. Millis is for a client
+// whose date-times are JavaScript Dates: they keep the instant to the
+// millisecond, not the offset or the digits past it.
+type rules struct{ exact, millis bool }
 
 // match compares a scenario's expectation with what arrived, the way the
 // scenarios read: an object lists the keys it checks (others may be there),
 // an array has exactly its items, "$any" is any value, "$absent" is a key
 // that must be missing. In a request, where a query, header or form value is
 // a list, a string stands for a list of just that string, and header names
-// match in any case. Exact, for the generated cases, allows no other keys
-// and no string for a list. It returns one line per difference.
-func match(path string, want, got any, exact bool) []string {
+// match in any case. It returns one line per difference.
+func match(path string, want, got any, r rules) []string {
 	switch w := want.(type) {
 	case string:
 		switch w {
@@ -27,11 +34,16 @@ func match(path string, want, got any, exact bool) []string {
 			return []string{path + ": want absent, got " + show(got)}
 		}
 
-		if g, ok := got.([]any); ok && len(g) == 1 && !exact && strings.HasPrefix(path, "request.") {
+		if g, ok := got.([]any); ok && len(g) == 1 && !r.exact && strings.HasPrefix(path, "request.") {
 			got = g[0]
 		}
 
-		if g, ok := got.(string); !ok || g != w {
+		// A Content-Type's parameters (a charset fetch adds) do not count.
+		if g, ok := got.(string); ok && strings.EqualFold(path, "request.header.Content-Type") {
+			got, _, _ = mime.ParseMediaType(g)
+		}
+
+		if g, ok := got.(string); !ok || g != w && (!r.millis || !sameMillis(w, g)) {
 			return []string{path + ": want " + show(w) + ", got " + show(got)}
 		}
 
@@ -60,12 +72,12 @@ func match(path string, want, got any, exact bool) []string {
 			case !present:
 				diffs = append(diffs, path+"."+k+": missing, want "+show(w[k]))
 			default:
-				diffs = append(diffs, match(path+"."+k, w[k], gv, exact)...)
+				diffs = append(diffs, match(path+"."+k, w[k], gv, r)...)
 			}
 		}
 
 		for _, k := range slices.Sorted(maps.Keys(g)) {
-			if _, wanted := w[k]; exact && !wanted {
+			if _, wanted := w[k]; r.exact && !wanted {
 				diffs = append(diffs, path+"."+k+": want absent, got "+show(g[k]))
 			}
 		}
@@ -80,7 +92,7 @@ func match(path string, want, got any, exact bool) []string {
 
 		var diffs []string
 		for i := range w {
-			diffs = append(diffs, match(fmt.Sprintf("%s[%d]", path, i), w[i], g[i], exact)...)
+			diffs = append(diffs, match(fmt.Sprintf("%s[%d]", path, i), w[i], g[i], r)...)
 		}
 
 		return diffs
@@ -121,6 +133,16 @@ func sameNumber(a, b json.Number) bool {
 	return okA && okB && x.Cmp(y) == 0
 }
 
+// sameMillis says whether two RFC 3339 date-times are one instant to the
+// millisecond: 03:04:05Z and 03:04:05.000Z, 23:59:59.123456+05:30 and
+// 18:29:59.123Z.
+func sameMillis(a, b string) bool {
+	x, errA := time.Parse(time.RFC3339Nano, a)
+	y, errB := time.Parse(time.RFC3339Nano, b)
+
+	return errA == nil && errB == nil && x.Truncate(time.Millisecond).Equal(y.Truncate(time.Millisecond))
+}
+
 func show(v any) string {
 	b, err := json.Marshal(v)
 	if err != nil {
@@ -140,6 +162,7 @@ func TestMatch(t *testing.T) {
 		{"missing key", "result", `{"a":1}`, `{"b":1}`, false, false},
 		{"key case matters in a result", "result", `{"id":"1"}`, `{"ID":"1"}`, false, false},
 		{"header name in any case", "request.header", `{"X-Request-ID":"r"}`, `{"X-Request-Id":["r"]}`, false, true},
+		{"a Content-Type by its media type", "request.header", `{"Content-Type":"a/b"}`, `{"Content-Type":["a/b;charset=UTF-8"]}`, false, true},
 		{"string for a one-value list in a request", "request.query", `{"q":"a"}`, `{"q":["a"]}`, false, true},
 		{"but not in a result", "result", `"stored"`, `["stored"]`, false, false},
 		{"array exact length", "result", `[1]`, `[1,2]`, false, false},
@@ -160,12 +183,27 @@ func TestMatch(t *testing.T) {
 		{"exact: absent is not null", "result", `{}`, `{"a":null}`, true, false},
 		{"exact: no string for a list", "request.body", `{"q":"a"}`, `{"q":["a"]}`, true, false},
 		{"exact: $any still any", "error", `{"status":500,"body":"$any"}`, `{"status":500,"body":"x"}`, true, true},
+		{"date-time digits matter", "result", `"2024-01-02T03:04:05Z"`, `"2024-01-02T03:04:05.000Z"`, true, false},
 	}
 
 	for _, tt := range tests {
-		diffs := match(tt.path, decodeJSON([]byte(tt.want)), decodeJSON([]byte(tt.got)), tt.exact)
+		diffs := match(tt.path, decodeJSON([]byte(tt.want)), decodeJSON([]byte(tt.got)), rules{exact: tt.exact})
 		if (len(diffs) == 0) != tt.ok {
 			t.Errorf("%s: match(%s, %s, exact %t) = %v, want ok %t", tt.name, tt.want, tt.got, tt.exact, diffs, tt.ok)
+		}
+	}
+
+	millis := rules{exact: true, millis: true}
+	for _, tt := range []struct {
+		want, got string
+		ok        bool
+	}{
+		{`"2024-02-29T23:59:59.123456+05:30"`, `"2024-02-29T18:29:59.123Z"`, true},
+		{`"2024-01-02T03:04:05Z"`, `"2024-01-02T03:04:06.000Z"`, false},
+		{`"2024-01-02T03:04:05"`, `"2024-01-02T02:04:05.000Z"`, false}, // naive: text
+	} {
+		if diffs := match("result", decodeJSON([]byte(tt.want)), decodeJSON([]byte(tt.got)), millis); (len(diffs) == 0) != tt.ok {
+			t.Errorf("millis: match(%s, %s) = %v, want ok %t", tt.want, tt.got, diffs, tt.ok)
 		}
 	}
 }

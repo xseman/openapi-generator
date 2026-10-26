@@ -157,6 +157,30 @@ func opParams(doc *openapi3.T) map[string][]string {
 	return out
 }
 
+// opBodies lists the responses of each operation that have a body, by
+// their key in the spec: "200", "404", "4XX", "default".
+func opBodies(doc *openapi3.T) map[string][]string {
+	out := map[string][]string{}
+
+	for _, item := range doc.Paths.Map() {
+		for _, op := range item.Operations() {
+			if op.Responses == nil {
+				continue
+			}
+
+			for code, resp := range op.Responses.Map() {
+				if resp.Value != nil && len(resp.Value.Content) > 0 {
+					out[op.OperationID] = append(out[op.OperationID], code)
+				}
+			}
+
+			slices.Sort(out[op.OperationID])
+		}
+	}
+
+	return out
+}
+
 // decodeJSON decodes JSON keeping numbers exact.
 func decodeJSON(b []byte) any {
 	var v any

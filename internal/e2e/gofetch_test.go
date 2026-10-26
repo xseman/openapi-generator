@@ -34,6 +34,7 @@ type suite struct {
 type suiteCase struct {
 	Op     string            `json:"op"`
 	Params []string          `json:"params"`
+	Bodies []string          `json:"bodies,omitempty"`
 	Args   json.RawMessage   `json:"args,omitempty"`
 	Auth   *auth             `json:"auth,omitempty"`
 	Save   map[string]string `json:"save,omitempty"`

@@ -13,6 +13,20 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Matrix"
+  /grid:
+    get:
+      operationId: getGrid
+      responses:
+        "200":
+          description: rows of cells
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: array
+                  items:
+                    $ref: "#/components/schemas/Cell"
 components:
   schemas:
     Matrix:
@@ -43,3 +57,8 @@ components:
       properties:
         value:
           type: number
+        cell-name:
+          type: string
+        seenAt:
+          type: string
+          format: date-time
