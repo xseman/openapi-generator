@@ -153,6 +153,27 @@ func servable(t *testing.T, spec string) (string, *openapi3.T) {
 	return out, doc
 }
 
+// absentProperties marks absent the keys an optional exploded query object
+// goes under: its properties' (deepObject: name[property]), as a client
+// that writes an unset one sends them.
+func absentProperties(where map[string]any, p *openapi3.Parameter) {
+	sm, err := p.SerializationMethod()
+	if err != nil || p.In != openapi3.ParameterInQuery || !sm.Explode || p.Schema == nil || p.Schema.Value == nil {
+		return
+	}
+
+	for prop := range p.Schema.Value.Properties {
+		key := prop
+		if sm.Style == openapi3.SerializationDeepObject {
+			key = p.Name + "[" + prop + "]"
+		}
+
+		if _, named := where[key]; !named {
+			where[key] = "$absent"
+		}
+	}
+}
+
 // clientHeaders are the headers an HTTP client may send on its own.
 var clientHeaders = map[string]bool{"Accept": true, "Accept-Language": true, "Accept-Encoding": true, "User-Agent": true}
 
@@ -196,6 +217,10 @@ func valueCases(item *openapi3.PathItem, op *openapi3.Operation, is31 bool) ([]k
 				where[p.Value.Name] = "$absent"
 			}
 
+			if where != nil {
+				absentProperties(where, p.Value)
+			}
+
 			continue
 		}
 
@@ -208,7 +233,12 @@ func valueCases(item *openapi3.PathItem, op *openapi3.Operation, is31 bool) ([]k
 		query = query || p.Value.In == openapi3.ParameterInQuery
 
 		if where != nil {
-			where[p.Value.Name] = strings.Trim(string(mustJSON(v)), `"`)
+			text, ok := v.(string)
+			if !ok {
+				text = string(mustJSON(v)) // a number as JSON writes it, as JavaScript does
+			}
+
+			where[p.Value.Name] = text
 		}
 	}
 

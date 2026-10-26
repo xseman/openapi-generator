@@ -76,6 +76,7 @@ type Decl = {
     days?: Set<string>;
     day?: boolean;
     values?: string[];
+    tag?: string;
 };
 
 // models reads the models' interfaces and type aliases from the sources.
@@ -120,7 +121,13 @@ function models(dir: string): Record<string, Decl> {
         }
 
         for (const m of src.matchAll(/^export type (\w+) = (.+);$/gm)) {
-            out[m[1]] ??= { alias: m[2], day: /json == null \? json : [^\n]*\bparseDate\b/.test(src) };
+            // A union with a discriminator sets its tag on the member, which
+            // may not declare it: Object.assign({ "kind": json["kind"] }, ...).
+            out[m[1]] ??= {
+                alias: m[2],
+                day: /json == null \? json : [^\n]*\bparseDate\b/.test(src),
+                tag: /Object\.assign\(\{ "([^"]+)": json\[/.exec(src)?.[1],
+            };
         }
     }
 
@@ -231,6 +238,12 @@ function shape(decls: Record<string, Decl>, t: string, v: any, at: string, scala
     }
 
     if (d.alias !== undefined) {
+        if (d.tag !== undefined && v !== null && typeof v === "object" && d.tag in v) {
+            const { [d.tag]: _, ...member } = v;
+
+            return shape(decls, d.alias, member, at, scalars, day || !!d.day);
+        }
+
         return d.alias.startsWith("typeof ") ? "" : shape(decls, d.alias, v, at, scalars, day || !!d.day);
     }
 

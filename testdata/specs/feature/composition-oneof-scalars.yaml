@@ -33,6 +33,10 @@ components:
           $ref: "#/components/schemas/ColorOrBox"
         pet:
           $ref: "#/components/schemas/Pet"
+        tagsOrTag:
+          $ref: "#/components/schemas/TagsOrTag"
+        animal:
+          $ref: "#/components/schemas/Animal"
     DayOrCount:
       oneOf:
         - type: string
@@ -79,3 +83,41 @@ components:
           type: boolean
         dog-name:
           type: string
+    # a list alias and a model: a list goes item by item
+    Tag:
+      type: object
+      required: [tag_name]
+      properties:
+        tag_name:
+          type: string
+        added_on:
+          type: string
+          format: date
+    Tags:
+      type: array
+      items:
+        $ref: "#/components/schemas/Tag"
+    TagsOrTag:
+      oneOf:
+        - $ref: "#/components/schemas/Tags"
+        - $ref: "#/components/schemas/Tag"
+    # members that do not declare the discriminator they are told by
+    Animal:
+      oneOf:
+        - $ref: "#/components/schemas/Barker"
+        - $ref: "#/components/schemas/Meower"
+      discriminator:
+        propertyName: kind
+        mapping:
+          dog: "#/components/schemas/Barker"
+          cat: "#/components/schemas/Meower"
+    Barker:
+      type: object
+      properties:
+        bark_volume:
+          type: integer
+    Meower:
+      type: object
+      properties:
+        meow_count:
+          type: integer
