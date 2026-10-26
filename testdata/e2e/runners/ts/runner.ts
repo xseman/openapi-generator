@@ -325,19 +325,20 @@ async function toWire(client: any, decls: Record<string, Decl>, t: string, v: an
         return out;
     }
 
+    // A model's own ToJSON first: an alias of a date (Day) writes it as one.
+    const to = client[t + "ToJSON"];
+    if (typeof to === "function") {
+        const out = to(v);
+        await restore(client, decls, t, v, out);
+
+        return out;
+    }
+
     if (v instanceof Date) {
         return day ? client.serializeDate(v) : v.toISOString();
     }
 
-    const to = client[t + "ToJSON"];
-    if (typeof to !== "function") {
-        return v;
-    }
-
-    const out = to(v);
-    await restore(client, decls, t, v, out);
-
-    return out;
+    return v;
 }
 
 // restore puts back the read-only properties a model's ToJSON leaves out,

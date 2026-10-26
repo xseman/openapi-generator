@@ -39,6 +39,9 @@ components:
           type: string
         name:
           type: string
+        born_on:
+          type: string
+          format: date
     Cat:
       allOf:
         - $ref: "#/components/schemas/Pet"

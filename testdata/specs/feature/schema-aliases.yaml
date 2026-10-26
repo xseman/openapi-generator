@@ -1,0 +1,53 @@
+openapi: "3.0.0"
+info:
+  title: Schema Aliases Feature
+  version: 1.0.0
+  description: Schemas that only name an array, a map or a scalar, as a body and as a result.
+paths:
+  /pets:
+    post:
+      operationId: storePets
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Pets"
+      responses:
+        "200":
+          description: the pets by name
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PetsByName"
+  /today:
+    get:
+      operationId: getToday
+      responses:
+        "200":
+          description: a day
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Day"
+components:
+  schemas:
+    Day:
+      type: string
+      format: date
+    Pet:
+      type: object
+      required: [pet_name]
+      properties:
+        pet_name:
+          type: string
+        born_on:
+          $ref: "#/components/schemas/Day"
+    Pets:
+      type: array
+      items:
+        $ref: "#/components/schemas/Pet"
+    PetsByName:
+      type: object
+      additionalProperties:
+        $ref: "#/components/schemas/Pet"
