@@ -360,7 +360,7 @@ func (g *FetchGenerator) fitMembers(cm *codegen.CodegenModel) {
 
 	// A member is a model, or the intersection of an allOf ("A & B"), whose
 	// models all import.
-	var members [][]*codegen.CodegenModel
+	var members []fit
 
 	for _, member := range cm.OneOf {
 		var parts []*codegen.CodegenModel
@@ -375,7 +375,7 @@ func (g *FetchGenerator) fitMembers(cm *codegen.CodegenModel) {
 			continue
 		}
 
-		members = append(members, parts)
+		members = append(members, fit{parts: parts})
 
 		for _, m := range parts {
 			if !slices.Contains(cm.OneOfModels, m.Classname) {

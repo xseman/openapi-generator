@@ -170,19 +170,26 @@ func (c *converter) discriminated(members []*codegen.CodegenProperty, x string) 
 // and the fewest it does not. A scalar member (Stripe's id next to the
 // object it expands to) takes a value that is no object.
 func (c *converter) bestFit(members []*codegen.CodegenProperty, x string) string {
-	var models [][]*codegen.CodegenModel
+	var models []fit
 
 	for _, m := range members {
+		// A list of a model fits a list whose every item fits the model.
+		array := m.IsArray && m.Items != nil
+		if array {
+			m = m.Items
+		}
+
 		model := c.g.byName[c.g.modelOf(m)]
 
+		// An inline object makes the union any: it stays as it came.
 		switch {
-		case model == nil && m.IsPrimitiveType && !m.IsContainer:
+		case model == nil && m.IsPrimitiveType && !m.IsContainer && !m.IsFreeFormObject:
 			continue
 		case model == nil:
 			return x
 		}
 
-		models = append(models, []*codegen.CodegenModel{model})
+		models = append(models, fit{parts: []*codegen.CodegenModel{model}, array: array})
 	}
 
 	if len(models) == 0 {
@@ -192,17 +199,23 @@ func (c *converter) bestFit(members []*codegen.CodegenProperty, x string) string
 	return c.rt + "bestFit(" + x + ", " + c.fits(models) + ") ?? " + x
 }
 
+// fit is a member of a union for the runtime's bestFit: a model, or the
+// intersection of several (an allOf), or a list of one (array).
+type fit struct {
+	parts []*codegen.CodegenModel
+	array bool
+}
+
 // fits lists members for the runtime's bestFit: each one's required keys,
-// its keys and its converter, in JSON (from) or in TypeScript (to). A
-// member is a model, or the intersection of several (an allOf), converted
-// by each and merged.
-func (c *converter) fits(members [][]*codegen.CodegenModel) string {
+// its keys, its converter, in JSON (from) or in TypeScript (to), and
+// whether it is a list. An intersection converts by each model, merged.
+func (c *converter) fits(members []fit) string {
 	cases := make([]string, 0, len(members))
 
-	for _, parts := range members {
+	for _, member := range members {
 		var required, known, fns []string
 
-		for _, m := range parts {
+		for _, m := range member.parts {
 			for _, v := range c.keyVars(m) {
 				name := strconv.Quote(v.BaseName)
 				if c.to {
@@ -227,7 +240,12 @@ func (c *converter) fits(members [][]*codegen.CodegenModel) string {
 			fn = "(v: any) => ({ ..." + strings.Join(fns, "(v), ...") + "(v) })"
 		}
 
-		cases = append(cases, "[["+strings.Join(required, ", ")+"], ["+strings.Join(known, ", ")+"], "+fn+"]")
+		array := ""
+		if member.array {
+			array = ", true"
+		}
+
+		cases = append(cases, "[["+strings.Join(required, ", ")+"], ["+strings.Join(known, ", ")+"], "+fn+array+"]")
 	}
 
 	return "[" + strings.Join(cases, ", ") + "]"
@@ -360,6 +378,6 @@ func (c *converter) varToJSON(p *codegen.CodegenProperty) string {
 func asProperty(p *codegen.CodegenParameter) *codegen.CodegenProperty {
 	return &codegen.CodegenProperty{
 		Datatype: p.DataType, IsModel: p.IsModel, IsArray: p.IsArray, IsMap: p.IsMap, IsContainer: p.IsContainer,
-		Items: p.Items, IsDateType: p.IsDateType, IsDateTimeType: p.IsDateTimeType, Ref: p.Ref,
+		Items: p.Items, IsDateType: p.IsDateType, IsDateTimeType: p.IsDateTimeType, Ref: p.Ref, ComposedSchemas: p.ComposedSchemas,
 	}
 }

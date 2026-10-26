@@ -536,24 +536,27 @@ export function otherKeys(value: any, keys: string[]): { [key: string]: any } {
 
 /**
  * A member of a union converted by the model it fits best: of the models whose required keys the
- * value has, the one that declares the most of its keys and the fewest it does not. undefined when
- * the value is no object (an id next to the object it expands to) or fits none.
+ * value has, the one that declares the most of its keys and the fewest it does not. A list fits a
+ * list member by all its items. undefined when the value is no object (an id next to the object it
+ * expands to) or fits none.
  */
-export function bestFit(value: any, models: Array<[string[], string[], (value: any) => any]>): any {
-    if (value === null || typeof value !== "object" || Array.isArray(value)) {
+export function bestFit(value: any, models: Array<[string[], string[], (value: any) => any, boolean?]>): any {
+    const list = Array.isArray(value);
+    const items: any[] = list ? value : [value];
+    if (value === null || typeof value !== "object" || items.some((item) => item === null || typeof item !== "object" || Array.isArray(item))) {
         return undefined;
     }
-    const keys = Object.keys(value);
     let best: ((value: any) => any) | undefined;
     let score = -Infinity;
-    for (const [required, known, fn] of models) {
-        const fit = keys.reduce((n, key) => n + (known.includes(key) ? 1 : -1), 0);
-        if (required.every((key) => key in value) && fit > score) {
+    for (const [required, known, fn, array] of models) {
+        const fits = !!array === list && items.every((item) => required.every((key) => key in item));
+        const fit = items.reduce((n, item) => n + Object.keys(item).reduce((m, key) => m + (known.includes(key) ? 1 : -1), 0), 0);
+        if (fits && fit > score) {
             best = fn;
             score = fit;
         }
     }
-    return best?.(value);
+    return best && (list ? value.map(best) : best(value));
 }
 
 export function mapValues(data: any, fn: (item: any) => any): { [key: string]: any } {
