@@ -82,45 +82,20 @@ func isPrimitiveTypeTS(t string) bool {
 	return primitives[t]
 }
 
-// modelUsesRuntimeJSONHelper reports whether modelGeneric.mustache will
-// literally emit a call to the runtime's {{datatype}}FromJSON/ToJSON helper
-// named wantDatatype (e.g. "any" -> anyFromJSON/anyToJSON, "Blob" ->
-// BlobFromJSON/BlobToJSON) for this model. That happens for a scalar var
-// whose datatype resolved to wantDatatype outside of the
-// isFreeFormObject/isPrimitiveType fast paths (which pass the value through
-// directly instead), and for an array var whose item type resolved the same
-// way (which maps the helper over the elements). Map vars never call it:
-// modelGeneric.mustache only invokes a per-item converter for maps when the
-// item is a model (mapValues({{items.datatype}}FromJSON)).
-func modelUsesRuntimeJSONHelper(model *generator.CodegenModel, wantDatatype string) bool {
-	callsHelper := func(p *generator.CodegenProperty) bool {
-		return p != nil && p.Datatype == wantDatatype && !p.IsPrimitiveType && !p.IsFreeFormObject
-	}
-
-	for _, v := range model.Vars {
-		if v == nil {
-			continue
-		}
-
-		if !v.IsArray && !v.IsMap && callsHelper(v) {
-			return true
-		}
-
-		if v.IsArray && v.Items != nil && !v.Items.IsContainer && callsHelper(v.Items) {
-			return true
-		}
-	}
-
-	return false
-}
-
-// modelUsesDateHelpers reports whether modelGeneric.mustache calls the
-// runtime's parseDate/serializeDate helpers for any var, mirroring upstream's
-// x-hasDateVars so a model without dates does not import them.
+// modelUsesDateHelpers reports whether a model's FromJSON or ToJSON calls
+// the runtime's date helpers, for a property or for the keys next to them,
+// so a model without dates does not import them.
 func modelUsesDateHelpers(model *generator.CodegenModel) bool {
+	exts := []map[string]any{model.VendorExtensions}
 	for _, v := range model.Vars {
-		if v != nil && v.IsPrimitiveType && !v.IsArray && (v.IsDateType || v.IsDateTimeType) {
-			return true
+		exts = append(exts, v.VendorExtensions)
+	}
+
+	for _, ext := range exts {
+		for _, k := range []string{"x-ts-from-json", "x-ts-to-json", "x-ts-rest-from", "x-ts-rest-to"} {
+			if e, _ := ext[k].(string); strings.Contains(e, "parseDate") || strings.Contains(e, "serializeDate") {
+				return true
+			}
 		}
 	}
 

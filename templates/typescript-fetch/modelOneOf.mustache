@@ -1,5 +1,5 @@
 {{^withoutRuntimeChecks}}
-import { parseDate, parseDateTime, serializeDate, serializeDateTime } from '../runtime{{importFileExtension}}';
+import { bestFit, parseDate, parseDateTime, serializeDate, serializeDateTime } from '../runtime{{importFileExtension}}';
 {{/withoutRuntimeChecks}}
 {{#hasImports}}
 {{#oneOfImports}}
@@ -40,11 +40,12 @@ export function {{classname}}FromJSONTyped(json: any, ignoreDiscriminator: boole
             return json;
     }
     {{/hasOneOfModels}}
-    {{#oneOfModels}}
-    if (instanceOf{{{.}}}(json)) {
-            return {{{.}}}FromJSONTyped(json, true);
+    {{#vendorExtensions.x-ts-fit-from}}
+    const fit = bestFit(json, {{{.}}});
+    if (fit !== undefined) {
+            return fit;
     }
-    {{/oneOfModels}}
+    {{/vendorExtensions.x-ts-fit-from}}
     {{#hasOneOfArrays}}
     if (Array.isArray(json)) {
             if (json.every((item: any) => typeof item === 'object')) {
@@ -61,14 +62,14 @@ export function {{classname}}FromJSONTyped(json: any, ignoreDiscriminator: boole
     {{#items}}
     {{#isDateType}}
     if (Array.isArray(json)) {
-            if (json.every((item: any) => !(isNaN(parseDate(item).getTime())))) {
+            if (json.every((item: any) => typeof item === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(item))) {
                     return json.map((value: any) => parseDate(value));
             }
     }
     {{/isDateType}}
     {{#isDateTimeType}}
     if (Array.isArray(json)) {
-            if (json.every((item: any) => !(isNaN(parseDateTime(item).getTime())))) {
+            if (json.every((item: any) => typeof item === 'string' && /^\d{4}-\d{2}-\d{2}T/.test(item))) {
                     return json.map((value: any) => parseDateTime(value));
             }
     }
@@ -107,13 +108,13 @@ export function {{classname}}FromJSONTyped(json: any, ignoreDiscriminator: boole
     }
     {{/isMap}}
     {{#isDateType}}
-    if (!(isNaN(parseDate(json).getTime()))) {
+    if (typeof json === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(json)) {
             return {{^required}}json == null ? undefined : {{/required}}({{#required}}{{#isNullable}}json == null ? null : {{/isNullable}}{{/required}}parseDate(json));
     }
     {{/isDateType}}
     {{^isDateType}}
     {{#isDateTimeType}}
-    if (!(isNaN(parseDateTime(json).getTime()))) {
+    if (typeof json === 'string' && /^\d{4}-\d{2}-\d{2}T/.test(json)) {
             return {{^required}}json == null ? undefined : {{/required}}({{#required}}{{#isNullable}}json == null ? null : {{/isNullable}}{{/required}}parseDateTime(json));
     }
     {{/isDateTimeType}}
@@ -144,7 +145,7 @@ export function {{classname}}FromJSONTyped(json: any, ignoreDiscriminator: boole
             return json;
     }
     {{/hasOneOfArrays}}
-    return {} as any;
+    return json;
 {{/discriminator}}
 }
 
@@ -172,11 +173,12 @@ export function {{classname}}ToJSONTyped(value?: {{classname}} | null, ignoreDis
             return value;
     }
     {{/hasOneOfModels}}
-    {{#oneOfModels}}
-    if (instanceOf{{{.}}}(value)) {
-            return {{{.}}}ToJSON(value as {{{.}}});
+    {{#vendorExtensions.x-ts-fit-to}}
+    const fit = bestFit(value, {{{.}}});
+    if (fit !== undefined) {
+            return fit;
     }
-    {{/oneOfModels}}
+    {{/vendorExtensions.x-ts-fit-to}}
     {{#hasOneOfArrays}}
     if (Array.isArray(value)) {
             if (value.every((item: any) => typeof item === 'object')) {
@@ -274,6 +276,6 @@ export function {{classname}}ToJSONTyped(value?: {{classname}} | null, ignoreDis
             return value;
     }
     {{/hasOneOfArrays}}
-    return {};
+    return value;
 {{/discriminator}}
 }

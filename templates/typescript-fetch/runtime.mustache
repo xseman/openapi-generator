@@ -396,6 +396,63 @@ function querystringSingleKey(key: string, value: string | number | null | undef
     return `${encodeURIComponent(fullKey)}=${encodeURIComponent(String(value))}`;
 }
 
+/**
+ * A path, header or cookie parameter as its style writes it: simple (a,b; an object k,v or, exploded,
+ * k=v), label (.a,b or .a.b), matrix (;n=a,b or ;n=a;n=b) and form (a,b, a cookie's). encode escapes
+ * each name and value, as a path's must be.
+ */
+export function styleParam(name: string, value: any, style: string, explode: boolean, encode: (text: string) => string = (text) => text): string {
+    const object = value !== null && typeof value === "object" && !Array.isArray(value);
+    const items: string[] = Array.isArray(value)
+        ? value.map((v) => encode(String(v)))
+        : object
+            ? Object.entries(value).map(([k, v]) => encode(k) + (explode ? "=" : ",") + encode(String(v)))
+            : [encode(String(value))];
+    switch (style) {
+        case "label":
+            return "." + items.join(explode ? "." : ",");
+        case "matrix":
+            if (explode && object) {
+                return items.map((item) => ";" + item).join("");
+            }
+            if (explode && Array.isArray(value)) {
+                return items.map((item) => `;${encode(name)}=${item}`).join("");
+            }
+            return `;${encode(name)}=` + items.join(",");
+        default:
+            return items.join(",");
+    }
+}
+
+/**
+ * The fields of a form value as its encoding writes them: deepObject as name[key] and name[key][0],
+ * as deep as the value goes; an array a field per item (exploded form) or one joined by its style's
+ * delimiter; an object a field per property (exploded form) or one of key,value pairs.
+ */
+export function formFields(name: string, value: any, style: string, explode: boolean): Array<[string, string]> {
+    if (style === "deepObject") {
+        return deepObjectFields(name, value);
+    }
+    if (value === null || typeof value !== "object") {
+        return [[name, String(value)]];
+    }
+    if (explode) {
+        return Array.isArray(value)
+            ? value.map((v): [string, string] => [name, String(v)])
+            : Object.entries(value).map(([k, v]): [string, string] => [k, String(v)]);
+    }
+    const delimiter = style === "spaceDelimited" ? " " : style === "pipeDelimited" ? "|" : ",";
+    return [[name, (Array.isArray(value) ? value : Object.entries(value).flat()).join(delimiter)]];
+}
+
+function deepObjectFields(name: string, value: any): Array<[string, string]> {
+    if (value === null || typeof value !== "object") {
+        return [[name, String(value)]];
+    }
+    const entries: Array<[string, any]> = Array.isArray(value) ? value.map((v, i) => [String(i), v]) : Object.entries(value);
+    return entries.flatMap(([k, v]) => (v === undefined ? [] : deepObjectFields(`${name}[${k}]`, v)));
+}
+
 export function exists(json: any, key: string): boolean {
     const value = json[key];
     return value !== null && value !== undefined;
@@ -454,6 +511,51 @@ export function parseDateTime(value: any): Date {
 {{/withoutRuntimeChecks}}
 
 {{^withoutRuntimeChecks}}
+/**
+ * Converts a member of a union by the value of its discriminator property, with the function the
+ * value names; a value no function is named for, or null, stays as it is.
+ */
+export function discriminate(value: any, property: string, by: { [value: string]: (value: any) => any }): any {
+    const fn = value == null ? undefined : by[value[property]];
+    return fn ? fn(value) : value;
+}
+
+/**
+ * The keys of a value other than the given ones, with their values: what a model holds next to
+ * its properties.
+ */
+export function otherKeys(value: any, keys: string[]): { [key: string]: any } {
+    const result: { [key: string]: any } = {};
+    for (const key of Object.keys(value)) {
+        if (!keys.includes(key)) {
+            result[key] = value[key];
+        }
+    }
+    return result;
+}
+
+/**
+ * A member of a union converted by the model it fits best: of the models whose required keys the
+ * value has, the one that declares the most of its keys and the fewest it does not. undefined when
+ * the value is no object (an id next to the object it expands to) or fits none.
+ */
+export function bestFit(value: any, models: Array<[string[], string[], (value: any) => any]>): any {
+    if (value === null || typeof value !== "object" || Array.isArray(value)) {
+        return undefined;
+    }
+    const keys = Object.keys(value);
+    let best: ((value: any) => any) | undefined;
+    let score = -Infinity;
+    for (const [required, known, fn] of models) {
+        const fit = keys.reduce((n, key) => n + (known.includes(key) ? 1 : -1), 0);
+        if (required.every((key) => key in value) && fit > score) {
+            best = fn;
+            score = fit;
+        }
+    }
+    return best?.(value);
+}
+
 export function mapValues(data: any, fn: (item: any) => any): { [key: string]: any } {
     const result: { [key: string]: any } = {};
     for (const key of Object.keys(data)) {
@@ -525,8 +627,13 @@ export interface ResponseTransformer<T> {
 export class JSONApiResponse<T> {
     constructor(public raw: Response, private transformer: ResponseTransformer<T> = (jsonValue: any) => jsonValue) {}
 
+    /**
+     * The body parsed and converted; null when there is none, as a 204 next to a 200 with a body
+     * or the answer to a HEAD has.
+     */
     async value(): Promise<T> {
-        return this.transformer(await this.raw.json());
+        const text = await this.raw.text();
+        return text === "" ? (null as T) : this.transformer(JSON.parse(text));
     }
 }
 
@@ -611,6 +718,130 @@ function parseHeaderParameters(value: string): Map<string, string> {
 function basename(name: string | undefined): string | undefined {
     const base = name?.split(/[\\/]/).pop();
     return !base || base === '.' || base === '..' ? undefined : base;
+}
+
+/**
+ * A server-sent event: its data as the item type (parsed from JSON unless the item is text), its
+ * event name, id and retry when the server sent them. An id stays the id of the events after it,
+ * as the specification has it.
+ */
+export interface ServerSentEvent<T> {
+    data: T;
+    event?: string;
+    id?: string;
+    retry?: number;
+}
+
+/**
+ * A streamed body, read as it arrives: the JSON value of each line of JSON Lines ("lines"), or each
+ * server-sent event ("events"), converted by the transformer. The response stays open until the loop
+ * over the value ends or breaks, or the request's signal aborts it.
+ */
+export class StreamApiResponse<T> {
+    constructor(public raw: Response, private kind: "lines" | "events", private transformer: (value: any) => any) {}
+
+    async value(): Promise<AsyncIterable<T>> {
+        return (this.kind === "lines" ? jsonLines(this.raw, this.transformer) : serverSentEvents(this.raw, this.transformer)) as AsyncIterable<T>;
+    }
+}
+
+/** The lines of a body as they arrive, without their line endings; the last one also without one. */
+async function* bodyLines(raw: Response): AsyncGenerator<string> {
+    if (raw.body == null) {
+        return;
+    }
+    const reader = raw.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+    try {
+        for (;;) {
+            const { done, value } = await reader.read();
+            buffer += done ? decoder.decode() : decoder.decode(value, { stream: true });
+            let end: number;
+            while ((end = buffer.search(/\r\n|\r|\n/)) >= 0) {
+                const newline = buffer.startsWith("\r\n", end) ? 2 : 1;
+                yield buffer.slice(0, end);
+                buffer = buffer.slice(end + newline);
+            }
+            if (done) {
+                break;
+            }
+        }
+        if (buffer !== "") {
+            yield buffer;
+        }
+    } finally {
+        // A loop that breaks early closes the response.
+        await reader.cancel().catch(() => undefined);
+    }
+}
+
+async function* jsonLines(raw: Response, transformer: (value: any) => any): AsyncGenerator<any> {
+    for await (const line of bodyLines(raw)) {
+        if (line.trim() !== "") {
+            yield transformer(JSON.parse(line));
+        }
+    }
+}
+
+/**
+ * The events of a text/event-stream (the HTML living standard's parser): data lines joined by a
+ * newline, a byte order mark and comments skipped, an event the stream ends in the middle of dropped.
+ */
+async function* serverSentEvents(raw: Response, transformer: (value: any) => any): AsyncGenerator<ServerSentEvent<any>> {
+    let data: string[] = [];
+    let event: string | undefined;
+    let id: string | undefined;
+    let retry: number | undefined;
+    let first = true;
+    for await (let line of bodyLines(raw)) {
+        if (first && line.startsWith("\uFEFF")) {
+            line = line.slice(1);
+        }
+        first = false;
+        if (line === "") {
+            if (data.length > 0) {
+                const e: ServerSentEvent<any> = { data: transformer(data.join("\n")) };
+                if (event !== undefined) {
+                    e.event = event;
+                }
+                if (id !== undefined) {
+                    e.id = id;
+                }
+                if (retry !== undefined) {
+                    e.retry = retry;
+                }
+                yield e;
+            }
+            data = [];
+            event = undefined;
+            continue;
+        }
+        if (line.startsWith(":")) {
+            continue;
+        }
+        const colon = line.indexOf(":");
+        const field = colon < 0 ? line : line.slice(0, colon);
+        const value = colon < 0 ? "" : line.slice(colon + 1).replace(/^ /, "");
+        switch (field) {
+            case "data":
+                data.push(value);
+                break;
+            case "event":
+                event = value;
+                break;
+            case "id":
+                if (!value.includes("\0")) {
+                    id = value;
+                }
+                break;
+            case "retry":
+                if (/^\d+$/.test(value)) {
+                    retry = Number(value);
+                }
+                break;
+        }
+    }
 }
 
 export class TextApiResponse {

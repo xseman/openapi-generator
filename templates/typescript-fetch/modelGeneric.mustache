@@ -1,14 +1,9 @@
 {{^withoutRuntimeChecks}}
 import {
+    bestFit,
+    discriminate,
     mapValues,
-{{#usesAnyJSON}}
-    anyFromJSON,
-    anyToJSON,
-{{/usesAnyJSON}}
-{{#usesBlobJSON}}
-    BlobFromJSON,
-    BlobToJSON,
-{{/usesBlobJSON}}
+    otherKeys,
 {{#usesDateHelpers}}
     parseDate,
     parseDateTime,
@@ -29,10 +24,10 @@ import {
 {{/tsImports}}
 
 {{/hasImports}}
-{{#discriminator}}
-{{#discriminator.mappedModels}}
+{{#vendorExtensions.x-ts-mapped}}
 import { type {{modelName}}, {{modelName}}FromJSONTyped, {{modelName}}ToJSON, {{modelName}}ToJSONTyped } from './{{modelFilename}}{{importFileExtension}}';
-{{/discriminator.mappedModels}}
+{{/vendorExtensions.x-ts-mapped}}
+{{#discriminator}}
 
 {{/discriminator}}
 {{/withoutRuntimeChecks}}
@@ -113,69 +108,11 @@ export function {{classname}}FromJSONTyped(json: any, ignoreDiscriminator: boole
 {{#parent}}
         ...{{#parentIsOneOf}}({{/parentIsOneOf}}{{{.}}}FromJSONTyped(json, true){{#parentIsOneOf}} as any){{/parentIsOneOf}},
 {{/parent}}
-{{#additionalPropertiesType}}
-        ...json,
-{{/additionalPropertiesType}}
+{{#vendorExtensions.x-ts-rest-from}}
+        ...{{{.}}},
+{{/vendorExtensions.x-ts-rest-from}}
 {{#vars}}
-        {{#isPrimitiveType}}
-        {{#isArray}}
-        {{#uniqueItems}}
-        "{{name}}": {{^required}}{{#isNullable}}json["{{baseName}}"] === undefined ? undefined : json["{{baseName}}"] === null ? null : {{/isNullable}}{{^isNullable}}json["{{baseName}}"] == null ? undefined : {{/isNullable}}{{/required}}{{#required}}{{#isNullable}}json["{{baseName}}"] == null ? null : {{/isNullable}}{{/required}}json["{{baseName}}"],
-        {{/uniqueItems}}
-        {{^uniqueItems}}
-        "{{name}}": {{^required}}{{#isNullable}}json["{{baseName}}"] === undefined ? undefined : json["{{baseName}}"] === null ? null : {{/isNullable}}{{^isNullable}}json["{{baseName}}"] == null ? undefined : {{/isNullable}}{{/required}}{{#required}}{{#isNullable}}json["{{baseName}}"] == null ? null : {{/isNullable}}{{/required}}json["{{baseName}}"],
-        {{/uniqueItems}}
-        {{/isArray}}
-        {{^isArray}}
-        {{#isDateType}}
-        "{{name}}": {{^required}}{{#isNullable}}json["{{baseName}}"] === undefined ? undefined : json["{{baseName}}"] === null ? null : {{/isNullable}}{{^isNullable}}json["{{baseName}}"] == null ? undefined : {{/isNullable}}{{/required}}({{#required}}{{#isNullable}}json["{{baseName}}"] == null ? null : {{/isNullable}}{{^isNullable}}json["{{baseName}}"] == null ? json["{{baseName}}"] : {{/isNullable}}{{/required}}parseDate(json["{{baseName}}"])),
-        {{/isDateType}}
-        {{#isDateTimeType}}
-        "{{name}}": {{^required}}{{#isNullable}}json["{{baseName}}"] === undefined ? undefined : json["{{baseName}}"] === null ? null : {{/isNullable}}{{^isNullable}}json["{{baseName}}"] == null ? undefined : {{/isNullable}}{{/required}}({{#required}}{{#isNullable}}json["{{baseName}}"] == null ? null : {{/isNullable}}{{^isNullable}}json["{{baseName}}"] == null ? json["{{baseName}}"] : {{/isNullable}}{{/required}}parseDateTime(json["{{baseName}}"])),
-        {{/isDateTimeType}}
-        {{^isDateType}}
-        {{^isDateTimeType}}
-        "{{name}}": {{^required}}{{#isNullable}}json["{{baseName}}"] === undefined ? undefined : json["{{baseName}}"] === null ? null : {{/isNullable}}{{^isNullable}}json["{{baseName}}"] == null ? undefined : {{/isNullable}}{{/required}}json["{{baseName}}"],
-        {{/isDateTimeType}}
-        {{/isDateType}}
-        {{/isArray}}
-        {{/isPrimitiveType}}
-        {{^isPrimitiveType}}
-        {{#isArray}}
-        {{#uniqueItems}}
-        "{{name}}": {{^required}}{{#isNullable}}json["{{baseName}}"] === undefined ? undefined : json["{{baseName}}"] === null ? null : {{/isNullable}}{{^isNullable}}json["{{baseName}}"] == null ? undefined : {{/isNullable}}{{/required}}{{#required}}{{#isNullable}}json["{{baseName}}"] == null ? null : {{/isNullable}}{{/required}}{{#items.isPrimitiveType}}(json["{{baseName}}"] as Array<any>){{/items.isPrimitiveType}}{{^items.isPrimitiveType}}{{#items.isContainer}}(json["{{baseName}}"] as Array<any>){{/items.isContainer}}{{^items.isContainer}}(json["{{baseName}}"] as Array<any>).map({{#items}}{{{datatype}}}{{/items}}FromJSON){{/items.isContainer}}{{/items.isPrimitiveType}}{{^items}}json["{{baseName}}"]{{/items}},
-        {{/uniqueItems}}
-        {{^uniqueItems}}
-        {{#items.isPrimitiveType}}
-        "{{name}}": {{^required}}{{#isNullable}}json["{{baseName}}"] === undefined ? undefined : json["{{baseName}}"] === null ? null : {{/isNullable}}{{^isNullable}}json["{{baseName}}"] == null ? undefined : {{/isNullable}}{{/required}}{{#required}}{{#isNullable}}json["{{baseName}}"] == null ? null : {{/isNullable}}{{/required}}(json["{{baseName}}"] as Array<any>),
-        {{/items.isPrimitiveType}}
-        {{^items.isPrimitiveType}}
-        {{#items.isContainer}}
-        "{{name}}": {{^required}}{{#isNullable}}json["{{baseName}}"] === undefined ? undefined : json["{{baseName}}"] === null ? null : {{/isNullable}}{{^isNullable}}json["{{baseName}}"] == null ? undefined : {{/isNullable}}{{/required}}{{#required}}{{#isNullable}}json["{{baseName}}"] == null ? null : {{/isNullable}}{{/required}}(json["{{baseName}}"] as Array<any>),
-        {{/items.isContainer}}
-        {{^items.isContainer}}
-        "{{name}}": {{^required}}{{#isNullable}}json["{{baseName}}"] === undefined ? undefined : json["{{baseName}}"] === null ? null : {{/isNullable}}{{^isNullable}}json["{{baseName}}"] == null ? undefined : {{/isNullable}}{{/required}}{{#required}}{{#isNullable}}json["{{baseName}}"] == null ? null : {{/isNullable}}{{/required}}(json["{{baseName}}"] as Array<any>).map({{#items}}{{{datatype}}}{{/items}}FromJSON),
-        {{/items.isContainer}}
-        {{/items.isPrimitiveType}}
-        {{^items}}
-        "{{name}}": {{^required}}{{#isNullable}}json["{{baseName}}"] === undefined ? undefined : json["{{baseName}}"] === null ? null : {{/isNullable}}{{^isNullable}}json["{{baseName}}"] == null ? undefined : {{/isNullable}}{{/required}}json["{{baseName}}"],
-        {{/items}}
-        {{/uniqueItems}}
-        {{/isArray}}
-        {{#isMap}}
-        "{{name}}": {{^required}}{{#isNullable}}json["{{baseName}}"] === undefined ? undefined : json["{{baseName}}"] === null ? null : {{/isNullable}}{{^isNullable}}json["{{baseName}}"] == null ? undefined : {{/isNullable}}{{/required}}({{#required}}{{#isNullable}}json["{{baseName}}"] == null ? null : {{/isNullable}}{{/required}}{{#items.isModel}}mapValues(json["{{baseName}}"], {{{items.datatype}}}FromJSON){{/items.isModel}}{{^items.isModel}}json["{{baseName}}"]{{/items.isModel}}),
-        {{/isMap}}
-        {{^isArray}}
-        {{^isMap}}
-        {{^isFreeFormObject}}
-        "{{name}}": {{^required}}{{#isNullable}}json["{{baseName}}"] === undefined ? undefined : json["{{baseName}}"] === null ? null : {{/isNullable}}{{^isNullable}}json["{{baseName}}"] == null ? undefined : {{/isNullable}}{{/required}}{{{datatype}}}FromJSON(json["{{baseName}}"]),
-        {{/isFreeFormObject}}
-        {{#isFreeFormObject}}
-        "{{name}}": {{^required}}{{#isNullable}}json["{{baseName}}"] === undefined ? undefined : json["{{baseName}}"] === null ? null : {{/isNullable}}{{^isNullable}}json["{{baseName}}"] == null ? undefined : {{/isNullable}}{{/required}}json["{{baseName}}"],
-        {{/isFreeFormObject}}
-        {{/isMap}}
-        {{/isArray}}
-        {{/isPrimitiveType}}
+        {{{vendorExtensions.x-ts-from-json}}},
 {{/vars}}
     };
     {{/hasVars}}
@@ -209,65 +146,12 @@ export function {{classname}}ToJSONTyped(value?: {{#hasReadOnly}}Omit<{{classnam
 {{#parent}}
         ...{{#parentIsOneOf}}({{/parentIsOneOf}}{{{.}}}ToJSONTyped(value, true){{#parentIsOneOf}} as any){{/parentIsOneOf}},
 {{/parent}}
-{{#additionalPropertiesType}}
-        ...value,
-{{/additionalPropertiesType}}
+{{#vendorExtensions.x-ts-rest-to}}
+        ...{{{.}}},
+{{/vendorExtensions.x-ts-rest-to}}
 {{#vars}}
         {{^isReadOnly}}
-        {{#isPrimitiveType}}
-        {{#isDateType}}
-        "{{baseName}}": value["{{name}}"] == null ? value["{{name}}"] : serializeDate(value["{{name}}"]),
-        {{/isDateType}}
-        {{#isDateTimeType}}
-        "{{baseName}}": value["{{name}}"] == null ? value["{{name}}"] : serializeDateTime(value["{{name}}"]),
-        {{/isDateTimeType}}
-        {{#isArray}}
-        "{{baseName}}": {{#uniqueItems}}value["{{name}}"]{{/uniqueItems}}{{^uniqueItems}}value["{{name}}"]{{/uniqueItems}},
-        {{/isArray}}
-        {{^isDateType}}
-        {{^isDateTimeType}}
-        {{^isArray}}
-        "{{baseName}}": value["{{name}}"],
-        {{/isArray}}
-        {{/isDateTimeType}}
-        {{/isDateType}}
-        {{/isPrimitiveType}}
-        {{^isPrimitiveType}}
-        {{#isArray}}
-        {{#uniqueItems}}
-        "{{baseName}}": {{^required}}value["{{name}}"] == null ? undefined : {{/required}}{{#required}}{{#isNullable}}value["{{name}}"] == null ? null : {{/isNullable}}{{/required}}{{#items.isPrimitiveType}}(value["{{name}}"] as Array<any>){{/items.isPrimitiveType}}{{^items.isPrimitiveType}}{{#items.isContainer}}(value["{{name}}"] as Array<any>){{/items.isContainer}}{{^items.isContainer}}(value["{{name}}"] as Array<any>).map({{#items}}{{{datatype}}}{{/items}}ToJSON){{/items.isContainer}}{{/items.isPrimitiveType}}{{^items}}value["{{name}}"]{{/items}},
-        {{/uniqueItems}}
-        {{^uniqueItems}}
-        {{#items.isPrimitiveType}}
-        "{{baseName}}": {{^required}}value["{{name}}"] == null ? undefined : {{/required}}(value["{{name}}"] as Array<any>),
-        {{/items.isPrimitiveType}}
-        {{^items.isPrimitiveType}}
-        {{#items.isContainer}}
-        "{{baseName}}": {{^required}}value["{{name}}"] == null ? undefined : {{/required}}({{#required}}{{#isNullable}}value["{{name}}"] == null ? null : {{/isNullable}}{{/required}}(value["{{name}}"] as Array<any>)),
-        {{/items.isContainer}}
-        {{^items.isContainer}}
-        "{{baseName}}": {{^required}}value["{{name}}"] == null ? undefined : {{/required}}({{#required}}{{#isNullable}}value["{{name}}"] == null ? null : {{/isNullable}}{{/required}}(value["{{name}}"] as Array<any>).map({{#items}}{{{datatype}}}{{/items}}ToJSON)),
-        {{/items.isContainer}}
-        {{/items.isPrimitiveType}}
-        {{^items}}
-        "{{baseName}}": value["{{name}}"],
-        {{/items}}
-        {{/uniqueItems}}
-        {{/isArray}}
-        {{#isMap}}
-        "{{baseName}}": {{^required}}value["{{name}}"] == null ? undefined : {{/required}}({{#required}}{{#isNullable}}value["{{name}}"] == null ? null : {{/isNullable}}{{/required}}{{#items.isModel}}mapValues(value["{{name}}"], {{{items.datatype}}}ToJSON){{/items.isModel}}{{^items.isModel}}value["{{name}}"]{{/items.isModel}}),
-        {{/isMap}}
-        {{^isArray}}
-        {{^isMap}}
-        {{^isFreeFormObject}}
-        "{{baseName}}": {{{datatype}}}ToJSON(value["{{name}}"]),
-        {{/isFreeFormObject}}
-        {{#isFreeFormObject}}
-        "{{baseName}}": value["{{name}}"],
-        {{/isFreeFormObject}}
-        {{/isMap}}
-        {{/isArray}}
-        {{/isPrimitiveType}}
+        {{{vendorExtensions.x-ts-to-json}}},
         {{/isReadOnly}}
 {{/vars}}
     };

@@ -202,6 +202,48 @@ export function PetFromJSON(json: any): Pet {
 // Use JSON directly with type assertions
 ```
 
+## Values on the wire
+
+With runtime checks, `FromJSON` and `ToJSON` convert at every depth: a list
+of lists of models, a map of dates, a map of lists of models.
+
+| Schema                                    | TypeScript                                                                                                                                   |
+| ----------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `date` / `date-time`                      | `Date`: a day at local midnight; an instant to the millisecond, sent in UTC (a time without an offset is read as local time)                 |
+| optional and nullable                     | `T \| null`: `null` is sent and read as `null`, a property left out stays out                                                                |
+| `additionalProperties` next to properties | an index signature; the other keys go through both ways, converted as their schema says                                                      |
+| `binary` property of a JSON model         | `string`: JSON holds no bytes, a server writes their text                                                                                    |
+| `oneOf` / `anyOf`                         | the member the discriminator names (its mapping, else the schema's name), one every member pins a property for, else the member it fits best |
+
+| Request                     | Sent                                                                                                                                                        |
+| --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| path, header, query, cookie | by `style` and `explode`: `simple`, `label`, `matrix`, `form`, `spaceDelimited`, `pipeDelimited`, `deepObject`; an object as its pairs                      |
+| cookie, API key in a cookie | a `Cookie` header: Node.js, Deno and Bun send it, a browser drops it and sends its own cookies                                                              |
+| urlencoded form field       | by its `encoding`: a list a field per item (or joined by its delimiter with `explode: false`), `deepObject` key by key (`a[b][0]=x`)                        |
+| multipart field             | a list a part per item, an object as a JSON part (a file named `blob`: `FormData` gives a part a type only as a file); a form with a file goes as multipart |
+
+| Response                                             | Result                                                                                  |
+| ---------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| a 2xx without a body (a 204, a HEAD)                 | `null`                                                                                  |
+| a 2xx of another body than the result's              | a `ResponseError`, its body unread                                                      |
+| a string or `any` the server sends as text           | the text; a number or boolean sent as text is parsed                                    |
+| JSON Lines, `text/event-stream` (3.2's `itemSchema`) | `AsyncIterable<T>`, of `ServerSentEvent<T>` (`data`, `event`, `id`, `retry`) for events |
+
+```typescript
+for await (const event of await api.chat({ prompt: { text: "hi" } })) {
+    console.log(event.event, event.data);
+}
+```
+
+A stream stays open until the loop ends or breaks, or the request's
+`signal` aborts it.
+
+A model named like a runtime export or a DOM type an API file uses
+(`BaseAPI`, `RequestInit`, `FormData`) is prefixed with `Model`; an operation
+named like a `BaseAPI` member (`request`) gets the suffix `Operation`; a
+property named `constructor` is `_constructor`. A server URL's variables
+take their defaults in `BASE_PATH`.
+
 ## Import File Extension
 
 For ES modules compatibility, you can specify import file extensions:
@@ -279,11 +321,13 @@ const api = new PetApi(config);
 ### Error Handling
 
 ```typescript
+import { ResponseError } from './generated';
+
 try {
     const pet = await api.getPetById({ petId: 999 });
 } catch (error) {
-    if (error instanceof Response) {
-        console.error('HTTP Error:', error.status, await error.text());
+    if (error instanceof ResponseError) {
+        console.error('HTTP Error:', error.response.status, await error.response.text());
     } else {
         console.error('Error:', error);
     }
