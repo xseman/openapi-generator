@@ -213,6 +213,7 @@ of lists of models, a map of dates, a map of lists of models.
 | optional and nullable                     | `T \| null`: `null` is sent and read as `null`, a property left out stays out                                                                |
 | `additionalProperties` next to properties | an index signature; the other keys go through both ways, converted as their schema says                                                      |
 | `binary` property of a JSON model         | `string`: JSON holds no bytes, a server writes their text                                                                                    |
+| a schema of an array, a map or a scalar   | a type alias that converts as its value does: `type Pets = Array<Pet>`, `type Day = Date`                                                    |
 | `oneOf` / `anyOf`                         | the member the discriminator names (its mapping, else the schema's name), one every member pins a property for, else the member it fits best |
 
 | Request                     | Sent                                                                                                                                                        |

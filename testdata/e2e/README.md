@@ -113,8 +113,11 @@ same cases.
   `error`'s model for a 4xx/5xx, or a 2xx whose body is not the result's.
 - A **request** value is `args.body` and must arrive as `request.body`; an
   optional body of null may also arrive as none.
-- Required parameters get a simple value. An operation without one (an
-  array in the path, a form body, a HEAD) is left out; the run logs which.
+- Required parameters get a simple value and must arrive as it; an
+  optional query or header parameter must not arrive at all (a header
+  the HTTP client sends itself, as `Accept-Language`, aside). An operation
+  without a value for a required one (an array in the path, a form body, a
+  HEAD) is left out; the run logs which.
 - They compare **exactly**: no other keys, and null is not absent.
 
 go-fetch and typescript-fetch must pass every case. A failing case of a
@@ -146,8 +149,11 @@ parsed as JSON where the spec declares a body for the status (`bodies` in
 the input). A converted round trip hides a `FromJSON` and a `ToJSON` that
 both leave a value alone, so the runner also checks each argument and
 result against the client's types: a model holds its TypeScript property
-names, a `Date` stands where the interface says. The runner puts back
-the read-only properties a model's `ToJSON` leaves out of a result.
+names, a `Date` stands where the interface says, and a day (`format:
+date`) is at local midnight, which a day parsed as UTC is not east of UTC,
+where the runners run. The runner makes a day argument as its users do,
+with the client's `parseDate`, and puts back the read-only properties a
+model's `ToJSON` leaves out of a result.
 
 A case one generator cannot pass has `skip: { <generator>: why }`. A spec
 whose client does not compile at all has the same `skip` at the top of its

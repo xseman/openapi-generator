@@ -64,8 +64,18 @@ function methods(dir: string): { methods: Method[]; requests: Record<string, Rec
 
 // Decl is a model of a client: an interface's properties (with those of
 // the interface it extends, and whether an index signature takes others),
-// their JSON names and the read-only ones, or a type alias.
-type Decl = { fields?: Record<string, string>; base?: string; open?: boolean; alias?: string; wire?: Record<string, string>; readonly?: Set<string> };
+// their JSON names, the read-only ones and the days (format: date), or a
+// type alias.
+type Decl = {
+    fields?: Record<string, string>;
+    base?: string;
+    open?: boolean;
+    alias?: string;
+    wire?: Record<string, string>;
+    readonly?: Set<string>;
+    days?: Set<string>;
+    day?: boolean;
+};
 
 // models reads the models' interfaces and type aliases from the sources.
 function models(dir: string): Record<string, Decl> {
@@ -75,10 +85,15 @@ function models(dir: string): Record<string, Decl> {
     for (const file of fs.existsSync(d) ? fs.readdirSync(d) : []) {
         const src: string = fs.readFileSync(path.join(d, file), "utf8");
 
-        // A FromJSON reads each property's JSON name: "name": ... json["wire"].
+        // A FromJSON reads each property's JSON name: "name": ... json["wire"],
+        // a day with parseDate.
         const wire: Record<string, string> = {};
-        for (const f of src.matchAll(/^        "([^"]+)": .*?json\["([^"]+)"\]/gm)) {
-            wire[f[1]] = f[2];
+        const days = new Set<string>();
+        for (const f of src.matchAll(/^        "([^"]+)": (.*?json\["([^"]+)"\].*)$/gm)) {
+            wire[f[1]] = f[3];
+            if (/\bparseDate\b/.test(f[2])) {
+                days.add(f[1]);
+            }
         }
 
         for (const m of src.matchAll(/^export interface (\w+)(?: extends (\w+))? \{([\s\S]*?)\n\}/gm)) {
@@ -94,11 +109,11 @@ function models(dir: string): Record<string, Decl> {
 
             // An interface without properties, as TypeScript's {}, takes any object.
             const open = /^    \[key: string\]/m.test(m[3]) || (Object.keys(fields).length === 0 && !m[2]);
-            out[m[1]] = { fields, base: m[2], open, wire, readonly };
+            out[m[1]] = { fields, base: m[2], open, wire, readonly, days };
         }
 
         for (const m of src.matchAll(/^export type (\w+) = (.+);$/gm)) {
-            out[m[1]] ??= { alias: m[2] };
+            out[m[1]] ??= { alias: m[2], day: /json == null \? json : [^\n]*\bparseDate\b/.test(src) };
         }
     }
 
@@ -129,17 +144,19 @@ const show = (v: any): string => (v instanceof Date ? "Date " + v.toISOString() 
 
 // shape says where v is not of the client's type t, or "": an object of a
 // model with a key its interface lacks (a wire name FromJSON left), a
-// string where a Date belongs. A FromJSON and a ToJSON that both leave a
-// value alone pass a round trip; they do not pass this. Scalars count in
-// results only: the runner hands arguments over as the scenario has them.
-function shape(decls: Record<string, Decl>, t: string, v: any, at: string, scalars: boolean): string {
+// string where a Date belongs, a day (format: date, day) other than at
+// local midnight, as one parsed as UTC is west of it. A FromJSON and a
+// ToJSON that both leave a value alone pass a round trip; they do not pass
+// this. Scalars count in results only: the runner hands arguments over as
+// the scenario has them.
+function shape(decls: Record<string, Decl>, t: string, v: any, at: string, scalars: boolean, day = false): string {
     if (v === null || v === undefined) {
         return "";
     }
 
     const alts = members(t).filter((x) => x !== "null" && x !== "undefined");
     if (alts.length > 1) {
-        const errs = alts.map((x) => shape(decls, x, v, at, scalars));
+        const errs = alts.map((x) => shape(decls, x, v, at, scalars, day));
 
         return errs.every(Boolean) ? errs[0] : "";
     }
@@ -154,7 +171,7 @@ function shape(decls: Record<string, Decl>, t: string, v: any, at: string, scala
 
         let i = 0;
         for (const x of v) {
-            const e = shape(decls, m[2], x, `${at}[${i++}]`, scalars);
+            const e = shape(decls, m[2], x, `${at}[${i++}]`, scalars, day);
             if (e) {
                 return e;
             }
@@ -169,7 +186,7 @@ function shape(decls: Record<string, Decl>, t: string, v: any, at: string, scala
         }
 
         for (const [k, x] of Object.entries(v)) {
-            const e = shape(decls, m[1], x, `${at}.${k}`, scalars);
+            const e = shape(decls, m[1], x, `${at}.${k}`, scalars, day);
             if (e) {
                 return e;
             }
@@ -179,7 +196,13 @@ function shape(decls: Record<string, Decl>, t: string, v: any, at: string, scala
     }
 
     if (t === "Date") {
-        return v instanceof Date && !isNaN(v.getTime()) ? "" : `${at}: want a Date, got ${show(v)}`;
+        if (!(v instanceof Date) || isNaN(v.getTime())) {
+            return `${at}: want a Date, got ${show(v)}`;
+        }
+
+        const midnight = v.getHours() + v.getMinutes() + v.getSeconds() + v.getMilliseconds() === 0;
+
+        return !day || midnight ? "" : `${at}: want a day at local midnight, got ${v.toString()}`;
     }
 
     if (t === "Blob") {
@@ -196,7 +219,7 @@ function shape(decls: Record<string, Decl>, t: string, v: any, at: string, scala
     }
 
     if (d.alias !== undefined) {
-        return d.alias.startsWith("typeof ") ? "" : shape(decls, d.alias, v, at, scalars);
+        return d.alias.startsWith("typeof ") ? "" : shape(decls, d.alias, v, at, scalars, day || !!d.day);
     }
 
     // An interface without properties is TypeScript's {}: any value but null.
@@ -227,9 +250,11 @@ function shape(decls: Record<string, Decl>, t: string, v: any, at: string, scala
 function fits(decls: Record<string, Decl>, t: string, v: any, at: string, scalars: boolean): string {
     const d = decls[t];
     const fields: Record<string, string> = {};
+    const days = new Set<string>();
     let open = false;
     for (let c: Decl | undefined = d; c; c = c.base ? decls[c.base] : undefined) {
         Object.assign(fields, { ...c.fields, ...fields });
+        c.days?.forEach((f) => days.add(f));
         open ||= !!c.open;
     }
 
@@ -242,7 +267,7 @@ function fits(decls: Record<string, Decl>, t: string, v: any, at: string, scalar
             return `${at}: ${k} is no property of ${t}`;
         }
 
-        const e = shape(decls, fields[k], x, `${at}.${k}`, scalars);
+        const e = shape(decls, fields[k], x, `${at}.${k}`, scalars, days.has(k));
         if (e) {
             return e;
         }
@@ -276,8 +301,9 @@ function fromWire(client: any, t: string, v: any): any {
         return Object.fromEntries(Object.entries(v).map(([k, x]) => [k, fromWire(client, m![1], x)]));
     }
 
+    // A day as its users make one: local midnight.
     if (t === "Date") {
-        return new Date(v);
+        return /^\d{4}-\d{2}-\d{2}$/.test(v) ? client.parseDate(v) : new Date(v);
     }
 
     const from = client[t + "FromJSON"];
@@ -465,7 +491,7 @@ async function callCase(client: Client, info: ReturnType<typeof methods>, decls:
     try {
         const result = m.request ? await api[m.name](params) : await api[m.name]();
 
-        const bad = shape(decls, m.result, result, "result", true);
+        const bad = shape(decls, m.result, result, "result", true, m.day);
         if (bad) {
             return { fail: "the result is not of its type: " + bad };
         }

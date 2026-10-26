@@ -285,13 +285,24 @@ func caseDiffs(k kase, o outcome, m *mock, i int, r rules) []string {
 		case got["responseInvalid"] != nil:
 			diffs = append(diffs, fmt.Sprintf("response: the scenario's is invalid for the spec: %v", got["responseInvalid"]))
 		case k.Request != nil && k.Exact:
-			// The body alone, absent when none was sent: null is not absent.
-			sent := map[string]any{}
-			if b, ok := got["body"]; ok {
-				sent["body"] = b
+			// The query and the headers as the scenarios read them (another
+			// key, an API key, may be there), the body exactly: absent when
+			// none was sent, and null is not absent.
+			want, _ := decodeJSON(k.Request).(map[string]any)
+			for _, where := range []string{"query", "header"} {
+				if w, ok := want[where]; ok {
+					diffs = append(diffs, match("request."+where, w, got[where], rules{millis: r.millis})...)
+				}
 			}
 
-			diffs = append(diffs, match("request", decodeJSON(k.Request), sent, r)...)
+			if b, ok := want["body"]; ok {
+				sent := map[string]any{}
+				if gb, ok := got["body"]; ok {
+					sent["body"] = gb
+				}
+
+				diffs = append(diffs, match("request", map[string]any{"body": b}, sent, r)...)
+			}
 
 		case k.Request != nil:
 			diffs = append(diffs, match("request", decodeJSON(k.Request), got, r)...)
