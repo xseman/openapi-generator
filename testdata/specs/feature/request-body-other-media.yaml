@@ -42,6 +42,24 @@ paths:
               schema:
                 type: string
                 format: binary
+  /notes/{id}:
+    patch:
+      operationId: patchNote
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/merge-patch+json:
+            schema:
+              $ref: "#/components/schemas/Meta"
+      responses:
+        "200":
+          description: patched
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Meta"
   /reports:
     post:
       operationId: postReport

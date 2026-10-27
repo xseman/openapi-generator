@@ -25,10 +25,12 @@ paths:
           description: painted
 components:
   schemas:
+    # Keys in sorted order: a client may write them as declared or sorted.
     Color:
       type: object
-      required: [R, G, B]
+      required: [B, G, R]
       properties:
-        R: { type: integer }
-        G: { type: integer }
+        A: { type: number }
         B: { type: integer }
+        G: { type: integer }
+        R: { type: integer }

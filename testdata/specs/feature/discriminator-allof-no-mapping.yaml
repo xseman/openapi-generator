@@ -1,0 +1,61 @@
+openapi: "3.0.0"
+info:
+  title: Discriminator Without Mapping Feature
+  version: 1.0.0
+  description: A discriminator on an allOf parent with no mapping; its value is the child's schema name.
+paths:
+  /pets:
+    get:
+      operationId: listPets
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Pet"
+    post:
+      operationId: addPet
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Pet"
+      responses:
+        "204":
+          description: added
+components:
+  schemas:
+    Pet:
+      type: object
+      required: [petType]
+      discriminator:
+        propertyName: petType
+      properties:
+        petType:
+          type: string
+        name:
+          type: string
+        born_on:
+          type: string
+          format: date
+    Cat:
+      allOf:
+        - $ref: "#/components/schemas/Pet"
+        - type: object
+          properties:
+            born:
+              type: string
+              format: date-time
+            nick-name:
+              type: string
+    Dog:
+      allOf:
+        - $ref: "#/components/schemas/Pet"
+        - type: object
+          properties:
+            pack-size:
+              type: integer

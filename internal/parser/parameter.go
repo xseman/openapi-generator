@@ -88,10 +88,23 @@ func (p *Parser) parameterToCodegen(param *openapi3.Parameter) *codegen.CodegenP
 		cp.IsNullable = prop.IsNullable
 		cp.Ref = prop.Ref
 
-		// Collection format
+		// Collection format, as upstream's getCollectionFormat derives it:
+		// an exploded form a value each, else joined by the style's delimiter.
 		if cp.IsArray {
-			cp.CollectionFormat = "multi"
-			cp.IsCollectionFormatMulti = true
+			cp.CollectionFormat = "csv"
+
+			if sm, err := param.SerializationMethod(); err == nil {
+				switch {
+				case sm.Explode && sm.Style != openapi3.SerializationSimple:
+					cp.CollectionFormat = "multi"
+				case sm.Style == openapi3.SerializationSpaceDelimited:
+					cp.CollectionFormat = "ssv"
+				case sm.Style == openapi3.SerializationPipeDelimited:
+					cp.CollectionFormat = "pipes"
+				}
+			}
+
+			cp.IsCollectionFormatMulti = cp.CollectionFormat == "multi"
 		}
 	}
 

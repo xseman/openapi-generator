@@ -52,6 +52,7 @@ type kase struct {
 	Response *mockResponse     `json:"response"`
 	Result   json.RawMessage   `json:"result"` // null is a null result, absent is unchecked
 	Error    json.RawMessage   `json:"error"`
+	Fails    bool              `json:"fails"` // the client cannot read the answer: the call fails, not as an HTTP error
 
 	// Exact compares the result, the error and the request's body with no
 	// other keys allowed: a generated case (values_test.go) sets it.
@@ -151,6 +152,30 @@ func opParams(doc *openapi3.T) map[string][]string {
 			}
 
 			out[op.OperationID] = names
+		}
+	}
+
+	return out
+}
+
+// opBodies lists the responses of each operation that have a body, by
+// their key in the spec: "200", "404", "4XX", "default".
+func opBodies(doc *openapi3.T) map[string][]string {
+	out := map[string][]string{}
+
+	for _, item := range doc.Paths.Map() {
+		for _, op := range item.Operations() {
+			if op.Responses == nil {
+				continue
+			}
+
+			for code, resp := range op.Responses.Map() {
+				if resp.Value != nil && len(resp.Value.Content) > 0 {
+					out[op.OperationID] = append(out[op.OperationID], code)
+				}
+			}
+
+			slices.Sort(out[op.OperationID])
 		}
 	}
 

@@ -22,7 +22,7 @@ components:
       type: integer
       enum: [0, 99, -1]
     Untyped:
-      enum: [placed, 'a\b']
+      enum: [placed, 'a\b', "two\nlines"]
     UntypedNumbers:
       enum: [1, 2]
 `)
@@ -46,16 +46,16 @@ components:
 	}{
 		{"Status", []string{"Active", "WeirdValue", "Active2"}, true},
 		{"Priority", []string{"_0", "_99", "Minus1"}, false},
-		{"Untyped", []string{"Placed", "AB"}, true},     // no type: quoted, as upstream
-		{"UntypedNumbers", []string{"_1", "_2"}, false}, // ...unless all are numbers
+		{"Untyped", []string{"Placed", "AB", "TwoLines"}, true}, // no type: quoted, as upstream
+		{"UntypedNumbers", []string{"_1", "_2"}, false},         // ...unless all are numbers
 	} {
 		vars, _ := findModel(t, models, tt.model).AllowableValues["enumVars"].([]map[string]any)
 		if len(vars) != len(tt.want) {
 			t.Fatalf("%s enumVars = %v, want names %v", tt.model, vars, tt.want)
 		}
 
-		if tt.model == "Untyped" && vars[1]["value"] != `a\\b` {
-			t.Errorf("Untyped value = %v, want the backslash escaped", vars[1]["value"])
+		if tt.model == "Untyped" && (vars[1]["value"] != `a\\b` || vars[2]["value"] != `two\nlines`) {
+			t.Errorf("Untyped values = %v, %v, want the backslash and the line break escaped", vars[1]["value"], vars[2]["value"])
 		}
 
 		for i, v := range vars {

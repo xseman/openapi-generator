@@ -2,6 +2,8 @@
 package parser
 
 import (
+	"strings"
+
 	"github.com/getkin/kin-openapi/openapi3"
 )
 
@@ -74,11 +76,19 @@ func (p *Parser) GetInfo() map[string]string {
 	return info
 }
 
-// GetBasePath returns the base path from servers.
+// GetBasePath returns the base path from servers: the first one's URL.
 func (p *Parser) GetBasePath() string {
 	if p.Doc == nil || len(p.Doc.Servers) == 0 {
 		return ""
 	}
 
-	return p.Doc.Servers[0].URL
+	// A variable takes its default, as upstream's getServerURL fills it.
+	url := p.Doc.Servers[0].URL
+	for name, v := range p.Doc.Servers[0].Variables {
+		if v != nil {
+			url = strings.ReplaceAll(url, "{"+name+"}", v.Default)
+		}
+	}
+
+	return url
 }

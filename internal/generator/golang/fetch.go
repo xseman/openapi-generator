@@ -683,7 +683,7 @@ func jsonTag(nameOpts string) string {
 // property an inline enum belongs to, nil for an enum model.
 func enumDecl(name, base string, allowable map[string]any, owner *codegen.CodegenProperty) map[string]any {
 	vars, _ := allowable["enumVars"].([]map[string]any)
-	unescape := strings.NewReplacer(`\\`, `\`, `\'`, `'`)
+	unescape := strings.NewReplacer(`\\`, `\`, `\'`, `'`, `\n`, "\n", `\r`, "\r", `\u2028`, "\u2028", `\u2029`, "\u2029")
 
 	values := make([]map[string]any, 0, len(vars))
 	for _, v := range vars {

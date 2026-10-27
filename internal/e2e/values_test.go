@@ -20,11 +20,6 @@ import (
 	"go.yaml.in/yaml/v3"
 )
 
-// valueLenient are the generators whose failing generated cases are
-// counted and skipped, not failed: they have known gaps a later change
-// fixes. Without an entry a generator is strict, as go-fetch is.
-var valueLenient = map[string]bool{"typescript-fetch": true, "dart-fetch": true}
-
 // valueScenarios generates a scenario for each feature spec, the FastAPI
 // spec (served by the mock) and each spec in E2E_SPECS (comma-separated
 // paths), and logs the operations it leaves out.
@@ -158,6 +153,30 @@ func servable(t *testing.T, spec string) (string, *openapi3.T) {
 	return out, doc
 }
 
+// absentProperties marks absent the keys an optional exploded query object
+// goes under: its properties' (deepObject: name[property]), as a client
+// that writes an unset one sends them.
+func absentProperties(where map[string]any, p *openapi3.Parameter) {
+	sm, err := p.SerializationMethod()
+	if err != nil || p.In != openapi3.ParameterInQuery || !sm.Explode || p.Schema == nil || p.Schema.Value == nil {
+		return
+	}
+
+	for prop := range p.Schema.Value.Properties {
+		key := prop
+		if sm.Style == openapi3.SerializationDeepObject {
+			key = p.Name + "[" + prop + "]"
+		}
+
+		if _, named := where[key]; !named {
+			where[key] = "$absent"
+		}
+	}
+}
+
+// clientHeaders are the headers an HTTP client may send on its own.
+var clientHeaders = map[string]bool{"Accept": true, "Accept-Language": true, "Accept-Encoding": true, "User-Agent": true}
+
 // valueCases makes an operation's generated cases: each value of a JSON
 // response is the mock's answer and the result, or the error's model; each
 // value of a JSON request body is the body to send, answered by the first
@@ -174,6 +193,10 @@ func valueCases(item *openapi3.PathItem, op *openapi3.Operation, is31 bool) ([]k
 		query     bool   // a query is sent
 		deepArray string // a deepObject array, which kin refuses in any query (Stripe's expand)
 		dropped   int    // values their schema rejects: a generator gap to log
+
+		// sent is what the query and the headers must hold: a required
+		// parameter its value, an optional one nothing.
+		sent = map[string]map[string]any{"query": {}, "header": {}}
 	)
 
 	for _, p := range slices.Concat(item.Parameters, op.Parameters) {
@@ -185,7 +208,19 @@ func valueCases(item *openapi3.PathItem, op *openapi3.Operation, is31 bool) ([]k
 			deepArray = p.Value.Name
 		}
 
+		where := sent[p.Value.In]
+
 		if !p.Value.Required {
+			// An HTTP client sends some headers itself: Node's fetch
+			// Accept and Accept-Language.
+			if where != nil && !clientHeaders[http.CanonicalHeaderKey(p.Value.Name)] {
+				where[p.Value.Name] = "$absent"
+			}
+
+			if where != nil {
+				absentProperties(where, p.Value)
+			}
+
 			continue
 		}
 
@@ -196,6 +231,15 @@ func valueCases(item *openapi3.PathItem, op *openapi3.Operation, is31 bool) ([]k
 
 		args[p.Value.Name] = v
 		query = query || p.Value.In == openapi3.ParameterInQuery
+
+		if where != nil {
+			text, ok := v.(string)
+			if !ok {
+				text = string(mustJSON(v)) // a number as JSON writes it, as JavaScript does
+			}
+
+			where[p.Value.Name] = text
+		}
 	}
 
 	if query && deepArray != "" {
@@ -263,7 +307,7 @@ func valueCases(item *openapi3.PathItem, op *openapi3.Operation, is31 bool) ([]k
 				break
 			}
 
-			k := kase{Name: fmt.Sprintf("response %d %s", status, v.name), Op: op.OperationID, Args: mustJSON(args), Response: r, Exact: true}
+			k := kase{Name: fmt.Sprintf("%s response %d %s", op.OperationID, status, v.name), Op: op.OperationID, Args: mustJSON(args), Response: r, Exact: true, Request: mustJSON(sent)}
 			if isResult {
 				k.Result = v.raw
 			} else {
@@ -284,14 +328,14 @@ func valueCases(item *openapi3.PathItem, op *openapi3.Operation, is31 bool) ([]k
 
 		// An optional body of null may go out as null or as none: the mock
 		// checks only that the request is valid.
-		want := mustJSON(map[string]any{"body": b.raw})
+		want := map[string]any{"query": sent["query"], "header": sent["header"], "body": b.raw}
 		if string(b.raw) == "null" && !op.RequestBody.Value.Required {
-			want = nil
+			delete(want, "body")
 		}
 
 		cases = append(cases, kase{
-			Name: "request " + b.name, Op: op.OperationID, Args: mustJSON(a), Exact: true,
-			Request: want, Response: answer,
+			Name: op.OperationID + " request " + b.name, Op: op.OperationID, Args: mustJSON(a), Exact: true,
+			Request: mustJSON(want), Response: answer,
 		})
 	}
 

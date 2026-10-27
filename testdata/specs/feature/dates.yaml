@@ -43,6 +43,58 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Event"
+  /today:
+    get:
+      operationId: getToday
+      responses:
+        "200":
+          description: a day
+          content:
+            application/json:
+              schema:
+                type: string
+                format: date
+  /ticks:
+    get:
+      operationId: listTicks
+      responses:
+        "200":
+          description: instants
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+                  format: date-time
+  /day:
+    put:
+      operationId: putDay
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: string
+              format: date
+      responses:
+        "204":
+          description: stored
+  /holidays:
+    put:
+      operationId: putHolidays
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                type: string
+                format: date
+      responses:
+        "204":
+          description: stored
 components:
   schemas:
     Event:
@@ -71,5 +123,10 @@ components:
         reminderTimestamps:
           type: array
           items:
+            type: string
+            format: date-time
+        seenBy:
+          type: object
+          additionalProperties:
             type: string
             format: date-time

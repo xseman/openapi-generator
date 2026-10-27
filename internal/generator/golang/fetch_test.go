@@ -94,7 +94,7 @@ func TestEnums(t *testing.T) {
 		literals    []string
 	}{
 		{"Level", "int", []string{"-1", "1", "2"}},
-		{"Severity", "string", []string{`"low"`, `"LOW"`, `"it's"`, `"a\\b"`}},
+		{"Severity", "string", []string{`"low"`, `"LOW"`, `"it's"`, `"a\\b"`, `"two\nlines"`}},
 		{"State", "string", []string{`"placed"`, `"approved"`}},
 		{"Rating", "int", []string{"1", "5"}},
 	}

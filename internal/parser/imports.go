@@ -2,6 +2,7 @@ package parser
 
 import (
 	"sort"
+	"strings"
 
 	"github.com/xseman/openapi-generator/internal/codegen"
 )
@@ -43,10 +44,13 @@ func (p *Parser) collectImports(model *codegen.CodegenModel) []string {
 	// AdditionalProperties, which is otherwise never visited above.
 	collectPropertyImports(model.AdditionalProperties, model.Classname, imports)
 
-	for _, ref := range model.OneOf {
-		// Skip self-references to avoid circular imports
-		if ref != model.Classname && !isPrimitiveType(ref) {
-			imports[ref] = true
+	for _, member := range model.OneOf {
+		// Each model of an intersection; skip self-references to avoid
+		// circular imports
+		for ref := range strings.SplitSeq(member, " & ") {
+			if ref != model.Classname && !isPrimitiveType(ref) {
+				imports[ref] = true
+			}
 		}
 	}
 
@@ -92,19 +96,18 @@ func (p *Parser) collectOperationImports(op *codegen.CodegenOperation) []string 
 		}
 	}
 
-	// A map of arrays has the base type "Array<X>"; the model to import is X.
-	returnBaseType := op.ReturnBaseType
-	if rp := op.ReturnProperty; rp != nil && rp.IsMap && rp.Items != nil && rp.Items.IsArray {
-		returnBaseType = rp.Items.BaseType
-	}
-
 	// From return type - also check that ReturnBaseType is not primitive. A
 	// composite (union/intersection) return type imports its member models
 	// instead of the joined string, which is not an importable identifier;
 	// such returns carry ReturnTypeIsPrimitive so no FromJSON import is needed.
-	if op.ReturnType != "" && !op.ReturnTypeIsPrimitive &&
-		!isPrimitiveType(op.ReturnType) && !isPrimitiveType(returnBaseType) && !isCompositeType(returnBaseType) {
-		imports[returnBaseType] = true
+	// A container's models are its items' at any depth: Array<Array<Cell>>
+	// and a map of arrays of Cell import Cell.
+	switch rp := op.ReturnProperty; {
+	case rp != nil && rp.IsContainer:
+		collectPropertyImports(rp.Items, "", imports)
+	case op.ReturnType != "" && !op.ReturnTypeIsPrimitive &&
+		!isPrimitiveType(op.ReturnType) && !isPrimitiveType(op.ReturnBaseType) && !isCompositeType(op.ReturnBaseType):
+		imports[op.ReturnBaseType] = true
 	}
 
 	for _, m := range op.ReturnComposedModels {

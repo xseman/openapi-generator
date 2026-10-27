@@ -9,7 +9,7 @@ import (
 // TestInlineUnion decodes inline unions into their variants and encodes
 // them back unchanged.
 func TestInlineUnion(t *testing.T) {
-	const in = `{"favourite":{"kind":"cat","lives":3},"residents":[{"kind":"dog","barkVolume":2}]}`
+	const in = `{"favourite":{"pet_kind":"cat","lives":3},"residents":[{"pet_kind":"dog","bark_volume":2}]}`
 
 	var s Shelter
 	if err := json.Unmarshal([]byte(in), &s); err != nil {
@@ -37,7 +37,7 @@ func TestInlineUnion(t *testing.T) {
 // TestInlineUnionBody sends the variant set with From as the body.
 func TestInlineUnionBody(t *testing.T) {
 	var body AdmitBody
-	if err := body.FromDog(Dog{Kind: "dog", BarkVolume: 1.5}); err != nil {
+	if err := body.FromDog(Dog{PetKind: "dog", BarkVolume: 1.5}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -47,12 +47,12 @@ func TestInlineUnionBody(t *testing.T) {
 	}
 
 	got, _ := io.ReadAll(req.Body)
-	if want := `{"kind":"dog","barkVolume":1.5}`; string(got) != want {
+	if want := `{"pet_kind":"dog","bark_volume":1.5}`; string(got) != want {
 		t.Errorf("body %s, want %s", got, want)
 	}
 }
 
-// TestImpliedDiscriminator fills in and checks the kind each variant pins,
+// TestImpliedDiscriminator fills in and checks the pet_kind each variant pins,
 // and dispatches on it.
 func TestImpliedDiscriminator(t *testing.T) {
 	var f ShelterFavourite
@@ -60,12 +60,12 @@ func TestImpliedDiscriminator(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if b, _ := json.Marshal(f); string(b) != `{"kind":"dog","barkVolume":3}` {
+	if b, _ := json.Marshal(f); string(b) != `{"pet_kind":"dog","bark_volume":3}` {
 		t.Errorf("FromDog = %s", b)
 	}
 
-	// Every key a Cat requires is there, but the kind says dog.
-	_ = json.Unmarshal([]byte(`{"kind":"dog","lives":1,"barkVolume":3}`), &f)
+	// Every key a Cat requires is there, but the pet_kind says dog.
+	_ = json.Unmarshal([]byte(`{"pet_kind":"dog","lives":1,"bark_volume":3}`), &f)
 	if _, err := f.AsCat(); err == nil {
 		t.Error("AsCat of a dog succeeded")
 	}
@@ -80,7 +80,7 @@ func TestImpliedDiscriminator(t *testing.T) {
 // apart by its required properties.
 func TestInlineObjectVariants(t *testing.T) {
 	var s Shelter
-	if err := json.Unmarshal([]byte(`{"favourite":{"kind":"cat","lives":1},"location":{"lat":1.5,"lon":2}}`), &s); err != nil {
+	if err := json.Unmarshal([]byte(`{"favourite":{"pet_kind":"cat","lives":1},"location":{"lat":1.5,"lon":2}}`), &s); err != nil {
 		t.Fatal(err)
 	}
 

@@ -61,6 +61,7 @@ cases:
     response: { status: 200, json: { id: "42" } }   # mock only; or text, base64, header
     result: { id: "42" }              # the client's result as wire JSON; null is null
     error: { status: 404, model: {...}, body: "..." }
+    fails: true                       # the client cannot read the answer (not an HTTP error)
     save: { token: access_token }     # ${token} in later args and auth
     skip: { go-fetch: why it fails }  # a known gap; fails once it passes
 ```
@@ -91,8 +92,9 @@ validates.
 **Portable values.** A case states what every generator should do. A value
 that a language cannot represent the same way belongs in a case of its own,
 which that generator's runner skips: an int64 above 2^53 in JavaScript, a
-time with microseconds in a JavaScript `Date`, an error body a client does
-not decode.
+time without an offset in a JavaScript `Date`, an error body a client does
+not decode. typescript-fetch compares date-times as instants to the
+millisecond, the most a `Date` holds: `03:04:05Z` matches `03:04:05.000Z`.
 
 ## Generated values
 
@@ -112,13 +114,16 @@ same cases.
   `error`'s model for a 4xx/5xx, or a 2xx whose body is not the result's.
 - A **request** value is `args.body` and must arrive as `request.body`; an
   optional body of null may also arrive as none.
-- Required parameters get a simple value. An operation without one (an
-  array in the path, a form body, a HEAD) is left out; the run logs which.
+- Required parameters get a simple value and must arrive as it; an
+  optional query or header parameter must not arrive at all (a header
+  the HTTP client sends itself, as `Accept-Language`, aside). An operation
+  without a value for a required one (an array in the path, a form body, a
+  HEAD) is left out; the run logs which.
 - They compare **exactly**: no other keys, and null is not absent.
 
-go-fetch must pass every case. A failing case of typescript-fetch or
-dart-fetch counts as failed in the table but skips (`valueLenient`) until
-their gaps are fixed. A Swagger
+go-fetch and typescript-fetch must pass every case. A failing case of a
+`lenient` runner (dart-fetch, `runners` in `e2e_test.go`) counts as failed
+in the table but skips until its gaps are fixed. A Swagger
 2.0 spec in `E2E_SPECS` is converted to OpenAPI 3 first, and of paths that
 differ only in their parameter names the first is kept.
 
@@ -129,28 +134,42 @@ the client the way its users do. `internal/e2e` generates every suite's
 client, builds one program that holds them all and runs it, then compares
 what the program prints with the scenarios.
 
-| Runner         | Client                                                                                                                                                                 |
-| -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `runners/go`   | go-fetch: finds methods, `Params` fields and results by reflection; standard library only                                                                              |
-| `runners/ts`   | typescript-fetch, compiled to CommonJS with `tsc`: reads the `<Op>Request` interfaces and method signatures from the sources, converts with `<Model>FromJSON`/`ToJSON` |
-| `runners/dart` | dart-fetch, on the VM with `dart:mirrors`: named parameters, `fromJson`/`toJson`; a client that does not compile fails only its own suite                              |
+| Runner         | Client                                                                                                                                                                                                                                          |
+| -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `runners/go`   | go-fetch: finds methods, `Params` fields and results by reflection; standard library only                                                                                                                                                       |
+| `runners/ts`   | typescript-fetch, compiled to CommonJS with `tsc --strict`: reads the `<Op>Request` interfaces, the models and the method signatures from the sources, converts with `<Model>FromJSON`/`ToJSON`; a client with a type error fails its own suite |
+| `runners/dart` | dart-fetch, on the VM with `dart:mirrors`: named parameters, `fromJson`/`toJson`; a client that does not compile fails only its own suite                                                                                                       |
 
 Runners run with `TZ=Europe/Bratislava`, so a client that reads or writes
-local time shows it.
+local time shows it. The typescript-fetch clients of the feature specs also
+compile, strict, with each of its boolean options flipped
+(`TestTypeScriptOptions`).
 
 typescript-fetch sends an OAuth2 token as the whole `Authorization` header,
-so its runner returns `Bearer <token>` for an OAuth2 scheme (`schemes` in the
-input). Its error has no decoded model: the runner reports the error body
-parsed as JSON. A case one generator cannot pass has
-`skip: { <generator>: why }`. A spec whose client does not compile at all
-has the same `skip` at the top of its file.
+so its runner returns `Bearer <token>` for an OAuth2 scheme (`schemes` in
+the input). Its error has no decoded model: the runner reports the error
+body parsed as JSON where the spec declares a body for the status (`bodies`
+in the input). A converted round trip hides a `FromJSON` and a `ToJSON` that
+both leave a value alone, so the runner also checks each argument and result
+against the client's types: a model holds its TypeScript property names, an
+enum one of its values, a `Date` stands where the interface says, and a day
+(`format: date`) is at local midnight, which a day parsed as UTC is not east
+of UTC, where the runners run. The runner makes a day argument as its users
+do, with the client's `parseDate`, and puts back the read-only properties a
+model's `ToJSON` leaves out of a result.
+
+A case one generator cannot pass has `skip: { <generator>: why }`. A spec
+whose client does not compile at all has the same `skip` at the top of its
+file.
 
 A runner for another generator follows the same protocol:
 
 1. **Input** is a JSON file given as the first argument:
-   `{ suites: [{ name, base, mock, auth, schemes, cases: [{ op, params, args, auth, save }] }] }`.
+   `{ suites: [{ name, base, mock, auth, schemes, cases: [{ op, params, bodies, args, auth, save }] }] }`.
    - `params` lists the names the operation's args may use (parameters and
      form fields); any other arg is `body`.
+   - `bodies` lists the operation's responses with a body, by their key in
+     the spec (`200`, `404`, `4XX`, `default`).
    - A case's `auth` fields replace those before it for the rest of the
      suite.
 2. **Before each case** of a `mock` suite, the runner sends

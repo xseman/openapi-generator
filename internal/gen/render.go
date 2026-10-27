@@ -200,20 +200,8 @@ func (r *renderer) renderModels(baseData map[string]any, models []*generator.Cod
 				data["dartImports"] = toDartImports(model.Imports, r.dartGen)
 				data["oneOfImports"] = toDartImports(oneOfImportNames, r.dartGen)
 			}
-			// Skip importing Blob helpers if this model IS Blob (to avoid conflicts
-			// with its own generated BlobFromJSON/BlobToJSON exports).
-			isNotBlobModel := model.Classname != "Blob"
-			data["isNotBlobModel"] = isNotBlobModel
-			// True when at least one var's FromJSON/ToJSON body will literally call
-			// the runtime's anyFromJSON/anyToJSON or BlobFromJSON/BlobToJSON helpers
-			// (datatype resolved to "any"/"Blob" outside the
-			// isFreeFormObject/isPrimitiveType/isArray/isMap fast paths that
-			// modelGeneric.mustache passes through directly). Computed here so the
-			// template can import those runtime helpers only when actually used,
-			// instead of unconditionally importing them into every model file.
+
 			if r.tsGen != nil {
-				data["usesAnyJSON"] = modelUsesRuntimeJSONHelper(model, "any")
-				data["usesBlobJSON"] = isNotBlobModel && modelUsesRuntimeJSONHelper(model, "Blob")
 				data["usesDateHelpers"] = modelUsesDateHelpers(model)
 			}
 			// Add model-level properties at top level for template access

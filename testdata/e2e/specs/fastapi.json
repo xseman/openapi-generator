@@ -292,6 +292,27 @@
         "title": "Circle",
         "type": "object"
       },
+      "Closed": {
+        "additionalProperties": false,
+        "properties": {
+          "at": {
+            "format": "date",
+            "title": "At",
+            "type": "string"
+          },
+          "kind": {
+            "const": "closed",
+            "title": "Kind",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "at"
+        ],
+        "title": "Closed",
+        "type": "object"
+      },
       "Color": {
         "enum": [
           "red",
@@ -1490,6 +1511,30 @@
         "title": "Open",
         "type": "object"
       },
+      "Opened": {
+        "additionalProperties": false,
+        "properties": {
+          "at": {
+            "format": "date-time",
+            "title": "At",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "opened",
+              "reopened"
+            ],
+            "title": "Kind",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "at"
+        ],
+        "title": "Opened",
+        "type": "object"
+      },
       "Order": {
         "additionalProperties": false,
         "properties": {
@@ -1876,6 +1921,66 @@
           1
         ],
         "title": "Retry"
+      },
+      "Rev1": {
+        "additionalProperties": false,
+        "properties": {
+          "at": {
+            "format": "date-time",
+            "title": "At",
+            "type": "string"
+          },
+          "rev": {
+            "const": 1,
+            "title": "Rev",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "rev",
+          "at"
+        ],
+        "title": "Rev1",
+        "type": "object"
+      },
+      "Rev2": {
+        "additionalProperties": false,
+        "properties": {
+          "at": {
+            "format": "date",
+            "title": "At",
+            "type": "string"
+          },
+          "rev": {
+            "const": 2,
+            "title": "Rev",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "rev",
+          "at"
+        ],
+        "title": "Rev2",
+        "type": "object"
+      },
+      "Revs": {
+        "discriminator": {
+          "mapping": {
+            "1": "#/components/schemas/Rev1",
+            "2": "#/components/schemas/Rev2"
+          },
+          "propertyName": "rev"
+        },
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/Rev1"
+          },
+          {
+            "$ref": "#/components/schemas/Rev2"
+          }
+        ],
+        "title": "Revs"
       },
       "Scalars-Input": {
         "additionalProperties": false,
@@ -2881,6 +2986,79 @@
         ]
       }
     },
+    "/echo/change": {
+      "post": {
+        "operationId": "echoChange",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "discriminator": {
+                  "mapping": {
+                    "closed": "#/components/schemas/Closed",
+                    "opened": "#/components/schemas/Opened",
+                    "reopened": "#/components/schemas/Opened"
+                  },
+                  "propertyName": "kind"
+                },
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/Opened"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Closed"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "discriminator": {
+                    "mapping": {
+                      "closed": "#/components/schemas/Closed",
+                      "opened": "#/components/schemas/Opened",
+                      "reopened": "#/components/schemas/Opened"
+                    },
+                    "propertyName": "kind"
+                  },
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/Opened"
+                    },
+                    {
+                      "$ref": "#/components/schemas/Closed"
+                    }
+                  ],
+                  "title": "Response Echochange"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Echo Change",
+        "tags": [
+          "echo"
+        ]
+      }
+    },
     "/echo/containers": {
       "post": {
         "operationId": "echoContainers",
@@ -3381,6 +3559,118 @@
           }
         },
         "summary": "Echo Raw",
+        "tags": [
+          "echo"
+        ]
+      }
+    },
+    "/echo/rev": {
+      "post": {
+        "operationId": "echoRev",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "discriminator": {
+                  "mapping": {
+                    "1": "#/components/schemas/Rev1",
+                    "2": "#/components/schemas/Rev2"
+                  },
+                  "propertyName": "rev"
+                },
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/Rev1"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Rev2"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "discriminator": {
+                    "mapping": {
+                      "1": "#/components/schemas/Rev1",
+                      "2": "#/components/schemas/Rev2"
+                    },
+                    "propertyName": "rev"
+                  },
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/Rev1"
+                    },
+                    {
+                      "$ref": "#/components/schemas/Rev2"
+                    }
+                  ],
+                  "title": "Response Echorev"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Echo Rev",
+        "tags": [
+          "echo"
+        ]
+      }
+    },
+    "/echo/revs": {
+      "post": {
+        "operationId": "echoRevs",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Revs"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Revs"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Echo Revs",
         "tags": [
           "echo"
         ]
@@ -4669,6 +4959,26 @@
         "summary": "Legacy Endpoint",
         "tags": [
           "misc"
+        ]
+      }
+    },
+    "/logo.png": {
+      "get": {
+        "operationId": "getLogo",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              },
+              "image/png": {}
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Logo",
+        "tags": [
+          "files"
         ]
       }
     },

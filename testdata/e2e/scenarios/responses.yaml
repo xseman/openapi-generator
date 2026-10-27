@@ -13,7 +13,15 @@ cases:
     error: { status: 500, model: { message: boom } }
   - { name: 204 no body, op: deleteTask, args: { id: "1" }, response: { status: 204 } }
   - { name: 201 with a body, op: createTask, args: { id: "1" }, response: { status: 201, json: { id: "1" } }, result: { id: "1" } }
-  - { name: 202 without a body, op: createTask, args: { id: "1" }, response: { status: 202 }, result: null, skip: { typescript-fetch: "fails on a 2xx without a body next to one with a body" } }
+  - { name: 202 without a body, op: createTask, args: { id: "1" }, response: { status: 202 }, result: null }
+  - name: an empty body where the spec declares one is no null
+    op: createTask
+    args: { id: "1" }
+    response: { status: 201, header: { Content-Type: application/json }, text: "", offSpec: true }
+    fails: true
+    skip:
+      go-fetch: an empty body is the result's zero, nil for a pointer
+      dart-fetch: an empty body is null
   - name: undeclared status keeps the text body
     op: deleteTask
     args: { id: "1" }

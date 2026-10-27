@@ -1,8 +1,10 @@
 package parser
 
 import (
+	"maps"
 	"slices"
 	"sort"
+	"strings"
 
 	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/xseman/openapi-generator/internal/codegen"
@@ -134,6 +136,7 @@ func (p *Parser) schemaToModel(name string, schema *openapi3.Schema) *codegen.Co
 		case "string":
 			model.IsString = true
 			model.IsPrimitiveType = true
+			model.IsDate, model.IsDateTime = schema.Format == "date", schema.Format == "date-time"
 
 		case "integer":
 			model.IsInteger = true
@@ -163,6 +166,17 @@ func (p *Parser) schemaToModel(name string, schema *openapi3.Schema) *codegen.Co
 			if ref.Ref != "" {
 				model.AnyOf = append(model.AnyOf, extractRefName(ref.Ref))
 			}
+		}
+
+		// AnyOf names the $ref members only; x-any-of-inline says there are
+		// others. A copy: the extensions are the document's own map.
+		if len(model.AnyOf) < len(schema.AnyOf) {
+			model.VendorExtensions = maps.Clone(model.VendorExtensions)
+			if model.VendorExtensions == nil {
+				model.VendorExtensions = map[string]any{}
+			}
+
+			model.VendorExtensions["x-any-of-inline"] = true
 		}
 	}
 
@@ -310,11 +324,13 @@ func (p *Parser) oneOfMembers(model *codegen.CodegenModel, schema *openapi3.Sche
 		// per-member conversion branches ever run.
 		prop := p.schemaToProperty("member", ref.Value, true)
 		// Prefer the resolved property type: it carries type parameters
-		// (Array<Pet>) where getTypeDeclaration returns a bare "Array".
-		// Composite declarations ("A & B") collapse to their first $ref so the
-		// alias members stay assignable from the narrowing conversions below.
+		// (Array<Pet>) where getTypeDeclaration returns a bare "Array". An
+		// allOf member stays the intersection of its models ("A & B"), whose
+		// first $ref is the member model as before; a union collapses to it.
 		typeName := prop.DataType
-		if typeName == "" || typeName == "any" || isCompositeType(typeName) {
+		intersection := strings.Contains(typeName, " & ") && !strings.Contains(typeName, " | ")
+
+		if typeName == "" || typeName == "any" || isCompositeType(typeName) && !intersection {
 			typeName = p.getTypeDeclaration(ref.Value)
 		}
 
@@ -329,6 +345,8 @@ func (p *Parser) oneOfMembers(model *codegen.CodegenModel, schema *openapi3.Sche
 			// Primitive members (arrays of primitives included) get typed JSON
 			// conversion branches instead of model imports.
 			model.OneOfPrimitives = append(model.OneOfPrimitives, prop)
+		case intersection:
+			models[p.getTypeDeclaration(ref.Value)] = true
 		case !isPrimitiveType(typeName) && !isCompositeType(typeName):
 			// Model members, inline compositions that collapse to a single
 			// referenced model included; free-form "any" is excluded by the guard.

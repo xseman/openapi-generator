@@ -19,6 +19,8 @@ paths:
                 type: string
               minPrice:
                 type: number
+              maxPrice:
+                type: number
       responses:
         "200":
           description: ok

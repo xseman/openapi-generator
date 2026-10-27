@@ -297,6 +297,7 @@ func (p *Parser) addFormParams(co *codegen.CodegenOperation, schema *openapi3.Sc
 			IsContainer:      prop.IsContainer,
 			IsPrimitiveType:  prop.IsPrimitiveType,
 			IsModel:          prop.IsModel,
+			IsFreeFormObject: prop.IsFreeFormObject,
 			IsString:         prop.IsString,
 			IsNumber:         prop.IsNumber,
 			IsInteger:        prop.IsInteger,
@@ -536,6 +537,8 @@ func (p *Parser) inlineBody(bodyParam *codegen.CodegenParameter, schema *openapi
 	bodyParam.IsNumber = prop.IsNumber
 	bodyParam.IsInteger = prop.IsInteger
 	bodyParam.IsBoolean = prop.IsBoolean
+	bodyParam.IsDate, bodyParam.IsDateType = prop.IsDate, prop.IsDateType
+	bodyParam.IsDateTime, bodyParam.IsDateTimeType = prop.IsDateTime, prop.IsDateTimeType
 	bodyParam.Items = prop.Items
 	bodyParam.ComposedModels = prop.ComposedModels
 

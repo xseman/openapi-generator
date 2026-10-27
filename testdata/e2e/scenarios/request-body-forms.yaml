@@ -23,4 +23,3 @@ cases:
         tags: "t1,t2"
         ids: ["1", "2"]
     response: { status: 204 }
-    skip: { typescript-fetch: "the form encoding (deepObject, explode) is ignored" }

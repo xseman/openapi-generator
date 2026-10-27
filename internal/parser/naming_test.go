@@ -113,6 +113,7 @@ func TestEscapeUnsafeChars(t *testing.T) {
 		{"a */ b", "a *_/ b"},
 		{"a /* b", "a /_* b"},
 		{"*/ then /*", "*_/ then /_*"},
+		{"release/*/*", "release/_*_/_*"},
 		{"", ""},
 	}
 	for _, tt := range tests {

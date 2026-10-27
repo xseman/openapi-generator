@@ -99,6 +99,10 @@ var tsReservedKeywords = map[string]bool{
 	"true": true, "try": true, "typeof": true, "var": true,
 	"void": true, "volatile": true, "while": true, "with": true,
 	"yield": true,
+
+	// Every object has a constructor of type Function: an optional string
+	// property of that name takes no object literal.
+	"constructor": true,
 }
 
 // Primitives is the set of TypeScript primitive types. It mirrors upstream

@@ -1,0 +1,45 @@
+openapi: "3.0.0"
+info:
+  title: Runtime Name Clash Feature
+  version: 1.0.0
+  description: Models and operations named like the client runtime's own types and methods.
+paths:
+  /responses:
+    post:
+      operationId: request
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Response"
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Response"
+  /apis:
+    get:
+      operationId: fetchApi
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BaseAPI"
+components:
+  schemas:
+    Response:
+      type: object
+      required: [status-code]
+      properties:
+        status-code:
+          type: integer
+    BaseAPI:
+      type: object
+      properties:
+        base-path:
+          type: string

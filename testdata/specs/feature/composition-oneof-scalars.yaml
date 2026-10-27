@@ -1,0 +1,123 @@
+openapi: "3.0.0"
+info:
+  title: OneOf Without Discriminator Feature
+  version: 1.0.0
+  description: oneOf members a client tells apart by their values alone, scalars of one JSON type among them.
+paths:
+  /holders:
+    post:
+      operationId: echoHolder
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Holder"
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Holder"
+components:
+  schemas:
+    Holder:
+      type: object
+      properties:
+        dayOrCount:
+          $ref: "#/components/schemas/DayOrCount"
+        instantOrText:
+          $ref: "#/components/schemas/InstantOrText"
+        colorOrBox:
+          $ref: "#/components/schemas/ColorOrBox"
+        pet:
+          $ref: "#/components/schemas/Pet"
+        tagsOrTag:
+          $ref: "#/components/schemas/TagsOrTag"
+        animal:
+          $ref: "#/components/schemas/Animal"
+    DayOrCount:
+      oneOf:
+        - type: string
+          format: date
+        - type: integer
+    InstantOrText:
+      oneOf:
+        - type: string
+          format: date-time
+        - type: string
+          pattern: "^[a-z ]+$"
+          example: "hello there"
+    ColorOrBox:
+      oneOf:
+        - $ref: "#/components/schemas/Color"
+        - $ref: "#/components/schemas/Box"
+    Color:
+      type: string
+      enum: [red, green]
+    Box:
+      type: object
+      required: [box-size]
+      properties:
+        box-size:
+          type: integer
+    # neither has a required property; the closed shapes tell them apart
+    Pet:
+      oneOf:
+        - $ref: "#/components/schemas/Cat"
+        - $ref: "#/components/schemas/Dog"
+    Cat:
+      type: object
+      additionalProperties: false
+      properties:
+        meows:
+          type: boolean
+        cat-name:
+          type: string
+    Dog:
+      type: object
+      additionalProperties: false
+      properties:
+        barks:
+          type: boolean
+        dog-name:
+          type: string
+    # a list alias and a model: a list goes item by item
+    Tag:
+      type: object
+      required: [tag_name]
+      properties:
+        tag_name:
+          type: string
+        added_on:
+          type: string
+          format: date
+    Tags:
+      type: array
+      items:
+        $ref: "#/components/schemas/Tag"
+    TagsOrTag:
+      oneOf:
+        - $ref: "#/components/schemas/Tags"
+        - $ref: "#/components/schemas/Tag"
+    # members that do not declare the discriminator they are told by
+    Animal:
+      oneOf:
+        - $ref: "#/components/schemas/Barker"
+        - $ref: "#/components/schemas/Meower"
+      discriminator:
+        propertyName: kind
+        mapping:
+          dog: "#/components/schemas/Barker"
+          cat: "#/components/schemas/Meower"
+    Barker:
+      type: object
+      properties:
+        bark_volume:
+          type: integer
+    Meower:
+      type: object
+      properties:
+        meow_count:
+          type: integer

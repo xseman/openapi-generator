@@ -1,0 +1,9 @@
+spec: ../../specs/feature/composition-oneof-scalars.yaml
+skip: { dart-fetch: "does not compile: lib/src/models/day_or_count.dart:10: Target of URI doesn't exist: 'model_date_time.dart'." }
+cases:
+  - name: a list alias member and a tag no member declares
+    op: echoHolder
+    args: { body: { tagsOrTag: [{ tag_name: a, added_on: "2024-01-02" }], animal: { kind: dog, bark_volume: 3 } } }
+    request: { body: { tagsOrTag: [{ tag_name: a, added_on: "2024-01-02" }], animal: { kind: dog, bark_volume: 3 } } }
+    response: { json: { tagsOrTag: { tag_name: b, added_on: "2024-01-03" }, animal: { kind: cat, meow_count: 2 } } }
+    result: { tagsOrTag: { tag_name: b, added_on: "2024-01-03" }, animal: { kind: cat, meow_count: 2 } }

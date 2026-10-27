@@ -45,11 +45,11 @@ if errors.As(err, &rerr) {
 }
 ```
 
-| Method       | Does                                                                                                                       |
-| ------------ | -------------------------------------------------------------------------------------------------------------------------- |
-| `Xxx`        | sends and decodes the body (JSON, text for a string or for an `any` the server does not send as JSON, `[]byte` for binary) |
-| `XxxRaw`     | sends; returns a 2xx `*http.Response` with its body unread                                                                 |
-| `XxxRequest` | builds the `*http.Request` without sending it                                                                              |
+| Method       | Does                                                                                                                                                              |
+| ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Xxx`        | sends and decodes the body (JSON, text for a string or for an `any` the server sends as text, `[]byte` for binary and for an `any` sent as an image or as octets) |
+| `XxxRaw`     | sends; returns a 2xx `*http.Response` with its body unread                                                                                                        |
+| `XxxRequest` | builds the `*http.Request` without sending it                                                                                                                     |
 
 When a 2xx status has no body next to one that has (a 204 beside a 200), or
 the result is nullable, the result is a pointer, nil for the bodiless status
@@ -119,7 +119,8 @@ for e, err := range events {
 | other multipart field                     | its own part: a list of scalars a part per item (comma-joined with `explode: false`), an object as JSON                                                                  |
 | urlencoded form field                     | sent as its `encoding` says: form and exploded by default, `deepObject` key by key (`a[b][0]=x`); a form with a file goes as multipart                                   |
 
-Not covered: server code, XML, server variables, validation, a discriminator
-without `oneOf` (the parent stays a plain struct), `additionalProperties`
-next to the properties of an inline object (it stays a map) or inherited
-through `allOf` (the extra keys are dropped).
+Not covered: server code, XML, server variables other than their defaults
+(which `BasePath` holds), validation, a discriminator without `oneOf` (the
+parent stays a plain struct), `additionalProperties` next to the properties
+of an inline object (it stays a map) or inherited through `allOf` (the extra
+keys are dropped).

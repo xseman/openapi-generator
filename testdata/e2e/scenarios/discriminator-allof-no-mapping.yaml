@@ -1,0 +1,19 @@
+spec: ../../specs/feature/discriminator-allof-no-mapping.yaml
+skip: { dart-fetch: "does not compile: lib/src/apis/default_api.dart:71: Expected an identifier." }
+cases:
+  - name: children by their schema names
+    op: listPets
+    response: { json: [{ petType: Cat, name: tom, born: "2024-01-02T03:04:05Z", nick-name: tommy }, { petType: Dog, pack-size: 3 }] }
+    result: [{ petType: Cat, name: tom, born: "2024-01-02T03:04:05Z", nick-name: tommy }, { petType: Dog, pack-size: 3 }]
+    skip: { go-fetch: &plain "a discriminator without oneOf: the parent stays a plain struct, the children's properties are dropped" }
+  - name: a child as the parent's body
+    op: addPet
+    args: { body: { petType: Cat, born: "2024-01-02T03:04:05Z", nick-name: tommy } }
+    request: { body: { petType: Cat, born: "2024-01-02T03:04:05Z", nick-name: tommy } }
+    response: { status: 204 }
+    skip: { go-fetch: *plain }
+  - name: the parent itself as the body
+    op: addPet
+    args: { body: { petType: Pet, name: rex, born_on: "2024-01-02" } }
+    request: { body: { petType: Pet, name: rex, born_on: "2024-01-02" } }
+    response: { status: 204 }

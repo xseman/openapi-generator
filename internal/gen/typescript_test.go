@@ -65,12 +65,12 @@ components:
 	api := string(data)
 
 	for _, want := range []string{
-		`runtime.mapValues(jsonValue, (items) => items.map(PetFromJSON))`,
-		`formParams.append("pets", new Blob([JSON.stringify(requestParameters["pets"].map(PetToJSON))], { type: "application/json", }))`,
-		`formParams.append("colors", requestParameters["colors"]!.join(runtime.COLLECTION_FORMATS["csv"]))`,
-		`formParams.append("ids", requestParameters["ids"]!.join(runtime.COLLECTION_FORMATS["csv"]))`,
-		`formParams.append("tags", requestParameters["tags"]!.join(runtime.COLLECTION_FORMATS["csv"]))`,
-		`formParams.append("files", element as any)`,
+		`runtime.mapValues(jsonValue, (v: any) => (v as Array<any>).map(PetFromJSON))`,
+		`formParams.append("pets", new Blob([JSON.stringify((requestParameters["pets"]! as Array<any>).map(PetToJSON))], { type: "application/json", }))`,
+		`runtime.formFields("colors", (requestParameters["colors"]! as Array<any>).map(ColorToJSON), "form", true)`,
+		`runtime.formFields("ids", (requestParameters["ids"]! as Array<any>).map(IdToJSON), "form", true)`,
+		`runtime.formFields("tags", requestParameters["tags"]!, "form", true)`,
+		`formParams.append("files", file)`,
 	} {
 		if !strings.Contains(api, want) {
 			t.Errorf("defaultApi.ts lacks %s", want)

@@ -55,6 +55,16 @@ paths:
               schema:
                 type: string
                 nullable: true
+  /count:
+    get:
+      operationId: count
+      responses:
+        "200":
+          description: a number, as text
+          content:
+            text/plain:
+              schema:
+                type: integer
   /anything:
     get:
       operationId: anything
