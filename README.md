@@ -113,7 +113,7 @@ make cover              # coverage report
 make regress REF=master # diff generated output against a git ref
 ```
 
-`CLAUDE.md` maps the packages and states the conventions, for people and
+`AGENTS.md` maps the packages and states the conventions, for people and
 agents alike.
 
 ### Manual Testing
