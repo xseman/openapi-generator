@@ -6,7 +6,9 @@ produces clean, type-safe code compatible with modern TypeScript projects.
 ## Features
 
 - Native Fetch API (no external HTTP client dependencies)
-- Full TypeScript type safety with generated interfaces
+- Full TypeScript type safety with generated interfaces; the client compiles under
+  `strict`, `noUncheckedIndexedAccess`, `noImplicitReturns`, `noImplicitOverride`
+  and `verbatimModuleSyntax`, and the generated tsconfig.json turns them on
 - Support for OpenAPI 3.x and Swagger 2.0 specifications
 - Runtime validation with FromJSON/ToJSON converters
 - Enum support (string enums or const objects)

@@ -107,9 +107,11 @@ func runTypeScript(t *testing.T, suites []suite) map[string]map[int]outcome {
 	return outcomes
 }
 
-// TestTypeScriptOptions compiles the client of every feature spec with each
-// boolean option of typescript-fetch flipped, strict: an option the
-// scenarios do not run must still give a client that builds.
+// TestTypeScriptOptions compiles the client of every feature spec, as
+// generated and with each boolean option of typescript-fetch flipped, under
+// the compilerOptions of a strict consumer: an option the scenarios do not
+// run must still give a client that builds, and so must a project stricter
+// than the runner's CommonJS build.
 func TestTypeScriptOptions(t *testing.T) {
 	requireE2E(t)
 
@@ -129,8 +131,9 @@ func TestTypeScriptOptions(t *testing.T) {
 
 	dir := t.TempDir()
 
+	// "" is the client as generated, without an option.
 	options := []string{
-		"withInterfaces=true", "useSingleRequestParameter=false", "prefixParameterInterfaces=true",
+		"", "withInterfaces=true", "useSingleRequestParameter=false", "prefixParameterInterfaces=true",
 		"withoutRuntimeChecks=true", "stringEnums=true", "validationAttributes=true",
 	}
 
@@ -152,8 +155,9 @@ func TestTypeScriptOptions(t *testing.T) {
 		}
 	}
 
-	write(t, filepath.Join(dir, "tsconfig.json"), `{"compilerOptions": {"target": "ES2022", "module": "commonjs", "lib": ["ES2022", "DOM"],
- "strict": true, "skipLibCheck": true, "noEmit": true}, "include": ["**/*.ts"]}`)
+	write(t, filepath.Join(dir, "tsconfig.json"), `{"compilerOptions": {"target": "ES2022", "module": "ESNext", "moduleResolution": "bundler",
+ "lib": ["ES2022", "DOM", "DOM.Iterable"], "strict": true, "noUncheckedIndexedAccess": true, "noImplicitReturns": true,
+ "noImplicitOverride": true, "verbatimModuleSyntax": true, "skipLibCheck": true, "noEmit": true}, "include": ["**/*.ts"]}`)
 
 	build := exec.Command(tsc, "-p", ".")
 	build.Dir = dir

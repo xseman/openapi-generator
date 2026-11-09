@@ -292,7 +292,7 @@ export class ResponseError extends Error {
 export class AbortError extends Error {
     override name: "AbortError" = "AbortError";
     constructor(
-        public cause: Error,
+        public override cause: Error,
         msg?: string
     ) {
         super(msg || "The request was aborted", { cause });
@@ -308,7 +308,7 @@ export class AbortError extends Error {
 export class FetchError extends Error {
     override name: "FetchError" = "FetchError";
     constructor(
-        public cause: Error,
+        public override cause: Error,
         msg?: string
     ) {
         super(msg || `Network request failed: ${cause.message}`, { cause });
@@ -690,9 +690,9 @@ export function parseContentDispositionFilename(headers: Headers): string | unde
 
 /** The decoded RFC 5987 ext-value, or undefined when it is not UTF-8 or its percent-encoding is malformed. */
 function decodeExtValue(value: string | undefined): string | undefined {
-    const match = value === undefined ? null : /^utf-8'[^']*'(.*)$/i.exec(value);
+    const encoded = value === undefined ? undefined : /^utf-8'[^']*'(.*)$/i.exec(value)?.[1];
     try {
-        return match ? decodeURIComponent(match[1]) : undefined;
+        return encoded === undefined ? undefined : decodeURIComponent(encoded);
     } catch {
         return undefined;
     }
@@ -708,9 +708,11 @@ function parseHeaderParameters(value: string): Map<string, string> {
     const parameter = /(?:^|;)\s*([^=;]+?)\s*=\s*(?:"((?:[^"\\]|\\.)*)"?|([^;]*))/g;
     let match: RegExpExecArray | null;
     while ((match = parameter.exec(value)) !== null) {
-        const name = match[1].toLowerCase();
+        // Group 1 always matches, and group 3 does whenever the quoted group 2 does not.
+        const [, rawName = '', quoted, token = ''] = match;
+        const name = rawName.toLowerCase();
         if (!params.has(name)) {
-            params.set(name, match[2] !== undefined ? match[2].replace(/\\(.)/g, '$1') : match[3].trim());
+            params.set(name, quoted !== undefined ? quoted.replace(/\\(.)/g, '$1') : token.trim());
         }
     }
     return params;

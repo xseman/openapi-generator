@@ -142,8 +142,10 @@ what the program prints with the scenarios.
 
 Runners run with `TZ=Europe/Bratislava`, so a client that reads or writes
 local time shows it. The typescript-fetch clients of the feature specs also
-compile, strict, with each of its boolean options flipped
-(`TestTypeScriptOptions`).
+compile, as generated and with each of its boolean options flipped, under a
+strict consumer's compilerOptions: `strict`, `noUncheckedIndexedAccess`,
+`noImplicitReturns`, `noImplicitOverride`, `verbatimModuleSyntax`
+(`TestTypeScriptOptions`, run in CI by the `TypeScript` job).
 
 typescript-fetch sends an OAuth2 token as the whole `Authorization` header,
 so its runner returns `Bearer <token>` for an OAuth2 scheme (`schemes` in
