@@ -68,6 +68,24 @@ jobs:
 
             - run: make lint
 
+    typescript:
+        # The typescript-fetch clients under a strict consumer's compilerOptions,
+        # the one e2e test that needs only tsc.
+        name: TypeScript
+        runs-on: ubuntu-latest
+
+        steps:
+            - uses: actions/checkout@v6
+
+            - uses: actions/setup-go@v6
+              with:
+                  go-version-file: go.mod
+                  cache-dependency-path: go.sum
+
+            - run: npm install -g typescript@5.9.3
+
+            - run: E2E=1 go test -count=1 -run TestTypeScriptOptions ./internal/e2e
+
     build:
         name: Build
         runs-on: ubuntu-latest
