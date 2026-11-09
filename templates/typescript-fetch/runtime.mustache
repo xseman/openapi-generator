@@ -862,30 +862,32 @@ export class EventStreamApiResponse<T> {
     }
 }
 
-/** The lines of a body as they arrive, without their line endings; the last one also without one. */
+/** The lines of a body as they arrive, without their line endings (\r\n, \r or \n). */
 async function* bodyLines(raw: Response): AsyncGenerator<string> {
-    if (raw.body == null) {
-        return;
-    }
+    if (raw.body == null) return;
+
     const reader = raw.body.getReader();
     const decoder = new TextDecoder();
-    let buffer = "";
+    let pending = "";
+
     try {
         for (;;) {
-            const { done, value } = await reader.read();
-            buffer += done ? decoder.decode() : decoder.decode(value, { stream: true });
-            let end: number;
-            while ((end = buffer.search(/\r\n|\r|\n/)) >= 0) {
-                const newline = buffer.startsWith("\r\n", end) ? 2 : 1;
-                yield buffer.slice(0, end);
-                buffer = buffer.slice(end + newline);
-            }
-            if (done) {
-                break;
-            }
+            const chunk = await reader.read();
+            pending += chunk.done ? decoder.decode() : decoder.decode(chunk.value, { stream: true });
+
+            // A \r that ends a chunk may be the first half of a \r\n: it waits for the next chunk.
+            const complete = !chunk.done && pending.endsWith("\r") ? pending.slice(0, -1) : pending;
+            const lines = complete.split(/\r\n|\r|\n/);
+            const unfinished = lines.pop() ?? "";
+
+            yield* lines;
+            pending = unfinished + pending.slice(complete.length);
+
+            if (chunk.done) break;
         }
-        if (buffer !== "") {
-            yield buffer;
+
+        if (pending !== "") {
+            yield pending;
         }
     } finally {
         // A loop that breaks early closes the response.
