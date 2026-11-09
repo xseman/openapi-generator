@@ -398,63 +398,141 @@ function querystringSingleKey(key: string, value: string | number | null | undef
     return `${encodeURIComponent(fullKey)}=${encodeURIComponent(String(value))}`;
 }
 
-/**
- * A path, header or cookie parameter as its style writes it: simple (a,b; an object k,v or, exploded,
- * k=v), label (.a,b or .a.b), matrix (;n=a,b or ;n=a;n=b) and form (a,b, a cookie's). encode escapes
- * each name and value, as a path's must be.
- */
-export function styleParam(name: string, value: any, style: string, explode: boolean, encode: (text: string) => string = (text) => text): string {
-    const object = value !== null && typeof value === "object" && !Array.isArray(value);
-    const items: string[] = Array.isArray(value)
-        ? value.map((v) => encode(String(v)))
-        : object
-            ? Object.entries(value).filter(([, v]) => v !== undefined).map(([k, v]) => encode(k) + (explode ? "=" : ",") + encode(String(v)))
-            : [encode(String(value))];
-    switch (style) {
-        case "label":
-            return "." + items.join(explode ? "." : ",");
-        case "matrix":
-            if (explode && object) {
-                return items.map((item) => ";" + item).join("");
-            }
-            if (explode && Array.isArray(value)) {
-                return items.map((item) => `;${encode(name)}=${item}`).join("");
-            }
-            return `;${encode(name)}=` + items.join(",");
-        default:
-            return items.join(",");
-    }
+/** Whether a value is an object with properties: not null, not a list. */
+function isPlainObject(value: any): boolean {
+    return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
 /**
- * The fields of a form value as its encoding writes them: deepObject as name[key] and name[key][0],
- * as deep as the value goes; an array a field per item (exploded form) or one joined by its style's
- * delimiter; an object a field per property (exploded form) or one of key,value pairs.
+ * The items a parameter value is written as, each escaped by encode: a list's items, an object's
+ * properties as `key=value` when exploded and as `key,value` when not, a scalar alone. A property
+ * left unset is left out.
  */
-export function formFields(name: string, value: any, style: string, explode: boolean): Array<[string, string]> {
-    if (style === "deepObject") {
-        return deepObjectFields(name, value);
+function paramItems(value: any, explode: boolean, encode: (text: string) => string): string[] {
+    if (Array.isArray(value)) {
+        return value.map((item) => encode(String(item)));
     }
-    if (value === null || typeof value !== "object") {
-        return [[name, String(value)]];
+
+    if (!isPlainObject(value)) {
+        return [encode(String(value))];
     }
-    // A property left unset is left out.
-    const entries = Object.entries(value).filter(([, v]) => v !== undefined);
-    if (explode) {
-        return Array.isArray(value)
-            ? value.map((v): [string, string] => [name, String(v)])
-            : entries.map(([k, v]): [string, string] => [k, String(v)]);
-    }
-    const delimiter = style === "spaceDelimited" ? " " : style === "pipeDelimited" ? "|" : ",";
-    return [[name, (Array.isArray(value) ? value : entries.flat()).join(delimiter)]];
+
+    const separator = explode ? "=" : ",";
+    const properties = Object.entries(value).filter(([, item]) => item !== undefined);
+
+    return properties.map(([key, item]) => encode(key) + separator + encode(String(item)));
 }
 
-function deepObjectFields(name: string, value: any): Array<[string, string]> {
+/**
+ * A list or an object in the simple style of a path or a header, or the form style of a cookie or
+ * of an unexploded query object: its items joined by commas.
+ *
+ *   value    explode=false      explode=true
+ *   [a, b]   a,b                a,b
+ *   {k: v}   k,v                k=v
+ */
+export function simpleParam(value: any, explode: boolean, encode: (text: string) => string = (text) => text): string {
+    const items = paramItems(value, explode, encode);
+
+    return items.join(",");
+}
+
+/**
+ * A path parameter in the label style, escaped.
+ *
+ *   value    explode=false      explode=true
+ *   a        .a                 .a
+ *   [a, b]   .a,b               .a.b
+ *   {k: v}   .k,v               .k=v
+ */
+export function labelParam(value: any, explode: boolean): string {
+    const items = paramItems(value, explode, encodeURIComponent);
+    const separator = explode ? "." : ",";
+
+    return "." + items.join(separator);
+}
+
+/**
+ * A path parameter in the matrix style, escaped.
+ *
+ *   value    explode=false      explode=true
+ *   a        ;name=a            ;name=a
+ *   [a, b]   ;name=a,b          ;name=a;name=b
+ *   {k: v}   ;name=k,v          ;k=v
+ */
+export function matrixParam(name: string, value: any, explode: boolean): string {
+    const items = paramItems(value, explode, encodeURIComponent);
+    const prefix = ";" + encodeURIComponent(name) + "=";
+
+    if (explode && isPlainObject(value)) {
+        return items.map((item) => ";" + item).join("");
+    }
+
+    if (explode && Array.isArray(value)) {
+        return items.map((item) => prefix + item).join("");
+    }
+
+    return prefix + items.join(",");
+}
+
+/**
+ * The form fields of a value in the deepObject style: `name[key]` for a property and `name[key][0]`
+ * for an item of a list, as deep as the value goes. A property left unset is left out.
+ */
+export function deepObjectFields(name: string, value: any): Array<[string, string]> {
     if (value === null || typeof value !== "object") {
         return [[name, String(value)]];
     }
-    const entries: Array<[string, any]> = Array.isArray(value) ? value.map((v, i) => [String(i), v]) : Object.entries(value);
-    return entries.flatMap(([k, v]) => (v === undefined ? [] : deepObjectFields(`${name}[${k}]`, v)));
+
+    const entries: Array<[string, any]> = Array.isArray(value)
+        ? value.map((item, index) => [String(index), item])
+        : Object.entries(value);
+    const fields: Array<[string, string]> = [];
+
+    for (const [key, item] of entries) {
+        if (item === undefined) continue;
+
+        fields.push(...deepObjectFields(`${name}[${key}]`, item));
+    }
+
+    return fields;
+}
+
+/**
+ * The form fields of a value in the exploded form style: a field named name per item of a list, a
+ * field per property of an object, named by the property. A property left unset is left out.
+ */
+export function explodedFields(name: string, value: any): Array<[string, string]> {
+    if (Array.isArray(value)) {
+        return value.map((item): [string, string] => [name, String(item)]);
+    }
+
+    if (!isPlainObject(value)) {
+        return [[name, String(value)]];
+    }
+
+    const properties = Object.entries(value).filter(([, item]) => item !== undefined);
+
+    return properties.map(([key, item]): [string, string] => [key, String(item)]);
+}
+
+/**
+ * The form field of a value in an unexploded style: one field named name, a list's items or an
+ * object's keys and values joined by the delimiter (`,` form, ` ` spaceDelimited, `|`
+ * pipeDelimited). A property left unset is left out.
+ */
+export function delimitedFields(name: string, value: any, delimiter: string): Array<[string, string]> {
+    if (Array.isArray(value)) {
+        return [[name, value.join(delimiter)]];
+    }
+
+    if (!isPlainObject(value)) {
+        return [[name, String(value)]];
+    }
+
+    const properties = Object.entries(value).filter(([, item]) => item !== undefined);
+
+    return [[name, properties.flat().join(delimiter)]];
 }
 
 export function exists(json: any, key: string): boolean {
@@ -520,8 +598,12 @@ export function parseDateTime(value: any): Date {
  * value names; a value no function is named for, or null, stays as it is.
  */
 export function discriminate(value: any, property: string, by: { [value: string]: (value: any) => any }): any {
-    const fn = value == null ? undefined : by[value[property]];
-    return fn ? fn(value) : value;
+    if (value == null) return value;
+
+    const convert = by[value[property]];
+    if (convert === undefined) return value;
+
+    return convert(value);
 }
 
 /**
@@ -529,13 +611,9 @@ export function discriminate(value: any, property: string, by: { [value: string]
  * its properties.
  */
 export function otherKeys(value: any, keys: string[]): { [key: string]: any } {
-    const result: { [key: string]: any } = {};
-    for (const key of Object.keys(value)) {
-        if (!keys.includes(key)) {
-            result[key] = value[key];
-        }
-    }
-    return result;
+    const others = Object.entries(value).filter(([key]) => !keys.includes(key));
+
+    return Object.fromEntries(others);
 }
 
 /**
@@ -543,24 +621,46 @@ export function otherKeys(value: any, keys: string[]): { [key: string]: any } {
  * value has, the one that declares the most of its keys and the fewest it does not. A list fits a
  * list member by all its items. undefined when the value is no object (an id next to the object it
  * expands to) or fits none.
+ *
+ * Each model is [its required keys, all its keys, its conversion, whether it is a list member].
  */
 export function bestFit(value: any, models: Array<[string[], string[], (value: any) => any, boolean?]>): any {
-    const list = Array.isArray(value);
-    const items: any[] = list ? value : [value];
-    if (value === null || typeof value !== "object" || items.some((item) => item === null || typeof item !== "object" || Array.isArray(item))) {
-        return undefined;
-    }
+    const isList = Array.isArray(value);
+    const items: any[] = isList ? value : [value];
+    if (!items.every(isPlainObject)) return undefined;
+
     let best: ((value: any) => any) | undefined;
-    let score = -Infinity;
-    for (const [required, known, fn, array] of models) {
-        const fits = !!array === list && items.every((item) => required.every((key) => key in item));
-        const fit = items.reduce((n, item) => n + Object.keys(item).reduce((m, key) => m + (known.includes(key) ? 1 : -1), 0), 0);
-        if (fits && fit > score) {
-            best = fn;
-            score = fit;
+    let bestScore = -Infinity;
+
+    for (const [required, known, convert, isListModel] of models) {
+        if (Boolean(isListModel) !== isList) continue;
+
+        const hasRequired = items.every((item) => required.every((key) => key in item));
+        if (!hasRequired) continue;
+
+        const score = fitScore(items, known);
+        if (score <= bestScore) continue;
+
+        best = convert;
+        bestScore = score;
+    }
+
+    if (best === undefined) return undefined;
+
+    return isList ? value.map(best) : best(value);
+}
+
+/** How well objects fit a model: one up for each key the model declares, one down for each other. */
+function fitScore(items: any[], known: string[]): number {
+    let score = 0;
+
+    for (const item of items) {
+        for (const key of Object.keys(item)) {
+            score += known.includes(key) ? 1 : -1;
         }
     }
-    return best && (list ? value.map(best) : best(value));
+
+    return score;
 }
 
 export function mapValues(data: any, fn: (item: any) => any): { [key: string]: any } {
@@ -737,15 +837,28 @@ export interface ServerSentEvent<T> {
 }
 
 /**
- * A streamed body, read as it arrives: the JSON value of each line of JSON Lines ("lines"), or each
- * server-sent event ("events"), converted by the transformer. The response stays open until the loop
- * over the value ends or breaks, or the request's signal aborts it.
+ * A JSON Lines body (application/jsonl, application/x-ndjson), read as it arrives: the JSON value of
+ * each line, converted by the transformer. The response stays open until the loop over the value
+ * ends or breaks, or the request's signal aborts it.
  */
-export class StreamApiResponse<T> {
-    constructor(public raw: Response, private kind: "lines" | "events", private transformer: (value: any) => any) {}
+export class JsonLinesApiResponse<T> {
+    constructor(public raw: Response, private transformer: (value: any) => any) {}
 
     async value(): Promise<AsyncIterable<T>> {
-        return (this.kind === "lines" ? jsonLines(this.raw, this.transformer) : serverSentEvents(this.raw, this.transformer)) as AsyncIterable<T>;
+        return jsonLines(this.raw, this.transformer);
+    }
+}
+
+/**
+ * A text/event-stream body, read as it arrives: each server-sent event, its data converted by the
+ * transformer. The response stays open until the loop over the value ends or breaks, or the
+ * request's signal aborts it.
+ */
+export class EventStreamApiResponse<T> {
+    constructor(public raw: Response, private transformer: (value: any) => any) {}
+
+    async value(): Promise<AsyncIterable<T>> {
+        return serverSentEvents(this.raw, this.transformer) as AsyncIterable<T>;
     }
 }
 
@@ -782,15 +895,17 @@ async function* bodyLines(raw: Response): AsyncGenerator<string> {
 
 async function* jsonLines(raw: Response, transformer: (value: any) => any): AsyncGenerator<any> {
     for await (const line of bodyLines(raw)) {
-        if (line.trim() !== "") {
-            yield transformer(JSON.parse(line));
-        }
+        if (line.trim() === "") continue;
+
+        yield transformer(JSON.parse(line));
     }
 }
 
 /**
- * The events of a text/event-stream (the HTML living standard's parser): data lines joined by a
- * newline, a byte order mark and comments skipped, an event the stream ends in the middle of dropped.
+ * The events of a text/event-stream, as the HTML living standard parses them: data lines joined by
+ * a newline, an empty line ends an event, a byte order mark and comments are skipped, and an event
+ * the stream ends in the middle of is dropped. The id and the retry stay for the events after the
+ * one that sets them.
  */
 async function* serverSentEvents(raw: Response, transformer: (value: any) => any): AsyncGenerator<ServerSentEvent<any>> {
     let data: string[] = [];
@@ -798,35 +913,32 @@ async function* serverSentEvents(raw: Response, transformer: (value: any) => any
     let id: string | undefined;
     let retry: number | undefined;
     let first = true;
-    for await (let line of bodyLines(raw)) {
-        if (first && line.startsWith("\uFEFF")) {
-            line = line.slice(1);
-        }
+
+    for await (const read of bodyLines(raw)) {
+        const line = first ? read.replace(/^\uFEFF/, "") : read;
         first = false;
+
+        if (line === "" && data.length > 0) {
+            const sent: ServerSentEvent<any> = { data: transformer(data.join("\n")) };
+            if (event !== undefined) sent.event = event;
+            if (id !== undefined) sent.id = id;
+            if (retry !== undefined) sent.retry = retry;
+
+            yield sent;
+        }
+
         if (line === "") {
-            if (data.length > 0) {
-                const e: ServerSentEvent<any> = { data: transformer(data.join("\n")) };
-                if (event !== undefined) {
-                    e.event = event;
-                }
-                if (id !== undefined) {
-                    e.id = id;
-                }
-                if (retry !== undefined) {
-                    e.retry = retry;
-                }
-                yield e;
-            }
             data = [];
             event = undefined;
             continue;
         }
-        if (line.startsWith(":")) {
-            continue;
-        }
+
+        if (line.startsWith(":")) continue;
+
         const colon = line.indexOf(":");
         const field = colon < 0 ? line : line.slice(0, colon);
         const value = colon < 0 ? "" : line.slice(colon + 1).replace(/^ /, "");
+
         switch (field) {
             case "data":
                 data.push(value);
@@ -835,14 +947,10 @@ async function* serverSentEvents(raw: Response, transformer: (value: any) => any
                 event = value;
                 break;
             case "id":
-                if (!value.includes("\0")) {
-                    id = value;
-                }
+                if (!value.includes("\0")) id = value;
                 break;
             case "retry":
-                if (/^\d+$/.test(value)) {
-                    retry = Number(value);
-                }
+                if (/^\d+$/.test(value)) retry = Number(value);
                 break;
         }
     }

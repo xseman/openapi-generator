@@ -202,7 +202,9 @@ func (r *renderer) renderModels(baseData map[string]any, models []*generator.Cod
 			}
 
 			if r.tsGen != nil {
-				data["usesDateHelpers"] = modelUsesDateHelpers(model)
+				helpers := modelRuntimeHelpers(model)
+				data["runtimeHelpers"] = helpers
+				data["hasRuntimeHelpers"] = len(helpers) > 0
 			}
 			// Add model-level properties at top level for template access
 			for k, v := range modelMap {

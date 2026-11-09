@@ -1,17 +1,12 @@
 {{^withoutRuntimeChecks}}
+{{#hasRuntimeHelpers}}
 import {
-    bestFit,
-    discriminate,
-    mapValues,
-    otherKeys,
-{{#usesDateHelpers}}
-    parseDate,
-    parseDateTime,
-    serializeDate,
-    serializeDateTime,
-{{/usesDateHelpers}}
+{{#runtimeHelpers}}
+    {{.}},
+{{/runtimeHelpers}}
 } from '../runtime{{importFileExtension}}';
 
+{{/hasRuntimeHelpers}}
 {{/withoutRuntimeChecks}}
 {{#hasImports}}
 {{#tsImports}}

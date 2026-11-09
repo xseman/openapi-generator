@@ -146,7 +146,7 @@ export class {{classname}} extends runtime.BaseAPI {
             }
 {{/vendorExtensions.x-ts-spread}}
 {{#vendorExtensions.x-ts-styled}}
-            queryParameters["{{baseName}}"] = runtime.styleParam("{{baseName}}", {{{vendorExtensions.x-ts-value}}}, "form", false);
+            queryParameters["{{baseName}}"] = runtime.simpleParam({{{vendorExtensions.x-ts-value}}}, false);
 {{/vendorExtensions.x-ts-styled}}
 {{^vendorExtensions.x-ts-spread}}
 {{^vendorExtensions.x-ts-styled}}
@@ -168,14 +168,14 @@ export class {{classname}} extends runtime.BaseAPI {
         }
 {{/jsonHeaderUsesModelSerializer}}{{^jsonHeaderUsesModelSerializer}}
         if (requestParameters["{{paramName}}"] != null) {
-            headerParameters["{{baseName}}"] = runtime.styleParam("{{baseName}}", {{{vendorExtensions.x-ts-value}}}, "{{vendorExtensions.x-ts-style}}", {{isExplode}});
+            headerParameters["{{baseName}}"] = {{{vendorExtensions.x-ts-text}}};
         }
 {{/jsonHeaderUsesModelSerializer}}
 {{/headerParams}}{{#vendorExtensions.x-ts-cookies}}
         const cookies: string[] = [];
 {{/vendorExtensions.x-ts-cookies}}{{#cookieParams}}
         if (requestParameters["{{paramName}}"] != null) {
-            cookies.push("{{baseName}}=" + runtime.styleParam("{{baseName}}", {{{vendorExtensions.x-ts-value}}}, "{{vendorExtensions.x-ts-style}}", {{isExplode}}, encodeURIComponent));
+            cookies.push("{{baseName}}=" + {{{vendorExtensions.x-ts-text}}});
         }
 {{/cookieParams}}{{#authMethods}}{{#isBasic}}{{#isBasicBasic}}
         if (this.configuration && (this.configuration.username !== undefined || this.configuration.password !== undefined)) {
@@ -228,7 +228,7 @@ export class {{classname}} extends runtime.BaseAPI {
             formParams.append("{{baseName}}", new Blob([JSON.stringify({{{.}}})], { type: "application/json", }));
 {{/vendorExtensions.x-ts-json}}
 {{#vendorExtensions.x-ts-fields}}
-            for (const [key, value] of runtime.formFields("{{baseName}}", {{{.}}})) {
+            for (const [key, value] of {{{.}}}) {
                 formParams.append(key, value);
             }
 {{/vendorExtensions.x-ts-fields}}
@@ -239,7 +239,7 @@ export class {{classname}} extends runtime.BaseAPI {
         let urlPath = `{{{path}}}`;
 
 {{#pathParams}}
-        urlPath = urlPath.replace(`{${"{{baseName}}"}}`, runtime.styleParam("{{baseName}}", {{{vendorExtensions.x-ts-value}}}, "{{vendorExtensions.x-ts-style}}", {{isExplode}}, encodeURIComponent));
+        urlPath = urlPath.replace(`{${"{{baseName}}"}}`, {{{vendorExtensions.x-ts-text}}});
 {{/pathParams}}
 
         return {
@@ -288,7 +288,7 @@ export class {{classname}} extends runtime.BaseAPI {
 
 {{#returnType}}
 {{#vendorExtensions.x-ts-stream}}
-        return new runtime.StreamApiResponse(response, "{{.}}", (v: any) => {{{vendorExtensions.x-ts-stream-item}}});
+        return new runtime.{{.}}(response, (v: any) => {{{vendorExtensions.x-ts-stream-item}}});
 {{/vendorExtensions.x-ts-stream}}
 {{^vendorExtensions.x-ts-stream}}
 {{#isResponseFile}}

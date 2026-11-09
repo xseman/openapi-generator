@@ -1,16 +1,12 @@
 {{! A schema that only names an array, a map or a scalar: a type alias that converts as its value does. }}
 {{^withoutRuntimeChecks}}
+{{#hasRuntimeHelpers}}
 import {
-    bestFit,
-    discriminate,
-    mapValues,
-{{#usesDateHelpers}}
-    parseDate,
-    parseDateTime,
-    serializeDate,
-    serializeDateTime,
-{{/usesDateHelpers}}
+{{#runtimeHelpers}}
+    {{.}},
+{{/runtimeHelpers}}
 } from '../runtime{{importFileExtension}}';
+{{/hasRuntimeHelpers}}
 {{/withoutRuntimeChecks}}
 {{#hasImports}}
 {{#tsImports}}

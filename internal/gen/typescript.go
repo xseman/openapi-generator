@@ -2,6 +2,7 @@ package gen
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 
 	"github.com/xseman/openapi-generator/internal/config"
@@ -82,25 +83,60 @@ func isPrimitiveTypeTS(t string) bool {
 	return primitives[t]
 }
 
-// modelUsesDateHelpers reports whether a model's FromJSON or ToJSON calls
-// the runtime's date helpers, for a property or for the keys next to them,
-// so a model without dates does not import them.
-func modelUsesDateHelpers(model *generator.CodegenModel) bool {
-	exts := []map[string]any{model.VendorExtensions}
-	for _, v := range model.Vars {
-		exts = append(exts, v.VendorExtensions)
+// runtimeHelpers are the runtime functions a model's FromJSON and ToJSON
+// may call, in the order its import lists them.
+var runtimeHelpers = []string{
+	"bestFit",
+	"discriminate",
+	"mapValues",
+	"otherKeys",
+	"parseDate",
+	"parseDateTime",
+	"serializeDate",
+	"serializeDateTime",
+}
+
+// modelRuntimeHelpers lists the runtime functions a model's FromJSON or
+// ToJSON uses, for a property or for the keys next to them, so the model
+// imports only those.
+func modelRuntimeHelpers(model *generator.CodegenModel) []string {
+	var code []string
+
+	for _, k := range []string{"x-ts-rest-from", "x-ts-rest-to", "x-ts-alias-from", "x-ts-alias-to"} {
+		e, _ := model.VendorExtensions[k].(string)
+		code = append(code, e)
 	}
 
-	for _, ext := range exts {
-		for _, k := range []string{"x-ts-from-json", "x-ts-to-json", "x-ts-rest-from", "x-ts-rest-to", "x-ts-alias-from", "x-ts-alias-to"} {
-			if e, _ := ext[k].(string); strings.Contains(e, "parseDate") || strings.Contains(e, "serializeDate") {
-				return true
-			}
+	for _, v := range model.Vars {
+		from, _ := v.VendorExtensions["x-ts-from-json"].(string)
+		code = append(code, from)
+
+		// ToJSON leaves a read-only property out.
+		if !v.IsReadOnly {
+			to, _ := v.VendorExtensions["x-ts-to-json"].(string)
+			code = append(code, to)
 		}
 	}
 
-	return false
+	names := map[string]bool{}
+
+	for _, name := range identifier.FindAllString(strings.Join(code, "\n"), -1) {
+		names[name] = true
+	}
+
+	var used []string
+
+	for _, helper := range runtimeHelpers {
+		if names[helper] {
+			used = append(used, helper)
+		}
+	}
+
+	return used
 }
+
+// identifier matches a name in a TypeScript expression.
+var identifier = regexp.MustCompile(`[A-Za-z_$][\w$]*`)
 
 // generateModelIndex emits the per-folder barrel for the TypeScript models
 // package.

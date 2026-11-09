@@ -534,12 +534,14 @@ func (g *FetchGenerator) convertOperation(op *codegen.CodegenOperation) {
 }
 
 // paramValue gives param the value its serialization starts from
-// (x-ts-value: dates as their text, a model as its JSON) and its style with
-// the default for its location filled in (x-ts-style).
+// (x-ts-value: dates as their text, a model as its JSON), its style with
+// the default for its location filled in (x-ts-style) and, for a path,
+// header or cookie parameter, the expression that writes it (x-ts-text).
 func (g *FetchGenerator) paramValue(to *converter, param *codegen.CodegenParameter) {
 	param.VendorExtensions = own(param.VendorExtensions)
 
-	param.VendorExtensions["x-ts-value"] = to.expr(asProperty(param), `requestParameters["`+param.ParamName+`"]!`)
+	value := to.expr(asProperty(param), `requestParameters["`+param.ParamName+`"]`)
+	param.VendorExtensions["x-ts-value"] = value
 
 	style := param.Style
 	if style == "" {
@@ -551,11 +553,42 @@ func (g *FetchGenerator) paramValue(to *converter, param *codegen.CodegenParamet
 
 	param.VendorExtensions["x-ts-style"] = style
 
+	if param.IsPathParam || param.IsHeaderParam || param.IsCookieParam {
+		param.VendorExtensions["x-ts-text"] = paramText(param, value, style)
+	}
+
 	// A query object not in deepObject style: exploded form spreads its
 	// properties as parameters, else it is one of key,value pairs.
 	if param.IsQueryParam && !param.IsDeepObject && isObject(param) {
 		param.VendorExtensions["x-ts-spread"] = param.IsExplode
 		param.VendorExtensions["x-ts-styled"] = !param.IsExplode
+	}
+}
+
+// paramText is the expression that writes path, header or cookie param, of
+// value, as its style does. A scalar is its text, escaped in a path or a
+// cookie, as upstream writes it; anything else, a value that may be a list
+// or an object, goes through the runtime function of its style. Only a path
+// has the label and matrix styles, a header and a cookie write the simple
+// one.
+func paramText(param *codegen.CodegenParameter, value, style string) string {
+	escaped := param.IsPathParam || param.IsCookieParam
+	explode := strconv.FormatBool(param.IsExplode)
+	scalar := isScalar(param)
+
+	switch {
+	case param.IsPathParam && style == "label":
+		return "runtime.labelParam(" + value + ", " + explode + ")"
+	case param.IsPathParam && style == "matrix":
+		return "runtime.matrixParam(" + strconv.Quote(param.BaseName) + ", " + value + ", " + explode + ")"
+	case scalar && escaped:
+		return "encodeURIComponent(String(" + value + "))"
+	case scalar:
+		return "String(" + value + ")"
+	case escaped:
+		return "runtime.simpleParam(" + value + ", " + explode + ", encodeURIComponent)"
+	default:
+		return "runtime.simpleParam(" + value + ", " + explode + ")"
 	}
 }
 
@@ -565,10 +598,26 @@ func isObject(param *codegen.CodegenParameter) bool {
 	return param.IsModel && !param.IsEnumRef && !param.IsPrimitiveType || param.IsMap || param.IsFreeFormObject
 }
 
+// isScalar says whether param's value is surely no list and no object: a
+// string, a number, a boolean, a date or an enum. A union, an any and a
+// free-form value may be either.
+func isScalar(param *codegen.CodegenParameter) bool {
+	if param.IsContainer || param.IsArray || param.IsMap || param.IsFreeFormObject || param.IsAnyType {
+		return false
+	}
+
+	number := param.IsNumeric || param.IsInteger || param.IsLong || param.IsNumber ||
+		param.IsFloat || param.IsDouble || param.IsDecimal
+
+	return number || param.IsString || param.IsBoolean ||
+		param.IsDateType || param.IsDateTimeType || param.IsUuid ||
+		param.IsEnum || param.IsEnumRef
+}
+
 // formField says how form field param goes into the body: a file as it is
 // (x-ts-file, a list of them x-ts-files), an object in a multipart body as
 // a JSON part (x-ts-json), anything else as the fields its encoding writes
-// (x-ts-fields, the arguments of the runtime's formFields after the name).
+// (x-ts-fields, the runtime call that gives them).
 func formField(param *codegen.CodegenParameter, multipart bool) {
 	value, _ := param.VendorExtensions["x-ts-value"].(string)
 	style, _ := param.VendorExtensions["x-ts-style"].(string)
@@ -582,7 +631,25 @@ func formField(param *codegen.CodegenParameter, multipart bool) {
 	case multipart && object:
 		param.VendorExtensions["x-ts-json"] = value
 	default:
-		param.VendorExtensions["x-ts-fields"] = value + ", " + strconv.Quote(style) + ", " + strconv.FormatBool(param.IsExplode)
+		param.VendorExtensions["x-ts-fields"] = fieldsCall(strconv.Quote(param.BaseName), value, style, param.IsExplode)
+	}
+}
+
+// fieldsCall is the runtime call that gives the form fields of value, named
+// name, in style: deepObject key by key, exploded form a field per item or
+// property, else one field joined by the style's delimiter.
+func fieldsCall(name, value, style string, explode bool) string {
+	switch {
+	case style == "deepObject":
+		return "runtime.deepObjectFields(" + name + ", " + value + ")"
+	case explode:
+		return "runtime.explodedFields(" + name + ", " + value + ")"
+	case style == "spaceDelimited":
+		return "runtime.delimitedFields(" + name + ", " + value + `, " ")`
+	case style == "pipeDelimited":
+		return "runtime.delimitedFields(" + name + ", " + value + `, "|")`
+	default:
+		return "runtime.delimitedFields(" + name + ", " + value + `, ",")`
 	}
 }
 
@@ -590,15 +657,19 @@ func formField(param *codegen.CodegenParameter, multipart bool) {
 // (x-stream), an AsyncIterable of them: of JSON Lines (application/jsonl,
 // application/x-ndjson) a value per line, of a text/event-stream a
 // ServerSentEvent per event, its data the item, parsed from JSON unless the
-// item is text. x-ts-stream is the kind, x-ts-stream-item the conversion of
-// one item v. Another streamed media type stays without a result.
+// item is text. x-ts-stream is the runtime class that reads it,
+// x-ts-stream-item the conversion of one item v. Another streamed media type stays without a result.
 func (g *FetchGenerator) stream(op *codegen.CodegenOperation, from *converter) {
 	for _, r := range op.Responses {
 		item, _ := r.VendorExtensions["x-stream-item"].(*codegen.CodegenProperty)
 		mediaType, _ := r.VendorExtensions["x-stream"].(string)
 		mediaType, _, _ = strings.Cut(mediaType, ";")
 
-		kind := map[string]string{"application/jsonl": "lines", "application/x-ndjson": "lines", "text/event-stream": "events"}[mediaType]
+		kind := map[string]string{
+			"application/jsonl":    "JsonLinesApiResponse",
+			"application/x-ndjson": "JsonLinesApiResponse",
+			"text/event-stream":    "EventStreamApiResponse",
+		}[mediaType]
 		if !r.Is2xx || item == nil || kind == "" || op.ReturnType != "" {
 			continue
 		}
@@ -606,7 +677,7 @@ func (g *FetchGenerator) stream(op *codegen.CodegenOperation, from *converter) {
 		textBinary(item)
 
 		x, yields := "v", item.DataType
-		if kind == "events" {
+		if kind == "EventStreamApiResponse" {
 			yields = "runtime.ServerSentEvent<" + yields + ">"
 
 			if !item.IsString {
