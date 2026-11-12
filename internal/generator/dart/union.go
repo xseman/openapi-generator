@@ -240,7 +240,9 @@ func keys(m *codegen.CodegenModel, required bool) string {
 	var out []string
 
 	for _, v := range m.AllVars {
-		if v.Required || !required {
+		// The keys its fromJson needs: readOnly and writeOnly ones are
+		// optional (see structFields).
+		if v.Required && !v.IsReadOnly && !v.IsWriteOnly || !required {
 			out = append(out, Literal(v.BaseName))
 		}
 	}

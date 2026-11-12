@@ -77,6 +77,8 @@ func TestStructFields(t *testing.T) {
 			{Name: "bornOn", BaseName: "born_on", IsString: true, IsDate: true},
 			{Name: "owner", BaseName: "owner", IsString: true, Required: true, IsNullable: true},
 			{Name: "tag", BaseName: "tag", IsString: true, IsNullable: true},
+			{Name: "uid", BaseName: "uid", IsString: true, Required: true, IsReadOnly: true},
+			{Name: "secret", BaseName: "secret", IsString: true, Required: true, IsWriteOnly: true},
 		},
 		AdditionalProperties: &codegen.CodegenProperty{IsInteger: true},
 	}})
@@ -88,9 +90,11 @@ func TestStructFields(t *testing.T) {
 		{"final DateTime? bornOn", `bornOn: json["born_on"] == null ? null : DateTime.parse(json["born_on"] as String)`, `if (bornOn case final v?) "born_on": formatDate(v)`},
 		{"required final String? owner", `owner: json["owner"] == null ? null : json["owner"] as String`, `"owner": owner`},
 		{"final Opt<String>? tag", `tag: json.containsKey("tag") ? Opt(json["tag"] == null ? null : json["tag"] as String) : null`, `if (tag case Opt(:final value)) "tag": value`},
+		{"final String? uid", `uid: json["uid"] == null ? null : json["uid"] as String`, `"uid": ?uid`},
+		{"final String? secret", `secret: json["secret"] == null ? null : json["secret"] as String`, `"secret": ?secret`},
 		{
 			"final Map<String, int> additionalProperties = const {}",
-			`additionalProperties: {for (final e in json.entries) if (!const {"id", "born_on", "owner", "tag"}.contains(e.key)) e.key: (e.value as num).toInt()}`,
+			`additionalProperties: {for (final e in json.entries) if (!const {"id", "born_on", "owner", "tag", "uid", "secret"}.contains(e.key)) e.key: (e.value as num).toInt()}`,
 			"...additionalProperties",
 		},
 	}

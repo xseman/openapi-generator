@@ -322,15 +322,19 @@ func (g *FetchGenerator) structFields(class string, m *codegen.CodegenModel, inl
 		to := g.toJSON(v, name, enum)
 
 		declared = append(declared, key)
+		// A request leaves a readOnly property out, the server sets it, and
+		// a response a writeOnly one: either is optional, required or not,
+		// as go-fetch's pointer is, and sent when set.
+		required := v.Required && !v.IsReadOnly && !v.IsWriteOnly
 		field := map[string]any{"doc": docLines(v.Description)}
 
 		switch {
-		case v.Required && !v.IsNullable:
+		case required && !v.IsNullable:
 			field["decl"] = "required final " + t + " " + name
 			field["fromJson"] = name + ": " + from
 			field["toJson"] = key + ": " + to
 
-		case v.Required:
+		case required:
 			field["decl"] = "required final " + Nullable(t) + " " + name
 			field["fromJson"] = name + ": " + orNull("json["+key+"]", from)
 			field["toJson"] = key + ": " + orNull(name, g.toJSON(v, name+"!", enum))

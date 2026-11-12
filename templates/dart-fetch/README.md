@@ -80,6 +80,10 @@ stream is read to its end or cancelled.
 | `oneOf`, `anyOf`                     | a `sealed class`, a variant class per member                                               |
 | `additionalProperties` by properties | a `Map` field `additionalProperties`                                                       |
 
+A `readOnly` property is optional whatever `required` says, as a request
+leaves it out, and so is a `writeOnly` one, as a response leaves it out;
+`toJson` writes either when it is set.
+
 An enum reads a value the spec does not list as itself and sends it back
 unchanged, as a server that adds a value expects: `Status('archived')`. A
 `switch` over one therefore needs a default.
