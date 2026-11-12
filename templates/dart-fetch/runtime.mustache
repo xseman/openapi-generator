@@ -468,7 +468,7 @@ class UploadFile(final List<int> bytes, {final String? filename});
 
 /// The body of a multipart/form-data request, a part at a time.
 class Multipart {
-    final String _boundary = 'dart-${List.generate(4, (_) => Random().nextInt(1 << 32).toRadixString(16)).join()}';
+    final String _boundary = 'dart-${List.generate(4, (_) => Random().nextInt(0x7fffffff).toRadixString(16)).join()}';
     final BytesBuilder _body = BytesBuilder(copy: false);
 
     /// The Content-Type header that names the boundary of [close]'s bytes.
