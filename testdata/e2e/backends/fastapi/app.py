@@ -993,6 +993,13 @@ def redirect() -> RedirectResponse:
     return RedirectResponse("/count", status_code=307)
 
 
+@app.post("/redirect/literals", tags=["misc"], operation_id="redirectToEchoLiterals",
+          responses={307: {"description": "the same request to /echo/literals"}})
+def redirect_literals(body: Literals) -> Literals:
+    """A POST answered 307: the client sends it, body and all, to the Location."""
+    return RedirectResponse("/echo/literals", status_code=307)
+
+
 @app.get("/stream", tags=["misc"], operation_id="streamLines",
          responses={200: {"content": {"application/x-ndjson": {"schema": {"type": "string"}}}}})
 def stream_lines(n: int = 3) -> StreamingResponse:

@@ -521,6 +521,10 @@ cases:
     result: { x: 9 }
   - name: 307 redirect followed
     op: redirectToCount
+  - name: 307 redirect of a POST sends its body again
+    op: redirectToEchoLiterals
+    args: { body: { retry: always, pin: x, order: asc } }
+    result: { retry: always, pin: x, order: asc, mode: auto, tag: a, size: 25 }
   - name: ndjson stream next to an empty JSON schema
     op: streamLines
     args: { n: 2 }

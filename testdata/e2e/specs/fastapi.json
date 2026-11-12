@@ -5811,6 +5811,51 @@
         ]
       }
     },
+    "/redirect/literals": {
+      "post": {
+        "description": "A POST answered 307: the client sends it, body and all, to the Location.",
+        "operationId": "redirectToEchoLiterals",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Literals"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Literals"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "307": {
+            "description": "the same request to /echo/literals"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Redirect Literals",
+        "tags": [
+          "misc"
+        ]
+      }
+    },
     "/stamps": {
       "get": {
         "operationId": "stampsQuery",
