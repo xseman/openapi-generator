@@ -13,7 +13,6 @@ cases:
     request: { header: { Content-Type: application/octet-stream }, body: { $base64: AAH/ } }
     response: { base64: /wEA }
     result: /wEA
-    skip: { dart-fetch: "request: none reached the server" }
   - name: a +json body and result
     op: patchNote
     args: { id: n1, body: { author: bo } }

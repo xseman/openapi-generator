@@ -231,7 +231,6 @@ cases:
     op: echoRaw
     args: { body: { $bytes: { base64: AAH/ } } }
     result: /wEA
-    skip: { dart-fetch: "call failed: no method for operation echoRaw" }
   - name: union body, int
     op: echoUnion
     args: { body: 5 }
@@ -466,7 +465,6 @@ cases:
   - name: a binary response without a schema, next to JSON
     op: getLogo
     result: iVBORw0KGgoAAAANSUhEUv8=
-    skip: { dart-fetch: "call failed: FormatException: Unexpected character (at character 1)" }
   - name: text/csv response
     op: exportCsv
     result: "sku,name\nABC-0001,Box\nABC-0002,Bag\n"

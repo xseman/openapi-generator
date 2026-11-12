@@ -77,12 +77,16 @@ class HttpResponse({
 
     bool get _isJson => mediaType == 'application/json' || mediaType.endsWith('+json');
 
+    bool get _isText => mediaType.startsWith('text/') || ['json', 'xml', 'urlencoded'].any(mediaType.contains);
+
     /// The body as a JSON value, null when empty. Plain text is read as the
-    /// JSON it holds, a number say, else as text; another media type is its
-    /// text.
+    /// JSON it holds, a number say, else as text; another text media type
+    /// is its text, anything else its bytes.
     Object? get bodyJson {
+        if (body.isEmpty) return null;
+        if (!_isText) return Uint8List.fromList(body);
+
         final text = bodyString;
-        if (text.isEmpty) return null;
         if (_isJson) return jsonDecode(text);
         if (mediaType != 'text/plain') return text;
 
@@ -242,6 +246,8 @@ String paramText(Object? value) {
     if (value == null) return '';
     if (value is DateTime) return value.toUtc().toIso8601String();
     if (value is List || value is Map) return jsonEncode(value);
+    // A whole number without the exponent toString gives a large one.
+    if (value is double && value.isFinite && value == value.truncateToDouble()) return BigInt.from(value).toString();
 
     return value.toString();
 }

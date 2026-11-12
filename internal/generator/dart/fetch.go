@@ -444,8 +444,13 @@ func clone(ext map[string]any) map[string]any {
 // PostProcessOperations types each operation's parameters, body and result
 // for the api template and writes the expressions that send and read them.
 func (g *FetchGenerator) PostProcessOperations(ops []*codegen.CodegenOperation) []*codegen.CodegenOperation {
+	taken := make(map[string]bool, len(ops))
 	for _, op := range ops {
-		g.escapeOperationId(op)
+		taken[op.Nickname] = true
+	}
+
+	for _, op := range ops {
+		g.escapeOperationId(op, taken)
 
 		ext := clone(op.VendorExtensions)
 		ext["x-dart-path"] = Literal(op.Path)
@@ -485,7 +490,7 @@ func (g *FetchGenerator) paramExtensions(op *codegen.CodegenOperation, ext map[s
 			t = "List<UploadFile>"
 		case p.IsFormParam && (p.IsFile || p.IsBinary):
 			t = "UploadFile"
-		case p.IsFile, p.IsBinary:
+		case p.IsFile, p.IsBinary, p.IsBodyParam && p.DataType == "Blob" && !p.IsModel:
 			t = "Uint8List"
 		}
 
@@ -722,17 +727,17 @@ var apiMembers = []string{
 	"toString", "hashCode", "runtimeType", "noSuchMethod",
 }
 
-// escapeOperationId disambiguates operation method names that would clash
-// with the `*Raw` / `*RequestOpts` helpers emitted by the api template, with
-// a member the API class inherits, or with a Dart reserved word.
-func (g *FetchGenerator) escapeOperationId(op *codegen.CodegenOperation) {
-	if strings.HasSuffix(op.OperationIdCamelCase, "Raw") {
-		op.OperationIdCamelCase += "Method"
-		op.OperationIdLowerCase += "method"
-		op.OperationIdSnakeCase += "_method"
-		op.Nickname = op.OperationIdCamelCase
+// escapeOperationId renames an operation whose method would clash with
+// the Raw or RequestOpts method the api template writes for another one
+// (taken, the operations' names), with a member the API class inherits, or
+// with a Dart reserved word.
+func (g *FetchGenerator) escapeOperationId(op *codegen.CodegenOperation, taken map[string]bool) {
+	for _, suffix := range []string{"Raw", "RequestOpts"} {
+		if base, ok := strings.CutSuffix(op.Nickname, suffix); ok && taken[base] {
+			op.Nickname += "Method"
 
-		return
+			return
+		}
 	}
 
 	if g.IsReservedWord(op.Nickname) || slices.Contains(apiMembers, op.Nickname) {
