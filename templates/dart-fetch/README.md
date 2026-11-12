@@ -67,18 +67,22 @@ stream is read to its end or cancelled.
 
 ## Types
 
-| OpenAPI                              | Dart                                               |
-| ------------------------------------ | -------------------------------------------------- |
-| `integer`                            | `int`                                              |
-| `number`                             | `double`                                           |
-| `string` with `date` or `date-time`  | `DateTime`; a date is written `2024-01-31`         |
-| binary body or result                | `Uint8List`                                        |
-| file in a form                       | `UploadFile` (bytes and a filename)                |
-| object with properties, `allOf`      | a class, the ancestors' properties included        |
-| enum                                 | an `enum` with a `value`; of mixed types `Object?` |
-| array, map or scalar schema          | a `typedef`                                        |
-| `oneOf`, `anyOf`                     | a `sealed class`, a variant class per member       |
-| `additionalProperties` by properties | a `Map` field `additionalProperties`               |
+| OpenAPI                              | Dart                                                                                       |
+| ------------------------------------ | ------------------------------------------------------------------------------------------ |
+| `integer`                            | `int`                                                                                      |
+| `number`                             | `double`                                                                                   |
+| `string` with `date` or `date-time`  | `DateTime`; a date is written `2024-01-31`                                                 |
+| binary body or result                | `Uint8List`                                                                                |
+| file in a form                       | `UploadFile` (bytes and a filename)                                                        |
+| object with properties, `allOf`      | a class, the ancestors' properties included                                                |
+| enum                                 | an extension type over its value, the listed values as constants; of mixed types `Object?` |
+| array, map or scalar schema          | a `typedef`                                                                                |
+| `oneOf`, `anyOf`                     | a `sealed class`, a variant class per member                                               |
+| `additionalProperties` by properties | a `Map` field `additionalProperties`                                                       |
+
+An enum reads a value the spec does not list as itself and sends it back
+unchanged, as a server that adds a value expects: `Status('archived')`. A
+`switch` over one therefore needs a default.
 
 A union's variants are named after their member, `PetCat(Cat value)` or
 `PetString(String value)` for a union `Pet`, so a `switch` over one is

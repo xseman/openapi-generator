@@ -2,22 +2,17 @@
 {{#doc}}
 {{{.}}}
 {{/doc}}
-enum {{name}} {
+extension type const {{name}}({{{base}}} value) implements {{{base}}} {
 {{#values}}
-    {{name}}({{{literal}}}),
+    static const {{name}} = {{type}}({{{literal}}});
 {{/values}}
-    ; // mustache here has no -last: a trailing comma, then the end of the values
 
-    const {{name}}(this.value);
+    /// The values the spec lists.
+    static const values = [{{list}}];
 
-    /// The value on the wire.
-    final {{{base}}} value;
-
-    /// Reads a {{name}} from its JSON value.
-    static {{name}} fromJson(Object? json) => values.firstWhere(
-        (v) => v.value == json,
-        orElse: () => throw ArgumentError.value(json, 'json', 'no {{name}}'),
-    );
+    /// Reads a {{name}} from its JSON value: a value the spec does not list
+    /// too, which goes back unchanged.
+    static {{name}} fromJson(Object? json) => {{name}}({{{read}}});
 
     {{{base}}} toJson() => value;
 }

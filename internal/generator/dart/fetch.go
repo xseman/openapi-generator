@@ -450,6 +450,7 @@ func enumDecl(name, base string, allowable map[string]any, doc []string) map[str
 
 	taken := map[string]int{"values": 1, "value": 1, "index": 1, "name": 1, "fromJson": 1, "toJson": 1, "hashCode": 1, "runtimeType": 1}
 	values := make([]map[string]any, 0, len(vars))
+	names := make([]string, 0, len(vars))
 
 	for _, v := range vars {
 		literal, _ := v["value"].(string)
@@ -473,10 +474,23 @@ func enumDecl(name, base string, allowable map[string]any, doc []string) map[str
 			member += "_"
 		}
 
-		values = append(values, map[string]any{"name": uniqueName(taken, member), "literal": literal})
+		member = uniqueName(taken, member)
+		names = append(names, member)
+		values = append(values, map[string]any{"name": member, "type": name, "literal": literal})
 	}
 
-	return map[string]any{"name": name, "base": base, "values": values, "doc": doc}
+	// An extension type over a value that is an Object, so that it is one
+	// too: an Opt<T> holds it.
+	base = strings.TrimSuffix(base, "?")
+	read := map[string]string{
+		"String": "json as String",
+		"int":    "(json as num).toInt()",
+		"double": "(json as num).toDouble()",
+		"bool":   "json as bool",
+		"Object": "json as Object",
+	}[base]
+
+	return map[string]any{"name": name, "base": base, "read": read, "values": values, "list": strings.Join(names, ", "), "doc": doc}
 }
 
 // uniqueName is name, numbered from its second use in taken.
