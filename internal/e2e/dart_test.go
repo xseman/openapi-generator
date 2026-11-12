@@ -71,7 +71,7 @@ func runDart(t *testing.T, suites []suite) map[string]map[int]outcome {
 		fmt.Fprintf(&deps, "  %s:\n    path: %s\n", pkg, pkg)
 		fmt.Fprintf(&imports, "import 'package:%s/%s.dart' as %s;\n", pkg, pkg, pkg)
 		fmt.Fprintf(&clients, "    %q: Client(\n      (base, a) => %s.Configuration(basePath: base, username: a.username, password: a.password, "+
-			"apiKey: (name) => a.apiKey ?? '', accessToken: () => a.bearer ?? ''),\n      (cfg) => [%s],\n      %q),\n",
+			"apiKey: (name) => a.apiKey ?? '', accessToken: (name, scopes) => a.bearer ?? ''),\n      (cfg) => [%s],\n      %q),\n",
 			s.Name, pkg, dartAPIs(t, filepath.Join(dir, pkg), pkg), pkg)
 	}
 

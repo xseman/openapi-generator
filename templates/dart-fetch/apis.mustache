@@ -15,7 +15,8 @@ class {{classname}} extends BaseApi {
 {{#operations}}
 {{#operation}}
 
-    /// Build the [HttpRequest] for `{{nickname}}` without sending it.
+    /// Build the [HttpRequest] for `{{nickname}}` without sending it, its
+    /// credentials included.
 {{#summary}}
     ///
 {{/summary}}
@@ -25,7 +26,7 @@ class {{classname}} extends BaseApi {
 {{#isDeprecated}}
     @Deprecated('This operation is deprecated.')
 {{/isDeprecated}}
-    HttpRequest {{nickname}}RequestOpts({{{vendorExtensions.x-dart-signature}}}) {
+    Future<HttpRequest> {{nickname}}RequestOpts({{{vendorExtensions.x-dart-signature}}}) async {
         final $path = {{{vendorExtensions.x-dart-path}}}{{#pathParams}}
             .replaceAll({{{vendorExtensions.x-dart-placeholder}}}, pathParam({{{vendorExtensions.x-dart-json}}}, {{{vendorExtensions.x-dart-wire}}})){{/pathParams}};
 
@@ -43,46 +44,23 @@ class {{classname}} extends BaseApi {
 {{/cookieParams}}
 {{#authMethods}}
 {{#isApiKey}}
-        {
-            final apiKey = configuration.apiKey;
-            if (apiKey != null) {
-                final v = apiKey('{{keyParamName}}');
-                if (v.isNotEmpty) {
+        if (await configuration.apiKey?.call({{{vendorExtensions.x-dart-key}}}) case final key? when key.isNotEmpty) {
 {{#isKeyInHeader}}
-                    $headers['{{keyParamName}}'] = v;
+            $headers[{{{vendorExtensions.x-dart-key}}}] = key;
 {{/isKeyInHeader}}
 {{#isKeyInQuery}}
-                    addQuery($query, '{{keyParamName}}', v, 'form', true);
+            addQuery($query, {{{vendorExtensions.x-dart-key}}}, key, 'form', true);
 {{/isKeyInQuery}}
 {{#isKeyInCookie}}
-                    addCookie($headers, '{{keyParamName}}', v, false);
+            addCookie($headers, {{{vendorExtensions.x-dart-key}}}, key, false);
 {{/isKeyInCookie}}
-                }
-            }
         }
 {{/isApiKey}}
-{{#isBasicBearer}}
-        {
-            final tokenFn = configuration.accessToken;
-            if (tokenFn != null) {
-                final tok = tokenFn();
-                if (tok.isNotEmpty) {
-                    $headers['Authorization'] = 'Bearer $tok';
-                }
-            }
+{{#vendorExtensions.x-dart-token}}
+        if (await configuration.accessToken?.call({{{vendorExtensions.x-dart-name}}}, {{{vendorExtensions.x-dart-scopes}}}) case final token? when token.isNotEmpty) {
+            $headers['Authorization'] = 'Bearer $token';
         }
-{{/isBasicBearer}}
-{{#isOAuth}}
-        {
-            final tokenFn = configuration.accessToken;
-            if (tokenFn != null) {
-                final tok = tokenFn();
-                if (tok.isNotEmpty) {
-                    $headers['Authorization'] = 'Bearer $tok';
-                }
-            }
-        }
-{{/isOAuth}}
+{{/vendorExtensions.x-dart-token}}
 {{#isBasicBasic}}
         if (configuration.username != null || configuration.password != null) {
             final creds = '${configuration.username ?? ''}:${configuration.password ?? ''}';
@@ -137,8 +115,8 @@ class {{classname}} extends BaseApi {
 {{#isDeprecated}}
     @Deprecated('This operation is deprecated.')
 {{/isDeprecated}}
-    Future<HttpResponse> {{nickname}}Raw({{{vendorExtensions.x-dart-signature}}}) =>
-        super.request({{nickname}}RequestOpts({{{vendorExtensions.x-dart-args}}}));
+    Future<HttpResponse> {{nickname}}Raw({{{vendorExtensions.x-dart-signature}}}) async =>
+        super.request(await {{nickname}}RequestOpts({{{vendorExtensions.x-dart-args}}}));
 
 {{#vendorExtensions.x-dart-summary}}
     {{{.}}}

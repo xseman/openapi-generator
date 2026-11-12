@@ -166,11 +166,15 @@ class Configuration {
     final String? username;
     final String? password;
 
-    /// Returns an API key for the given header/query parameter name.
-    final String Function(String name)? apiKey;
+    /// Returns the API key for the header, query or cookie parameter
+    /// [name], at once or as a future; an empty one is not sent.
+    final FutureOr<String> Function(String name)? apiKey;
 
-    /// Returns a bearer token (e.g. for OAuth2).
-    final String Function()? accessToken;
+    /// Returns the bearer token for the security scheme [name] of an
+    /// operation (bearer, OAuth2 or OpenID Connect) and the [scopes] it
+    /// requires, at once or as a future, a refreshed one say; an empty one
+    /// is not sent.
+    final FutureOr<String> Function(String name, List<String> scopes)? accessToken;
 
     final HttpSender? _sender;
     final PlatformSender? _platform;

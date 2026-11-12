@@ -42,7 +42,7 @@ result, `someOperationRaw` returns the `HttpResponse`, and
 - `basePath` — server base URL.
 - `headers` — extra headers sent with every request.
 - `username` / `password` — HTTP Basic auth.
-- `apiKey` — callback `String Function(String name)` for API key auth.
-- `accessToken` — callback `String Function()` for bearer/OAuth2 auth.
+- `apiKey` — callback `FutureOr<String> Function(String name)` for API key auth.
+- `accessToken` — callback `FutureOr<String> Function(String name, List<String> scopes)` for bearer, OAuth2 and OpenID Connect auth: the scheme's name and the scopes the operation requires.
 - `httpSender` — replaces the platform's HTTP transport.
 - `middleware` — list of `Middleware` objects with `pre` / `post` / `onError` hooks.

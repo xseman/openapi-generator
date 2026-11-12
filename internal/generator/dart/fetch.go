@@ -568,6 +568,8 @@ func (g *FetchGenerator) PostProcessOperations(ops []*codegen.CodegenOperation) 
 		ext := clone(op.VendorExtensions)
 		ext["x-dart-path"] = Literal(op.Path)
 		ext["x-dart-summary"] = docLines(op.Summary)
+		authExtensions(op)
+
 		inline := newInlineTypes()
 		g.paramExtensions(op, ext, inline)
 		g.resultExtensions(op, ext, inline)
@@ -578,6 +580,26 @@ func (g *FetchGenerator) PostProcessOperations(ops []*codegen.CodegenOperation) 
 	}
 
 	return ops
+}
+
+// authExtensions gives each security scheme of op its name and key as
+// Dart literals, and the scopes the operation requires; x-dart-token marks
+// one whose credential is a bearer token.
+func authExtensions(op *codegen.CodegenOperation) {
+	for _, sec := range op.AuthMethods {
+		scopes := make([]string, 0, len(sec.Scopes))
+		for _, s := range sec.Scopes {
+			scope, _ := s["scope"].(string)
+			scopes = append(scopes, Literal(scope))
+		}
+
+		ext := clone(sec.VendorExtensions)
+		ext["x-dart-name"] = Literal(sec.Name)
+		ext["x-dart-key"] = Literal(sec.KeyParamName)
+		ext["x-dart-scopes"] = "const [" + strings.Join(scopes, ", ") + "]"
+		ext["x-dart-token"] = sec.IsBasicBearer || sec.IsOAuth || sec.IsOpenId
+		sec.VendorExtensions = ext
+	}
 }
 
 // paramExtensions gives each parameter its declaration, its key on the

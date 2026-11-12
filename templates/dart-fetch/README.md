@@ -35,7 +35,7 @@ openapi-generator generate -g dart-fetch -i openapi.yaml -o ./petstore -p pubNam
 ```dart
 final pets = DefaultApi(Configuration(
   basePath: 'https://api.example.com',
-  accessToken: () => token,
+  accessToken: (scheme, scopes) => auth.token(scopes),
 ));
 
 try {
@@ -49,7 +49,12 @@ try {
 | ---------------- | ------------------------------------------------------------------------------------------- |
 | `xxx`            | sends and decodes the body: JSON, text for a `String`, a `Uint8List` for binary, a `Stream` |
 | `xxxRaw`         | sends; returns the `HttpResponse` of a 2xx status                                           |
-| `xxxRequestOpts` | builds the `HttpRequest` without sending it                                                 |
+| `xxxRequestOpts` | builds the `HttpRequest`, credentials included, without sending it                          |
+
+`accessToken` gets the name of the operation's security scheme (bearer,
+OAuth2 or OpenID Connect) and the scopes it requires, `apiKey` the name of
+the key's parameter; either may return a `Future`, a token it refreshes
+say. An empty credential is not sent.
 
 Parameters are named arguments, `required` where the spec says so. Each
 method also takes `abortTrigger`, a `Future` that aborts the call when it
