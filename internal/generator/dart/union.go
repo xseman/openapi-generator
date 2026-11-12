@@ -54,7 +54,7 @@ func inlineUnion(p *codegen.CodegenProperty) []*codegen.CodegenProperty {
 // unionDecl declares the union name of members, a sealed class with a
 // variant class per member that wraps its value, and writes the lines of
 // the fromJson that tells which one a JSON value is: by the discriminator
-// d, by its JSON type, then the struct it fits best (bestFit in the
+// d, by its JSON type, then the struct it fits best (byFit in the
 // runtime); a value that is none of them is the Other variant, kept as
 // decoded. It is nil when no member has a type of its own, or the only one
 // is a map.
@@ -138,13 +138,28 @@ func (g *FetchGenerator) unionDecl(name, description string, members []*codegen.
 			fits = append(fits, "(["+keys(v.model, true)+"], ["+keys(v.model, false)+"])")
 		}
 
-		lines = append(lines, "", "if (json is Map<String, Object?>"+untagged+") {", "    switch (bestFit(json, const ["+strings.Join(fits, ", ")+"])) {")
+		// Members with the same keys tell apart only by their values: the
+		// next one when the best fit's do not read.
+		lines = append(lines, "",
+			"if (json is Map<String, Object?>"+untagged+") {",
+			"    for (final index in byFit(json, const ["+strings.Join(fits, ", ")+"])) {",
+			"        try {",
+			"            switch (index) {",
+		)
 
 		for i, v := range structs {
-			lines = append(lines, "        case "+strconv.Itoa(i)+":", "            "+read(v))
+			lines = append(lines, "                case "+strconv.Itoa(i)+":", "                    "+read(v))
 		}
 
-		lines = append(lines, "    }", "}", "")
+		lines = append(lines,
+			"            }",
+			"        } catch (_) {",
+			"            // Another member's.",
+			"        }",
+			"    }",
+			"}",
+			"",
+		)
 	}
 
 	lines = append(lines, tests[3]...)

@@ -52,7 +52,7 @@ func TestUnion(t *testing.T) {
 		`switch (json["kind"]) {`, `case "cat" when const ["kind"].every(json.containsKey):`, `return PetCat(Cat.fromJson(json));`, `case "dog" when`,
 		`if (json is String && DateTime.tryParse(json) != null) return PetDateTime(DateTime.parse(json));`,
 		`if (json is String) return PetString(json);`,
-		`switch (bestFit(json, const [(["kind"], ["kind"]), (["kind"], ["kind", "pack"])])) {`,
+		`for (final index in byFit(json, const [(["kind"], ["kind"]), (["kind"], ["kind", "pack"])])) {`,
 	}
 
 	at := 0

@@ -378,24 +378,19 @@ void addCookie(Map<String, String> headers, String name, Object? value, bool exp
 /// when the key is absent.
 class Opt<T extends Object>(final T? value);
 
-/// The index of the model [json] fits best, for a union: of [models], each
-/// its required keys and all its keys, one whose required keys the value
-/// has, declaring the most of its keys and the fewest it does not; null when
-/// it fits none.
-int? bestFit(Map<String, Object?> json, List<(List<String>, List<String>)> models) {
-    int? best;
-    var bestScore = 0;
+/// The indexes of the models [json] may be, for a union, the best fit
+/// first: of [models], each its required keys and all its keys, those whose
+/// required keys the value has, by how many of its keys they declare less
+/// how many they do not, then in order.
+List<int> byFit(Map<String, Object?> json, List<(List<String>, List<String>)> models) {
+    final scored = [
+        for (final (index, (required, known)) in models.indexed)
+            if (required.every(json.containsKey)) (index, json.keys.fold(0, (score, key) => score + (known.contains(key) ? 1 : -1))),
+    ];
 
-    for (final (index, (required, known)) in models.indexed) {
-        if (!required.every(json.containsKey)) continue;
+    scored.sort((a, b) => a.$2 != b.$2 ? b.$2.compareTo(a.$2) : a.$1.compareTo(b.$1));
 
-        final score = json.keys.fold(0, (score, key) => score + (known.contains(key) ? 1 : -1));
-        if (best != null && score <= bestScore) continue;
-
-        (best, bestScore) = (index, score);
-    }
-
-    return best;
+    return [for (final (index, _) in scored) index];
 }
 
 /// The items of a JSON Lines response, each read by [item] from its JSON.
