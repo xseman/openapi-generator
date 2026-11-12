@@ -144,6 +144,16 @@ Future<Map<String, Object?>> callCase(Client client, Map<String, dynamic> suite,
   final cfg = client.configuration(suite['base'] as String, auth);
   final op = norm(c['op'] as String);
 
+  try {
+    return await _call(client, cfg, c, op, vars);
+  } finally {
+    // Its connections would keep the run alive until they idle out.
+    reflect(cfg).invoke(#close, []);
+  }
+}
+
+Future<Map<String, Object?>> _call(Client client, Object cfg, Map<String, dynamic> c, String op, Map<String, String> vars) async {
+
   for (final api in client.apis(cfg)) {
     final m = reflect(api);
     // The API's own methods: an operation called request is request_, next

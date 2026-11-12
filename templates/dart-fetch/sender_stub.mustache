@@ -1,0 +1,12 @@
+{{>licenseInfo}}
+
+import 'runtime.dart';
+
+/// The sender of a platform with neither `dart:io` nor JavaScript: pass a
+/// sender of your own to `Configuration(httpSender: ...)`.
+class PlatformSender {
+    Future<HttpResponse> call(HttpRequest request) =>
+        throw UnsupportedError('No HTTP sender for this platform: pass one to Configuration(httpSender: ...).');
+
+    void close() {}
+}

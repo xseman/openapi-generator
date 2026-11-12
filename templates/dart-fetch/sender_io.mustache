@@ -1,0 +1,50 @@
+{{>licenseInfo}}
+
+import 'dart:convert';
+import 'dart:io' show HttpClient;
+import 'dart:typed_data';
+
+import 'runtime.dart';
+
+/// Sends requests through one `dart:io` [HttpClient], on the Dart VM and
+/// Flutter outside the browser; its connections stay open for the next
+/// request until [close].
+class PlatformSender {
+    final HttpClient _client = HttpClient();
+
+    Future<HttpResponse> call(HttpRequest request) async {
+        final sent = await _client.openUrl(request.method.value, request.url);
+        request.headers.forEach(sent.headers.add);
+
+        final bytes = switch (request.body) {
+            final String text => utf8.encode(text),
+            final List<int> bytes => bytes,
+            _ => null,
+        };
+
+        // With its length a body goes whole, not chunked, which not every
+        // server reads.
+        if (bytes != null) {
+            sent.contentLength = bytes.length;
+            sent.add(bytes);
+        }
+
+        final response = await sent.close();
+        final headers = <String, String>{};
+        response.headers.forEach((name, values) => headers[name] = values.join(', '));
+
+        final streamed = request.stream && response.statusCode >= 200 && response.statusCode < 300;
+        final body = BytesBuilder(copy: false);
+
+        if (!streamed) await response.forEach(body.add);
+
+        return HttpResponse(
+            statusCode: response.statusCode,
+            headers: headers,
+            body: body.takeBytes(),
+            stream: streamed ? response : null,
+        );
+    }
+
+    void close() => _client.close();
+}

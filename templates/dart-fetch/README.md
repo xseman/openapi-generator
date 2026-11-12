@@ -18,14 +18,14 @@ openapi-generator generate -g dart-fetch -i openapi.yaml -o ./petstore -p pubNam
 | `pubHomepage`     |           | homepage in `pubspec.yaml`                                         |
 | `pubRepository`   |           | repository in `pubspec.yaml`                                       |
 | `sdkConstraint`   | `^3.13.0` | Dart SDK constraint in `pubspec.yaml`                              |
-| `useDartIoSender` | `true`    | include the `dart:io` sender; `false` for a target without dart:io |
 
 ## Output
 
 | File                          | Contents                                                               |
 | ----------------------------- | ---------------------------------------------------------------------- |
 | `lib/<pubName>.dart`          | the library: exports the runtime, the models and the APIs              |
-| `lib/src/runtime.dart`        | `Configuration`, `ApiException`, `Opt`, `UploadFile`, senders, helpers |
+| `lib/src/runtime.dart`        | `Configuration`, `ApiException`, `Opt`, `UploadFile`, helpers          |
+| `lib/src/sender_*.dart`       | the sender of each platform: `dart:io`, `fetch` in a browser, a stub   |
 | `lib/src/apis/<tag>_api.dart` | `<Tag>Api` and the enums its parameters list inline                    |
 | `lib/src/models/<name>.dart`  | one model and the enums its properties list inline                     |
 | `pubspec.yaml`, `README.md`   | the package and its usage                                              |
@@ -107,9 +107,13 @@ pipeDelimited, deepObject). A `multipart/form-data` body sends an
 `UploadFile` as a file part, an object as a JSON part; a form with a file
 goes as multipart whatever the spec declares.
 
-`Configuration.httpSender` replaces the transport (the default opens a
-`dart:io` `HttpClient` per request), and `Configuration.middleware` runs
-`pre`, `post` and `onError` hooks around it.
+A `Configuration` sends through the platform's own sender, picked by a
+conditional import: one `dart:io` `HttpClient` on the VM and Flutter, whose
+connections stay open between requests, `fetch` in a browser. Call
+`close()` on the configuration when done, or the program waits for the
+connections to idle out. `Configuration(httpSender: ...)` replaces the
+transport, and `Configuration.middleware` runs `pre`, `post` and `onError`
+hooks around it.
 
 ## Limits
 

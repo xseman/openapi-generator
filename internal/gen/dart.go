@@ -40,10 +40,6 @@ func applyDartAdditionalProperties(dc *config.DartFetchConfig, props map[string]
 		dc.SdkConstraint = v
 	}
 
-	if v, ok := props["useDartIoSender"].(bool); ok {
-		dc.UseDartIoSender = v
-	}
-
 	if v, ok := props["modelPropertyNaming"].(string); ok {
 		dc.ModelPropertyNaming = v
 	}
@@ -105,11 +101,6 @@ func PrintDartFetchConfigHelp() {
 	fmt.Println()
 	fmt.Println("  sdkConstraint")
 	fmt.Println("      Dart SDK constraint. (Default: '^3.13.0')")
-	fmt.Println()
-	fmt.Println("  useDartIoSender")
-	fmt.Println("      Bundle a default HttpSender backed by dart:io. Set to false")
-	fmt.Println("      for browser-only targets where dart:io is unavailable.")
-	fmt.Println("      (Default: true)")
 	fmt.Println()
 	fmt.Println("  modelPropertyNaming")
 	fmt.Println("      One of: original, camelCase, PascalCase, snake_case.")

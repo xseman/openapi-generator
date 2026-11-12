@@ -7,11 +7,8 @@ description: {{pubDescription}}
 environment:
   sdk: '{{{sdkConstraint}}}'
 
-# This package intentionally has no runtime dependencies.
-# HTTP transport is dispatched through a pluggable HttpSender; the
-# default implementation uses dart:io and works on the Dart VM and
-# Flutter mobile/desktop targets. Browser users should supply their
-# own HttpSender via Configuration.httpSender.
+# This package intentionally has no runtime dependencies: requests go
+# through dart:io on the VM and Flutter, through fetch in a browser.
 
 dev_dependencies:
   lints: ^6.0.0

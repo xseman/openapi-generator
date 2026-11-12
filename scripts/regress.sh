@@ -33,7 +33,6 @@ git archive "$ref" | tar -x -C "$tmp/src"
 # useSingleRequestParameter=false would hide what prefixParameterInterfaces does.
 declare -A flipped=(
 	[typescript-fetch]="withPackageJson=true withInterfaces=true useSingleRequestParameter=false prefixParameterInterfaces=true withoutRuntimeChecks=true stringEnums=true validationAttributes=true"
-	[dart-fetch]="useDartIoSender=false"
 	[go-fetch]="withGoMod=true"
 )
 

@@ -1,0 +1,77 @@
+{{>licenseInfo}}
+
+import 'dart:js_interop';
+import 'dart:typed_data';
+
+import 'runtime.dart';
+
+@JS('fetch')
+external JSPromise<_Response> _fetch(JSString url, _Init init);
+
+extension type _Init._(JSObject _) implements JSObject {
+    external factory _Init({JSString method, JSAny headers, JSAny? body});
+}
+
+extension type _Response._(JSObject _) implements JSObject {
+    external int get status;
+    external _Headers get headers;
+    external _Body? get body;
+    external JSPromise<JSArrayBuffer> arrayBuffer();
+}
+
+extension type _Headers._(JSObject _) implements JSObject {
+    external void forEach(JSFunction callback);
+}
+
+extension type _Body._(JSObject _) implements JSObject {
+    external _Reader getReader();
+}
+
+extension type _Reader._(JSObject _) implements JSObject {
+    external JSPromise<_Chunk> read();
+}
+
+extension type _Chunk._(JSObject _) implements JSObject {
+    external bool get done;
+    external JSUint8Array? get value;
+}
+
+/// Sends requests with the browser's `fetch`.
+class PlatformSender {
+    Future<HttpResponse> call(HttpRequest request) async {
+        final body = switch (request.body) {
+            final String text => text.toJS,
+            final List<int> bytes => Uint8List.fromList(bytes).toJS,
+            _ => null,
+        };
+
+        final init = _Init(method: request.method.value.toJS, headers: request.headers.jsify()!, body: body);
+        final response = await _fetch(request.url.toString().toJS, init).toDart;
+
+        final headers = <String, String>{};
+        response.headers.forEach(((JSString value, JSString name) {
+            headers[name.toDart] = value.toDart;
+        }).toJS);
+
+        final streamed = request.stream && response.status >= 200 && response.status < 300 && response.body != null;
+
+        return HttpResponse(
+            statusCode: response.status,
+            headers: headers,
+            body: streamed ? const <int>[] : (await response.arrayBuffer().toDart).toDart.asUint8List(),
+            stream: streamed ? _chunks(response.body!.getReader()) : null,
+        );
+    }
+
+    Stream<List<int>> _chunks(_Reader reader) async* {
+        while (true) {
+            final chunk = await reader.read().toDart;
+            if (chunk.done) return;
+
+            yield chunk.value!.toDart;
+        }
+    }
+
+    /// The browser owns the connections: nothing to close.
+    void close() {}
+}

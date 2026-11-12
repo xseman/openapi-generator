@@ -2,11 +2,10 @@
 
 import 'dart:async';
 import 'dart:convert';
-{{#useDartIoSender}}
-import 'dart:io' show HttpClient;
-{{/useDartIoSender}}
 import 'dart:math';
 import 'dart:typed_data';
+
+import 'sender_stub.dart' if (dart.library.io) 'sender_io.dart' if (dart.library.js_interop) 'sender_web.dart';
 
 /// Default base path for this client.
 const String basePath = '{{basePath}}';
@@ -130,10 +129,7 @@ class Middleware({
     final ErrorMiddleware? onError,
 });
 
-/// Client configuration.
-///
-/// All fields are optional. The defaults assume a Dart VM / Flutter
-/// environment with `dart:io` available.
+/// Client configuration. All fields are optional.
 class Configuration {
     Configuration({
         String? basePath,
@@ -146,7 +142,8 @@ class Configuration {
         List<Middleware>? middleware,
     })  : basePath = basePath ?? _defaultBasePath,
                 headers = Map<String, String>.from(headers ?? const <String, String>{}),
-                httpSender = httpSender ?? defaultHttpSender,
+                _sender = httpSender,
+                _platform = httpSender == null ? PlatformSender() : null,
                 middleware = List<Middleware>.unmodifiable(middleware ?? const <Middleware>[]);
 
     static const String _defaultBasePath = '{{basePath}}';
@@ -162,7 +159,16 @@ class Configuration {
     /// Returns a bearer token (e.g. for OAuth2).
     final String Function()? accessToken;
 
-    final HttpSender httpSender;
+    final HttpSender? _sender;
+    final PlatformSender? _platform;
+
+    /// Sends the requests: the sender given, else the platform's own, a
+    /// `dart:io` HttpClient or `fetch` in a browser.
+    HttpSender get httpSender => _sender ?? _platform!.call;
+
+    /// Closes the connections the platform's sender keeps open between
+    /// requests; without it a program waits for them to idle out.
+    void close() => _platform?.close();
     final List<Middleware> middleware;
 }
 
@@ -507,57 +513,3 @@ Object? dateTimeToJson(DateTime? value) {
     if (value == null) return null;
     return value.toUtc().toIso8601String();
 }
-
-{{#useDartIoSender}}
-/// Default [HttpSender] backed by `dart:io`'s [HttpClient].
-///
-/// Usable on the Dart VM and Flutter mobile/desktop. For browser targets,
-/// supply a custom sender via [Configuration.httpSender].
-Future<HttpResponse> defaultHttpSender(HttpRequest req) async {
-    final client = HttpClient();
-    try {
-        final dartReq = await client.openUrl(req.method.value, req.url);
-        req.headers.forEach(dartReq.headers.add);
-
-        final body = req.body;
-        if (body is String) {
-            dartReq.add(utf8.encode(body));
-        } else if (body is List<int>) {
-            dartReq.add(body);
-        }
-
-        final dartRes = await dartReq.close();
-        final headers = <String, String>{};
-        dartRes.headers.forEach((name, values) => headers[name] = values.join(', '));
-
-        final streamed = req.stream && dartRes.statusCode >= 200 && dartRes.statusCode < 300;
-
-        return HttpResponse(
-            statusCode: dartRes.statusCode,
-            headers: headers,
-            body: streamed ? const <int>[] : await _collectBytes(dartRes),
-            stream: streamed ? dartRes : null,
-        );
-    } finally {
-        client.close(force: false);
-    }
-}
-
-Future<List<int>> _collectBytes(Stream<List<int>> stream) async {
-    final builder = BytesBuilder(copy: false);
-    await for (final chunk in stream) {
-        builder.add(chunk);
-    }
-    return builder.takeBytes();
-}
-{{/useDartIoSender}}
-{{^useDartIoSender}}
-/// No default [HttpSender] is bundled with this client.
-///
-/// Supply one explicitly via [Configuration.httpSender]. Until you do,
-/// every request will throw [UnimplementedError].
-Future<HttpResponse> defaultHttpSender(HttpRequest req) =>
-        throw UnimplementedError(
-            'No HttpSender configured. Pass one to Configuration(httpSender: ...).',
-        );
-{{/useDartIoSender}}
