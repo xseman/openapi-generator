@@ -573,6 +573,7 @@ func (g *FetchGenerator) PostProcessOperations(ops []*codegen.CodegenOperation) 
 		inline := newInlineTypes()
 		g.paramExtensions(op, ext, inline)
 		g.resultExtensions(op, ext, inline)
+		g.errorExtensions(op, ext, inline)
 		ext["x-dart-structs"] = inline.structs
 		ext["x-dart-enums"] = inline.enums
 		ext["x-dart-unions"] = inline.unions
@@ -793,6 +794,63 @@ func (g *FetchGenerator) resultExtensions(op *codegen.CodegenOperation, ext map[
 	}
 }
 
+// errorExtensions writes the switch that reads the body of each status
+// whose body is not the result into the model the spec declares for it, as
+// go-fetch does: the code, then 4XX or 5XX, then default. x-dart-errors is
+// false when no status declares one.
+func (g *FetchGenerator) errorExtensions(op *codegen.CodegenOperation, ext map[string]any, inline *inlineTypes) {
+	other := strings.Split(other2xx(op), ", ")
+	ext["x-dart-errors"] = false
+
+	var codes, ranges []string
+
+	def := ""
+
+	for _, r := range op.Responses {
+		if r.IsBinary || r.IsFile || r.DataType == "" || r.Is2xx && !slices.Contains(other, r.Code) {
+			continue
+		}
+
+		prop := r.ReturnProperty
+		if prop == nil && g.kinds[r.DataType] != "" {
+			// A $ref, which the parser names but leaves untyped.
+			prop = &codegen.CodegenProperty{IsModel: true, DataType: r.DataType}
+		}
+
+		if prop == nil {
+			continue
+		}
+
+		named := g.inline(inline, prop, Camelize(op.Nickname, false)+"Response"+Camelize(r.Code, false))
+
+		read := g.fromJSON(prop, "json", named)
+		if prop.IsNullable {
+			read = orNull("json", read)
+		}
+
+		_, err := strconv.Atoi(r.Code)
+
+		switch digit := r.Code[:1]; {
+		case r.IsDefault:
+			def = "_ => " + read
+		case len(r.Code) == 3 && strings.EqualFold(r.Code[1:], "XX"):
+			ranges = append(ranges, ">= "+digit+"00 && < "+string(rune(r.Code[0]+1))+"00 => "+read)
+		case err == nil:
+			codes = append(codes, r.Code+" => "+read)
+		}
+	}
+
+	if len(codes) == 0 && len(ranges) == 0 && def == "" {
+		return
+	}
+
+	if def == "" {
+		def = "_ => null"
+	}
+
+	ext["x-dart-errors"] = map[string]any{"cases": slices.Concat(codes, ranges, []string{def})}
+}
+
 // streamResult types an operation whose 2xx response streams its items
 // (x-stream, see the parser's streamItem) and reports whether it does: JSON
 // Lines as a Stream of the item type, server-sent events as one of
@@ -869,7 +927,7 @@ func other2xx(op *codegen.CodegenOperation) string {
 // apiMembers are the members of BaseApi and Object, which an operation's
 // method of the same name would override.
 var apiMembers = []string{
-	"configuration", "buildUri", "request", "queryValues",
+	"configuration", "buildUri", "request", "errorModel", "queryValues",
 	"toString", "hashCode", "runtimeType", "noSuchMethod",
 }
 
@@ -901,7 +959,7 @@ func (g *FetchGenerator) addExtraReservedWords() {
 		"HttpRequest", "HttpResponse", "HttpSender", "HttpMethod",
 		"JsonApiResponse", "VoidApiResponse", "TextApiResponse", "BlobApiResponse",
 		"Middleware", "RequestContext", "ResponseContext",
-		"PlatformSender", "encodeFormData", "encodeQueryParam", "UploadFile", "Multipart", "ServerSentEvent", "Opt",
+		"PlatformSender", "encodeFormData", "encodeQueryParam", "UploadFile", "Multipart", "ServerSentEvent", "Opt", "ErrorModels", "RequestAbortedException",
 		// Members every class has, or a model declares: a property of the
 		// same name would override them.
 		"toJson", "fromJson", "hashCode", "runtimeType", "toString", "noSuchMethod",

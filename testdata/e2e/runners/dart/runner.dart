@@ -203,13 +203,9 @@ Future<Map<String, Object?>> _call(Client client, Object cfg, Map<String, dynami
       final em = reflect(e);
       if (em.type.instanceMembers.containsKey(#statusCode) && em.type.instanceMembers.containsKey(#body)) {
         final body = (em.getField(#body).reflectee as String?) ?? '';
-        // The body as JSON, where the spec declares one for the status.
-        final status = '${em.getField(#statusCode).reflectee}';
-        final declared = (c['bodies'] as List? ?? []).any((k) => k == status || k == '${status[0]}XX' || k == 'default');
-        Object? model;
-        try {
-          if (declared) model = jsonDecode(body);
-        } catch (_) {}
+        // The model the client read the body as, where the spec declares one
+        // for the status.
+        final model = toWire(em.getField(#model).reflectee);
         return {
           'error': {'status': em.getField(#statusCode).reflectee, 'body': body, if (model != null) 'model': model},
         };

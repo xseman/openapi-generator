@@ -60,11 +60,14 @@ Parameters are named arguments, `required` where the spec says so. Each
 method also takes `abortTrigger`, a `Future` that aborts the call when it
 completes, as in `package:http`: the call fails with a
 `RequestAbortedException` and its connection is closed. A deadline is
-`abortTrigger: Future.delayed(const Duration(seconds: 10))`. A result
-is nullable when it is nullable in the spec or a 2xx status has no body next
-to one that has. A status outside 2xx is an `ApiException` with the body as
+`abortTrigger: Future.delayed(const Duration(seconds: 10))`. A result is
+nullable when it is nullable in the spec or a 2xx status has no body next to
+one that has. A status outside 2xx is an `ApiException` with the body as
 text, and so is a 2xx status whose body is of another type than the result
-(a 202 `Problem` next to a 201 `Order`).
+(a 202 `Problem` next to a 201 `Order`). Its `model` is the body read as the
+model the spec declares for the status, as go-fetch's is: the code, then
+`4XX` or `5XX`, then `default`; null when the spec declares none or the body
+is not one.
 
 A response of JSON Lines is a `Stream` of its items, one of server-sent
 events a `Stream<ServerSentEvent<T>>`; the response stays open until the

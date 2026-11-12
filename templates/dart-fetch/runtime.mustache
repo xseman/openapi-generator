@@ -189,13 +189,20 @@ class Configuration {
     final List<Middleware> middleware;
 }
 
+/// Reads the body of a status into the model the spec declares for it, for
+/// one operation (see [BaseApi.request]).
+typedef ErrorModels = Object? Function(int status, Object? json);
+
 /// Thrown when the server returns a non-2xx status, or a 2xx one whose body
-/// is of another type than the operation's result.
+/// is of another type than the operation's result. [model] is the body read
+/// as the model the spec declares for the status (the code, then 4XX or
+/// 5XX, then default), null when it declares none or the body is not one.
 class ApiException(
     final int statusCode,
     final String message, {
     final String? body,
     final Map<String, String>? headers,
+    final Object? model,
 }) implements Exception {
     @override
     String toString() => 'ApiException($statusCode): $message';
@@ -213,9 +220,22 @@ class BaseApi(final Configuration configuration) {
         return base.replace(path: basePath + path, queryParameters: query.isEmpty ? null : query);
     }
 
+    /// The body of [response] read by [models], null when it reads as none.
+    Object? errorModel(HttpResponse response, ErrorModels? models) {
+        if (models == null) return null;
+
+        try {
+            return models(response.statusCode, response.bodyJson);
+        } catch (_) {
+            // A body that is not the model's, which ApiException.body holds.
+            return null;
+        }
+    }
+
     /// Sends [req] through configured middleware and the [HttpSender],
-    /// returning the raw [HttpResponse].
-    Future<HttpResponse> request(HttpRequest req) async {
+    /// returning the raw [HttpResponse]; a status outside 2xx throws an
+    /// [ApiException] holding its body, read by [errors].
+    Future<HttpResponse> request(HttpRequest req, {ErrorModels? errors}) async {
         final merged = <String, String>{
             ...configuration.headers,
             ...req.headers,
@@ -255,6 +275,7 @@ class BaseApi(final Configuration configuration) {
                 'HTTP ${response.statusCode}',
                 body: response.bodyString,
                 headers: response.headers,
+                model: errorModel(response, errors),
             );
         }
 

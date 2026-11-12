@@ -116,7 +116,7 @@ class {{classname}} extends BaseApi {
     @Deprecated('This operation is deprecated.')
 {{/isDeprecated}}
     Future<HttpResponse> {{nickname}}Raw({{{vendorExtensions.x-dart-signature}}}) async =>
-        super.request(await {{nickname}}RequestOpts({{{vendorExtensions.x-dart-args}}}));
+        super.request(await {{nickname}}RequestOpts({{{vendorExtensions.x-dart-args}}}){{#vendorExtensions.x-dart-errors}}, errors: _{{nickname}}Errors{{/vendorExtensions.x-dart-errors}});
 
 {{#vendorExtensions.x-dart-summary}}
     {{{.}}}
@@ -149,7 +149,7 @@ class {{classname}} extends BaseApi {
 
         // A body of another type than the result.
         if (const [{{{.}}}].contains($res.statusCode)) {
-            throw ApiException($res.statusCode, 'HTTP ${$res.statusCode}', body: $res.bodyString, headers: $res.headers);
+            throw ApiException($res.statusCode, 'HTTP ${$res.statusCode}', body: $res.bodyString, headers: $res.headers{{#vendorExtensions.x-dart-errors}}, model: super.errorModel($res, _{{nickname}}Errors){{/vendorExtensions.x-dart-errors}});
         }
 {{/other}}
 {{#bytes}}
@@ -168,6 +168,15 @@ class {{classname}} extends BaseApi {
     }
 {{/stream}}
 {{/vendorExtensions.x-dart-return}}
+{{#vendorExtensions.x-dart-errors}}
+
+    /// The models the bodies of `{{nickname}}`'s other statuses read as.
+    static Object? _{{nickname}}Errors(int status, Object? json) => switch (status) {
+{{#cases}}
+        {{{.}}},
+{{/cases}}
+    };
+{{/vendorExtensions.x-dart-errors}}
 {{/operation}}
 {{/operations}}
 }
