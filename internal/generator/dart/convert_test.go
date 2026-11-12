@@ -43,7 +43,7 @@ func TestConvert(t *testing.T) {
 		{
 			"list of nullable models", &codegen.CodegenProperty{IsArray: true, Items: &codegen.CodegenProperty{IsModel: true, DataType: "Pet", IsNullable: true}}, "List<Pet?>",
 			"(x as List<Object?>).map((e) => e == null ? null : Pet.fromJson(e as Map<String, Object?>)).toList()",
-			"x.map((e) => e == null ? null : e.toJson()).toList()",
+			"x.map((e) => e?.toJson()).toList()",
 		},
 		{"list of strings stays as it is", &codegen.CodegenProperty{IsArray: true, Items: &codegen.CodegenProperty{IsString: true}}, "List<String>", "(x as List<Object?>).map((e) => e as String).toList()", "x"},
 	}

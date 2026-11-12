@@ -43,7 +43,7 @@ typedef {{classname}} = {{{vendorExtensions.x-dart-alias-type}}};
 {{#vendorExtensions.x-dart-doc}}
 {{{.}}}
 {{/vendorExtensions.x-dart-doc}}
-/// [value] is the JSON value as decoded: one of {{#oneOf}}{{{.}}}, {{/oneOf}}{{#anyOf}}{{{.}}}, {{/anyOf}}not told apart.
+/// [value] is the JSON value as decoded: one of {{#oneOf}}`{{{.}}}`, {{/oneOf}}{{#anyOf}}`{{{.}}}`, {{/anyOf}}not told apart.
 class {{classname}}(final Object? value) {
     factory {{classname}}.fromJson(Object? json) => {{classname}}(json);
 

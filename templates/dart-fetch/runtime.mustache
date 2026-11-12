@@ -288,15 +288,20 @@ void addQuery(Map<String, List<String>> query, String name, Object? value, Strin
 
     if (value is List) {
         final items = value.map(paramText);
-        if (explode) return items.forEach((item) => add(name, item));
+        final separator = switch (style) { 'spaceDelimited' => ' ', 'pipeDelimited' => '|', _ => ',' };
 
-        return add(name, items.join(switch (style) { 'spaceDelimited' => ' ', 'pipeDelimited' => '|', _ => ',' }));
+        for (final item in explode ? items : [items.join(separator)]) {
+            add(name, item);
+        }
+
+        return;
     }
 
     final pairs = _pairs(value as Map);
-    if (explode) return pairs.forEach((pair) => add(pair.$1, pair.$2));
 
-    add(name, pairs.map((pair) => '${pair.$1},${pair.$2}').join(','));
+    for (final (key, text) in explode ? pairs : [(name, pairs.map((pair) => '${pair.$1},${pair.$2}').join(','))]) {
+        add(key, text);
+    }
 }
 
 /// The text of [value] for the path parameter [name] in the OpenAPI [style]
@@ -418,14 +423,24 @@ class Multipart {
         if (_absent(value)) return;
 
         if (value is UploadFile) return _part(name, value.bytes, filename: value.filename ?? name);
-        if (value is List<UploadFile>) return value.forEach((file) => add(name, file, explode));
         if (value is! List && value is! Map) return _part(name, utf8.encode(paramText(value)));
+
+        if (value is List<UploadFile>) {
+            for (final file in value) {
+                add(name, file, explode);
+            }
+
+            return;
+        }
 
         if (value is List && value.every((item) => item is! List && item is! Map)) {
             final items = value.map(paramText);
-            if (!explode) return _part(name, utf8.encode(items.join(',')));
 
-            return items.forEach((item) => _part(name, utf8.encode(item)));
+            for (final item in explode ? items : [items.join(',')]) {
+                _part(name, utf8.encode(item));
+            }
+
+            return;
         }
 
         _part(name, utf8.encode(jsonEncode(value)), contentType: 'application/json');

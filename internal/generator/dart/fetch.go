@@ -358,6 +358,13 @@ func orNull(x, expr string) string {
 		return x
 	}
 
+	// A method of x: x?.toJson().
+	for _, receiver := range []string{x + "!.", x + "."} {
+		if rest, ok := strings.CutPrefix(expr, receiver); ok {
+			return x + "?." + rest
+		}
+	}
+
 	return x + " == null ? null : " + expr
 }
 
@@ -765,7 +772,9 @@ func (g *FetchGenerator) escapeOperationId(op *codegen.CodegenOperation, taken m
 		}
 	}
 
-	if g.IsReservedWord(op.Nickname) || slices.Contains(apiMembers, op.Nickname) {
+	// Dart's own words only: the names the runtime declares are types, which
+	// a method called uploadFile does not hide.
+	if ReservedWords[strings.ToLower(op.Nickname)] || slices.Contains(apiMembers, op.Nickname) {
 		op.Nickname += "_"
 	}
 }
