@@ -102,14 +102,22 @@ class {{classname}} extends BaseApi {
         $body = {{{vendorExtensions.x-dart-body}}};
 {{/vendorExtensions.x-dart-optional}}
 {{/bodyParam}}
-{{#hasFormParams}}
+{{#vendorExtensions.x-dart-form}}
         final $form = <String, List<String>>{};
 {{#formParams}}
         {{#vendorExtensions.x-dart-optional}}if ({{paramName}} != null) {{/vendorExtensions.x-dart-optional}}addQuery($form, {{{vendorExtensions.x-dart-key}}}, {{{vendorExtensions.x-dart-json}}}, {{{vendorExtensions.x-dart-style}}});
 {{/formParams}}
         $headers['Content-Type'] = 'application/x-www-form-urlencoded';
         $body = encodeFormData($form);
-{{/hasFormParams}}
+{{/vendorExtensions.x-dart-form}}
+{{#vendorExtensions.x-dart-multipart}}
+        final $parts = Multipart();
+{{#formParams}}
+        {{#vendorExtensions.x-dart-optional}}if ({{paramName}} != null) {{/vendorExtensions.x-dart-optional}}$parts.add({{{vendorExtensions.x-dart-key}}}, {{{vendorExtensions.x-dart-json}}}, {{vendorExtensions.x-dart-explode}});
+{{/formParams}}
+        $headers['Content-Type'] = $parts.contentType;
+        $body = $parts.close();
+{{/vendorExtensions.x-dart-multipart}}
 
         return HttpRequest(
             method: HttpMethod.{{#lambda.lowercase}}{{httpMethod}}{{/lambda.lowercase}},

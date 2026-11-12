@@ -53,7 +53,13 @@ Object? fromWire(TypeMirror t, Object? v) {
 
   if (v is Map && (v.containsKey(r'$file') || v.containsKey(r'$bytes'))) {
     final c = (v[r'$file'] ?? v[r'$bytes']) as Map;
-    return c['base64'] != null ? base64Decode(c['base64'] as String) : utf8.encode((c['text'] ?? '') as String);
+    final bytes = c['base64'] != null ? base64Decode(c['base64'] as String) : utf8.encode((c['text'] ?? '') as String);
+    // A form's file is the client's UploadFile, with its name.
+    if (t is ClassMirror && MirrorSystem.getName(t.simpleName) == 'UploadFile') {
+      return t.newInstance(Symbol(''), [bytes], {#filename: c['name'] as String?}).reflectee;
+    }
+
+    return bytes;
   }
 
   if (t is ClassMirror && t.typeArguments.isNotEmpty) {

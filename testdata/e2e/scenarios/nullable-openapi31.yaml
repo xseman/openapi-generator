@@ -12,4 +12,3 @@ cases:
     args: { id: "1", file: { $file: { name: p.png, base64: iVBORw== } }, caption: hi, tags: [a, b], labels: [x, y] }
     request: { body: { file: [{ filename: p.png, base64: iVBORw== }], caption: [hi], tags: [a, b], labels: ["x,y"] } }
     response: { status: 204 }
-    skip: { dart-fetch: "request: invalid for the spec: request body has an error: header Content-Type has unexpected value \"application/x-www-form-urlencoded\"" }

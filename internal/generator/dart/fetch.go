@@ -462,6 +462,7 @@ func (g *FetchGenerator) PostProcessOperations(ops []*codegen.CodegenOperation) 
 // signature and arguments its three methods share.
 func (g *FetchGenerator) paramExtensions(op *codegen.CodegenOperation, ext map[string]any) {
 	enums := []map[string]any{}
+	files := false
 
 	var signature, args []string
 
@@ -477,13 +478,18 @@ func (g *FetchGenerator) paramExtensions(op *codegen.CodegenOperation, ext map[s
 		optional := !p.Required || p.IsNullable
 		value := g.toJSON(prop, p.ParamName, enum)
 
-		// A file is its bytes, which JSON has no type for.
+		// A file is its bytes, which JSON has no type for: a part of a
+		// form with its name, the whole of a body.
 		switch {
-		case p.IsArray && p.IsFile:
-			t = "List<Uint8List>"
+		case p.IsFormParam && p.IsArray && p.IsFile:
+			t = "List<UploadFile>"
+		case p.IsFormParam && (p.IsFile || p.IsBinary):
+			t = "UploadFile"
 		case p.IsFile, p.IsBinary:
 			t = "Uint8List"
 		}
+
+		files = files || p.IsFormParam && (p.IsFile || p.IsBinary)
 
 		if optional {
 			t = Nullable(t)
@@ -518,6 +524,11 @@ func (g *FetchGenerator) paramExtensions(op *codegen.CodegenOperation, ext map[s
 		args = append(args, p.ParamName+": "+p.ParamName)
 	}
 
+	// A form with a file goes as multipart whatever the spec declares, as
+	// url-encoding has no place for its bytes.
+	multipart := len(op.FormParams) > 0 && (op.IsMultipart || files)
+	ext["x-dart-multipart"] = multipart
+	ext["x-dart-form"] = len(op.FormParams) > 0 && !multipart
 	ext["x-dart-enums"] = enums
 	ext["x-dart-args"] = strings.Join(args, ", ")
 	ext["x-dart-signature"] = ""
@@ -658,7 +669,7 @@ func (g *FetchGenerator) addExtraReservedWords() {
 		"HttpRequest", "HttpResponse", "HttpSender", "HttpMethod",
 		"JsonApiResponse", "VoidApiResponse", "TextApiResponse", "BlobApiResponse",
 		"Middleware", "RequestContext", "ResponseContext",
-		"defaultHttpSender", "encodeFormData", "encodeQueryParam",
+		"defaultHttpSender", "encodeFormData", "encodeQueryParam", "UploadFile", "Multipart",
 		// Members every class has, or a model declares: a property of the
 		// same name would override them.
 		"toJson", "fromJson", "hashCode", "runtimeType", "toString", "noSuchMethod",

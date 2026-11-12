@@ -339,8 +339,8 @@ cases:
     args: { x-tags: [a, b], x-ids: [1, 2], x-colors: [red, light green] }
     result: { tags: [a, b], ids: [1, 2], colors: [red, light green] }
     skip:
-      dart-fetch: "error: 422 {\"detail\":[{\"type\":\"int_parsing\",\"loc\":[\"header\",\"x-ids\",0],\"msg\":\"Input should be a valid integer, unable to parse string as an "
       go-fetch: &listHeader "a list header goes as one comma-joined line, as the spec's simple style says; FastAPI reads repeated lines only (422 on \"1,2\")"
+      dart-fetch: *listHeader
       typescript-fetch: *listHeader
 
   # ------------------------------------------------------------ items
@@ -431,17 +431,14 @@ cases:
       labels: [x, y]
       meta: '{"k":1}'
     result: [{ name: docs/a b.txt, size: 5, labels: "x|y", meta: '{"k":1}' }, { name: docs/ž.bin, size: 2 }]
-    skip: { dart-fetch: "error: 422 {\"detail\":[{\"type\":\"value_error\",\"loc\":[\"body\",\"files\",0],\"msg\":\"Value error, Expected UploadFile, received: <class 'str'>\",\"inpu" }
   - name: duplicate file is a 409
     op: uploadFiles
     args: { files: [{ $file: { name: a b.txt, text: again } }], folder: docs }
     error: { status: 409 }
-    skip: { dart-fetch: "error.status: want 409, got 422" }
   - name: bool form field
     op: uploadFiles
     args: { files: [{ $file: { name: a b.txt, text: again } }], folder: docs, overwrite: true }
     result: [{ name: docs/a b.txt, size: 5 }]
-    skip: { dart-fetch: "error: 422 {\"detail\":[{\"type\":\"value_error\",\"loc\":[\"body\",\"files\",0],\"msg\":\"Value error, Expected UploadFile, received: <class 'str'>\",\"inpu" }
   - name: typed form, lists as repeated keys
     op: submitForm
     args: { day: "2024-01-31", when: "2024-03-01T10:00:00Z", price: "19.99", color: light green, tags: [a, "b,c"], colors: [red, dark-blue], days: ["2024-01-31", "2024-02-29"], qty: 0, agree: true }
@@ -455,22 +452,18 @@ cases:
     op: uploadModel
     args: { folder: docs, files: [{ $file: { name: a.txt, text: abc } }, { $file: { name: b.txt, text: de } }], labels: [x, y] }
     result: { folder: docs, files: { a.txt: 3, b.txt: 2 }, labels: [x, y], cover: null }
-    skip: { dart-fetch: "error: 422 {\"detail\":[{\"type\":\"value_error\",\"loc\":[\"body\",\"files\",0],\"msg\":\"Value error, Expected UploadFile, received: <class 'str'>\",\"inpu" }
   - name: a form model's optional file given
     op: uploadModel
     args: { folder: docs, files: [{ $file: { name: a.txt, text: abc } }], cover: { $file: { name: c.png, text: C } } }
     result: { files: { a.txt: 3 }, cover: c.png }
-    skip: { dart-fetch: "error: 422 {\"detail\":[{\"type\":\"value_error\",\"loc\":[\"body\",\"files\",0],\"msg\":\"Value error, Expected UploadFile, received: <class 'str'>\",\"inpu" }
   - name: optional file left out
     op: uploadAvatar
     args: { image: { $file: { name: i.png, text: "12345" } } }
     result: { image: 5, thumbnail: -1 }
-    skip: { dart-fetch: "error: 422 {\"detail\":[{\"type\":\"value_error\",\"loc\":[\"body\",\"image\"],\"msg\":\"Value error, Expected UploadFile, received: <class 'str'>\",\"input\"" }
   - name: download by a path with a slash and unicode
     op: downloadFile
     args: { name: docs/ž.bin }
     result: AP8=
-    skip: { dart-fetch: "error: 404 {\"type\":\"about:blank\",\"title\":\"Not found\",\"status\":404,\"detail\":\"docs/ž.bin\"}" }
   - name: a binary response without a schema, next to JSON
     op: getLogo
     result: iVBORw0KGgoAAAANSUhEUv8=

@@ -4,8 +4,9 @@ import 'dart:async';
 import 'dart:convert';
 {{#useDartIoSender}}
 import 'dart:io' show HttpClient;
-import 'dart:typed_data';
 {{/useDartIoSender}}
+import 'dart:math';
+import 'dart:typed_data';
 
 /// Default base path for this client.
 const String basePath = '{{basePath}}';
@@ -314,6 +315,59 @@ void addCookie(Map<String, String> headers, String name, Object? value, bool exp
     if (text == null) return;
 
     headers.update('Cookie', (cookies) => '$cookies; $name=$text', ifAbsent: () => '$name=$text');
+}
+
+/// A file in a multipart request.
+class UploadFile(final List<int> bytes, {final String? filename});
+
+/// The body of a multipart/form-data request, a part at a time.
+class Multipart {
+    final String _boundary = 'dart-${List.generate(4, (_) => Random().nextInt(1 << 32).toRadixString(16)).join()}';
+    final BytesBuilder _body = BytesBuilder(copy: false);
+
+    /// The Content-Type header that names the boundary of [close]'s bytes.
+    String get contentType => 'multipart/form-data; boundary=$_boundary';
+
+    /// Adds the form field [name] holding [value]: an [UploadFile] as a file
+    /// part, a list of them as one part each, a list of scalars one part
+    /// each (one comma-separated part unless [explode]), an object as a JSON
+    /// part; nothing for an absent value.
+    void add(String name, Object? value, bool explode) {
+        if (_absent(value)) return;
+
+        if (value is UploadFile) return _part(name, value.bytes, filename: value.filename ?? name);
+        if (value is List<UploadFile>) return value.forEach((file) => add(name, file, explode));
+        if (value is! List && value is! Map) return _part(name, utf8.encode(paramText(value)));
+
+        if (value is List && value.every((item) => item is! List && item is! Map)) {
+            final items = value.map(paramText);
+            if (!explode) return _part(name, utf8.encode(items.join(',')));
+
+            return items.forEach((item) => _part(name, utf8.encode(item)));
+        }
+
+        _part(name, utf8.encode(jsonEncode(value)), contentType: 'application/json');
+    }
+
+    void _part(String name, List<int> bytes, {String? filename, String? contentType}) {
+        String quoted(String text) => text.replaceAll(r'\', r'\').replaceAll('"', r'\"');
+
+        final file = filename == null ? '' : '; filename="${quoted(filename)}"';
+        final type = contentType ?? (filename == null ? null : 'application/octet-stream');
+
+        _body.add(utf8.encode('--$_boundary\r\nContent-Disposition: form-data; name="${quoted(name)}"$file\r\n'));
+        if (type != null) _body.add(utf8.encode('Content-Type: $type\r\n'));
+        _body.add(utf8.encode('\r\n'));
+        _body.add(bytes);
+        _body.add(utf8.encode('\r\n'));
+    }
+
+    /// The bytes of the body, after its last part.
+    Uint8List close() {
+        _body.add(utf8.encode('--$_boundary--\r\n'));
+
+        return _body.takeBytes();
+    }
 }
 
 /// The day of [value] as OpenAPI's `date` writes it, 2024-01-31.
