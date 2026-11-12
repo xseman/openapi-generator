@@ -86,10 +86,10 @@ unchanged, as a server that adds a value expects: `Status('archived')`. A
 
 A union's variants are named after their member, `PetCat(Cat value)` or
 `PetString(String value)` for a union `Pet`, so a `switch` over one is
-exhaustive. A union listed inline is named after where it is: `ItemPrice`
-for the property `price` of `Item`, `FindPetsResult` for a result. A number
-in a union is a `num`, the int or the double it came as. A switch over the
-union `Pet`:
+exhaustive. An object or a union listed inline is a class named after where
+it is: `ItemPrice` for the property `price` of `Item`, `FindPetsResult` for
+a result, `AddPetBody` for a body. A number in a union is a `num`, the int
+or the double it came as. A switch over the union `Pet`:
 
 ```dart
 final text = switch (pet) {
@@ -121,16 +121,15 @@ goes as multipart whatever the spec declares.
 
 A `Configuration` sends through the platform's own sender, picked by a
 conditional import: one `dart:io` `HttpClient` on the VM and Flutter, whose
-connections stay open between requests, `fetch` in a browser. Call
-`close()` on the configuration when done, or the program waits for the
-connections to idle out. `Configuration(httpSender: ...)` replaces the
-transport, which then honours `HttpRequest.abortTrigger` itself, and `Configuration.middleware` runs `pre`, `post` and `onError`
-hooks around it.
+connections stay open between requests, `fetch` in a browser. Call `close()`
+on the configuration when done, or the program waits for the connections to
+idle out. `Configuration(httpSender: ...)` replaces the transport, which
+then honours `HttpRequest.abortTrigger` itself, and
+`Configuration.middleware` runs `pre`, `post` and `onError` hooks around it.
 
 ## Limits
 
 - A discriminator on an `allOf` parent reads the parent only; the
   children's own properties are dropped.
 - A date-time without an offset is read as local time and sent in UTC.
-- An inline object is a `Map<String, Object?>`.
 - Schema defaults are not constructor defaults.

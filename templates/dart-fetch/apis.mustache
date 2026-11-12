@@ -188,6 +188,9 @@ class {{classname}} extends BaseApi {
 }
 {{#operations}}
 {{#operation}}
+{{#vendorExtensions.x-dart-structs}}
+{{>struct}}
+{{/vendorExtensions.x-dart-structs}}
 {{#vendorExtensions.x-dart-enums}}
 {{>enum}}
 {{/vendorExtensions.x-dart-enums}}

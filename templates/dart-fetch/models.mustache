@@ -6,31 +6,11 @@ import 'models.dart';
 {{#models}}
 {{#model}}
 {{#vendorExtensions.x-dart-struct}}
-
-{{#vendorExtensions.x-dart-doc}}
-{{{.}}}
-{{/vendorExtensions.x-dart-doc}}
-class {{classname}}({{#vendorExtensions.x-dart-has-fields}}{
-{{#vendorExtensions.x-dart-fields}}
-{{#doc}}
-    {{{.}}}
-{{/doc}}
-    {{{decl}}},
-{{/vendorExtensions.x-dart-fields}}
-}{{/vendorExtensions.x-dart-has-fields}}) {
-    factory {{classname}}.fromJson(Map<String, Object?> json) => {{classname}}(
-{{#vendorExtensions.x-dart-fields}}
-        {{{fromJson}}},
-{{/vendorExtensions.x-dart-fields}}
-    );
-
-    Map<String, Object?> toJson() => {
-{{#vendorExtensions.x-dart-fields}}
-        {{{toJson}}},
-{{/vendorExtensions.x-dart-fields}}
-    };
-}
+{{>struct}}
 {{/vendorExtensions.x-dart-struct}}
+{{#vendorExtensions.x-dart-structs}}
+{{>struct}}
+{{/vendorExtensions.x-dart-structs}}
 {{#vendorExtensions.x-dart-alias}}
 
 {{#vendorExtensions.x-dart-doc}}

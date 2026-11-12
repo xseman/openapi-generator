@@ -1,6 +1,7 @@
 package dart
 
 import (
+	"slices"
 	"testing"
 
 	"github.com/xseman/openapi-generator/internal/codegen"
@@ -80,7 +81,8 @@ func TestStructFields(t *testing.T) {
 		AdditionalProperties: &codegen.CodegenProperty{IsInteger: true},
 	}})
 
-	fields, _ := models[0].VendorExtensions["x-dart-fields"].([]map[string]any)
+	decl, _ := models[0].VendorExtensions["x-dart-struct"].(map[string]any)
+	fields, _ := decl["fields"].([]map[string]any)
 	want := [][3]string{
 		{"required final int id", `id: (json["id"] as num).toInt()`, `"id": id`},
 		{"final DateTime? bornOn", `bornOn: json["born_on"] == null ? null : DateTime.parse(json["born_on"] as String)`, `if (bornOn case final v?) "born_on": formatDate(v)`},
@@ -103,5 +105,45 @@ func TestStructFields(t *testing.T) {
 				t.Errorf("field %d %s = %v, want %s", i, key, got, w[j])
 			}
 		}
+	}
+}
+
+func TestInlineStruct(t *testing.T) {
+	g := NewFetchGenerator()
+	address := &codegen.CodegenProperty{
+		Name: "address", BaseName: "address", OpenApiType: "object",
+		Vars: []*codegen.CodegenProperty{{Name: "city", BaseName: "city", IsString: true, Required: true}},
+	}
+	user := &codegen.CodegenProperty{
+		Name: "users", BaseName: "users", IsArray: true,
+		Items: &codegen.CodegenProperty{OpenApiType: "object", Vars: []*codegen.CodegenProperty{
+			{Name: "name", BaseName: "name", IsString: true, Required: true},
+			address,
+		}},
+	}
+	models := g.PostProcessModels([]*codegen.CodegenModel{{Classname: "Team", SchemaName: "Team", AllVars: []*codegen.CodegenProperty{user}}})
+
+	decl, _ := models[0].VendorExtensions["x-dart-struct"].(map[string]any)
+	fields, _ := decl["fields"].([]map[string]any)
+	structs, _ := models[0].VendorExtensions["x-dart-structs"].([]map[string]any)
+
+	got := []any{fields[0]["decl"], fields[0]["fromJson"], fields[0]["toJson"]}
+	want := []any{
+		"final List<TeamUsers>? users",
+		`users: json["users"] == null ? null : (json["users"] as List<Object?>).map((e) => TeamUsers.fromJson(e as Map<String, Object?>)).toList()`,
+		`if (users case final v?) "users": v.map((e) => e.toJson()).toList()`,
+	}
+
+	if !slices.Equal(got, want) {
+		t.Errorf("users = %q, want %q", got, want)
+	}
+
+	var names []any
+	for _, s := range structs {
+		names = append(names, s["name"])
+	}
+
+	if !slices.Equal(names, []any{"TeamUsersAddress", "TeamUsers"}) {
+		t.Errorf("inline classes = %v, want TeamUsersAddress, TeamUsers", names)
 	}
 }

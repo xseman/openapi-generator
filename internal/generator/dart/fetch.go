@@ -176,15 +176,16 @@ func (g *FetchGenerator) PostProcessModels(models []*codegen.CodegenModel) []*co
 		ext := clone(m.VendorExtensions)
 		ext["x-dart-doc"] = docLines(m.Description)
 		ext["x-dart-enums"] = []map[string]any{}
+		ext["x-dart-structs"] = []map[string]any{}
 		ext["x-dart-"+kind] = true
 
 		unions := []map[string]any{}
 
 		switch kind {
 		case "struct":
-			fields, inline := g.structFields(m)
-			ext["x-dart-fields"] = fields
-			ext["x-dart-has-fields"] = len(fields) > 0
+			inline := newInlineTypes()
+			ext["x-dart-struct"] = g.structDecl(m.Classname, m.Description, m, inline)
+			ext["x-dart-structs"] = inline.structs
 			ext["x-dart-enums"] = inline.enums
 			unions = inline.unions
 
@@ -290,21 +291,30 @@ func allVars(m *codegen.CodegenModel, bySchema map[string]*codegen.CodegenModel,
 	return out
 }
 
+// structDecl describes the class name for the properties of m, and declares
+// in inline the types its properties list inline.
+func (g *FetchGenerator) structDecl(name, description string, m *codegen.CodegenModel, inline *inlineTypes) map[string]any {
+	fields := g.structFields(name, m, inline)
+
+	return map[string]any{"name": name, "doc": docLines(description), "fields": fields, "hasFields": len(fields) > 0}
+}
+
 // structFields types the properties of a struct model, writes the lines
-// that read and write each in JSON, and declares its inline enums. A
+// that read and write each in JSON, and declares in inline the types they
+// list inline, named after the class name. A
 // property that is optional and nullable is an Opt: null when its key is
 // absent, an Opt of null when the key holds null. A model that takes
 // additionalProperties next to its properties gets a map field for the keys
 // it does not declare.
-func (g *FetchGenerator) structFields(m *codegen.CodegenModel) (fields []map[string]any, inline *inlineTypes) {
+func (g *FetchGenerator) structFields(class string, m *codegen.CodegenModel, inline *inlineTypes) []map[string]any {
 	taken := make(map[string]int)
-	fields, inline = []map[string]any{}, newInlineTypes()
+	fields := []map[string]any{}
 	declared := make([]string, 0, len(m.AllVars))
 
 	for _, v := range m.AllVars {
 		name := uniqueName(taken, v.Name)
 
-		enum := g.inline(inline, v, m.Classname+Camelize(v.Name, false))
+		enum := g.inline(inline, v, class+Camelize(v.Name, false))
 
 		t := g.typeOf(v, enum)
 		key := Literal(v.BaseName)
@@ -340,7 +350,7 @@ func (g *FetchGenerator) structFields(m *codegen.CodegenModel) (fields []map[str
 	}
 
 	if !m.IsAdditionalPropertiesTrue && m.AdditionalProperties == nil {
-		return fields, inline
+		return fields
 	}
 
 	name := uniqueName(taken, "additionalProperties")
@@ -359,7 +369,7 @@ func (g *FetchGenerator) structFields(m *codegen.CodegenModel) (fields []map[str
 		"toJson":   spread,
 	})
 
-	return fields, inline
+	return fields
 }
 
 // optionalEntry is the map entry of key that leaves out a null name;
@@ -398,18 +408,19 @@ func leaf(p *codegen.CodegenProperty) *codegen.CodegenProperty {
 	return p
 }
 
-// inlineTypes collects the enums and unions declared for the values that
-// properties or parameters list inline, for the file that uses them.
-type inlineTypes struct{ enums, unions []map[string]any }
+// inlineTypes collects the classes, enums and unions declared for the
+// values that properties or parameters list inline, for the file that uses
+// them.
+type inlineTypes struct{ structs, enums, unions []map[string]any }
 
 func newInlineTypes() *inlineTypes {
-	return &inlineTypes{enums: []map[string]any{}, unions: []map[string]any{}}
+	return &inlineTypes{structs: []map[string]any{}, enums: []map[string]any{}, unions: []map[string]any{}}
 }
 
-// inline declares in types the enum or the union that p, or the element of
-// its lists and maps, lists inline, called name (an enum nameEnum), and
-// returns the name it took; "" when p lists none, refers to a model, or an
-// enum of it mixes types.
+// inline declares in types the class, the enum or the union that p, or the
+// element of its lists and maps, lists inline, called name (an enum
+// nameEnum), and returns the name it took; "" when p lists none, refers to a
+// model, or an enum of it mixes types.
 func (g *FetchGenerator) inline(types *inlineTypes, p *codegen.CodegenProperty, name string) string {
 	l := leaf(p)
 	if l == nil || g.modelOf(l) != "" {
@@ -425,6 +436,15 @@ func (g *FetchGenerator) inline(types *inlineTypes, p *codegen.CodegenProperty, 
 		}
 
 		types.unions = append(types.unions, decl)
+
+		return name
+	}
+
+	// An object with properties, as go-fetch declares a struct for one.
+	if len(l.Vars) > 0 {
+		name = uniqueName(g.types, name)
+		object := &codegen.CodegenModel{AllVars: l.Vars, AdditionalProperties: l.AdditionalProperties}
+		types.structs = append(types.structs, g.structDecl(name, l.Description, object, types))
 
 		return name
 	}
@@ -547,6 +567,7 @@ func (g *FetchGenerator) PostProcessOperations(ops []*codegen.CodegenOperation) 
 		inline := newInlineTypes()
 		g.paramExtensions(op, ext, inline)
 		g.resultExtensions(op, ext, inline)
+		ext["x-dart-structs"] = inline.structs
 		ext["x-dart-enums"] = inline.enums
 		ext["x-dart-unions"] = inline.unions
 		op.VendorExtensions = ext
@@ -673,7 +694,7 @@ func asProperty(p *codegen.CodegenParameter) *codegen.CodegenProperty {
 		IsEnum: p.IsEnum, AllowableValues: p.AllowableValues,
 		IsString: p.IsString, IsDate: p.IsDate, IsDateTime: p.IsDateTime,
 		IsInteger: p.IsInteger, IsLong: p.IsLong, IsNumber: p.IsNumber, IsFloat: p.IsFloat, IsDouble: p.IsDouble,
-		IsBoolean: p.IsBoolean,
+		IsBoolean: p.IsBoolean, Vars: p.Vars, AdditionalProperties: p.AdditionalProperties,
 	}
 }
 

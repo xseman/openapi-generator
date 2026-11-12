@@ -56,6 +56,8 @@ func (g *FetchGenerator) fromJSON(p *codegen.CodegenProperty, x, enum string) st
 		return model + ".fromJson(" + x + " as Map<String, Object?>)"
 	case model != "":
 		return model + ".fromJson(" + x + ")"
+	case enum != "" && len(p.Vars) > 0:
+		return enum + ".fromJson(" + x + " as Map<String, Object?>)"
 	case enum != "" && (p.IsEnum || len(inlineUnion(p)) > 0):
 		return enum + ".fromJson(" + x + ")"
 	}
@@ -111,7 +113,7 @@ func (g *FetchGenerator) toJSON(p *codegen.CodegenProperty, x, enum string) stri
 	switch {
 	case g.kinds[model] == "alias":
 		return g.toJSON(g.aliases[model], x, "")
-	case model != "", enum != "" && (p.IsEnum || len(inlineUnion(p)) > 0):
+	case model != "", enum != "" && (p.IsEnum || len(p.Vars) > 0 || len(inlineUnion(p)) > 0):
 		return x + ".toJson()"
 	case p.IsDate:
 		return "formatDate(" + x + ")"

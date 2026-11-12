@@ -84,7 +84,8 @@ func TestInlineUnion(t *testing.T) {
 	}})
 
 	ext := models[0].VendorExtensions
-	fields, _ := ext["x-dart-fields"].([]map[string]any)
+	decl, _ := ext["x-dart-struct"].(map[string]any)
+	fields, _ := decl["fields"].([]map[string]any)
 	unions, _ := ext["x-dart-unions"].([]map[string]any)
 
 	if len(fields) != 1 || len(unions) != 1 {

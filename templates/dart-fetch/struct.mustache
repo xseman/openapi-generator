@@ -1,0 +1,24 @@
+
+{{#doc}}
+{{{.}}}
+{{/doc}}
+class {{name}}({{#hasFields}}{
+{{#fields}}
+{{#doc}}
+    {{{.}}}
+{{/doc}}
+    {{{decl}}},
+{{/fields}}
+}{{/hasFields}}) {
+    factory {{name}}.fromJson(Map<String, Object?> json) => {{name}}(
+{{#fields}}
+        {{{fromJson}}},
+{{/fields}}
+    );
+
+    Map<String, Object?> toJson() => {
+{{#fields}}
+        {{{toJson}}},
+{{/fields}}
+    };
+}
