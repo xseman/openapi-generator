@@ -22,13 +22,20 @@ For browser targets, supply your own `HttpSender` via
 import 'package:{{pubName}}/{{pubName}}.dart';
 
 void main() async {
-  final config = Configuration(
-    basePath: '{{basePath}}',
-  );
+  final config = Configuration(basePath: '{{basePath}}');
   // final api = SomeApi(config);
-  // final result = await api.someOperation();
+
+  try {
+    // final result = await api.someOperation(id: 1);
+  } on ApiException catch (e) {
+    print('${e.statusCode}: ${e.body}');
+  }
 }
 ```
+
+Each operation has three methods: `someOperation` sends and decodes the
+result, `someOperationRaw` returns the `HttpResponse`, and
+`someOperationRequestOpts` builds the `HttpRequest` without sending it.
 
 ## Configuration
 

@@ -50,7 +50,7 @@ go install github.com/xseman/openapi-generator/cmd/openapi-generator@latest
 ### Client
 
 - [typescript-fetch](./templates/typescript-fetch/README.md)
-- [dart-fetch](./samples/dart-fetch/README.md)
+- [dart-fetch](./templates/dart-fetch/README.md)
 - [go-fetch](./templates/go-fetch/README.md)
 
 ### Server
