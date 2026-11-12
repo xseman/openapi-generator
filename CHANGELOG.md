@@ -1,5 +1,63 @@
 # Changelog
 
+## [0.5.0](https://github.com/xseman/openapi-generator/compare/v0.4.0...v0.5.0) (2026-11-12)
+
+
+### ⚠ BREAKING CHANGES
+
+* **dart-fetch:** accessToken is FutureOr<String> Function(String name, List<String> scopes), apiKey returns FutureOr<String>, and xxxRequestOpts returns a Future<HttpRequest>.
+* **dart-fetch:** an inline object is a class, not a Map<String, Object?>.
+* **dart-fetch:** an enum is no longer a Dart enum: a switch over one needs a default, and it has no name or index.
+* **dart-fetch:** the useDartIoSender option and defaultHttpSender are gone: the client runs on the web as generated. A program that made requests calls Configuration.close(), or waits for the idle connections.
+* **dart-fetch:** generated dart-fetch clients change shape. Integers are int and numbers double (were num), enum values are lowerCamelCase, an alias model is a typedef, an allOf model carries its ancestors' fields, a result is nullable only when the spec allows no body, a date is sent as YYYY-MM-DD, schema defaults are no longer constructor defaults, and the default sdkConstraint is ^3.13.0.
+
+### Features
+
+* **dart-fetch:** abort a call with abortTrigger ([80b8032](https://github.com/xseman/openapi-generator/commit/80b803299b315df85bb4081c31746575862c4c96))
+* **dart-fetch:** ask for a credential by scheme and scopes, at once or as a future ([b40f590](https://github.com/xseman/openapi-generator/commit/b40f5902ab91724dec0bc589ba9726796da6fa27))
+* **dart-fetch:** declare a class for an inline object ([2697e2e](https://github.com/xseman/openapi-generator/commit/2697e2e6083ec1b183131982288796f5df08800f))
+* **dart-fetch:** read an enum value the spec does not list ([6579cec](https://github.com/xseman/openapi-generator/commit/6579cec3218e130faab38a3e5b1958d6ee4f3232))
+* **dart-fetch:** read an error body into the model the spec declares ([252d43f](https://github.com/xseman/openapi-generator/commit/252d43fd39d9577b21adb517fd8dfd2f6f84a675))
+* **dart-fetch:** send multipart forms, files as UploadFile ([f682085](https://github.com/xseman/openapi-generator/commit/f6820857e450c40cca0daf4a3e0eb64af5ba2226))
+* **dart-fetch:** send through the platform's sender, fetch in a browser ([f7ede71](https://github.com/xseman/openapi-generator/commit/f7ede7138400cfc4b11690519ca6a12aea63fcb3))
+* **dart-fetch:** stream JSON Lines and server-sent events, tell 2xx bodies apart ([a5bf8d2](https://github.com/xseman/openapi-generator/commit/a5bf8d2fe766d3c2d593d5b13ebb19c11c2272b6))
+* **dart-fetch:** tell null from absent, keep undeclared keys ([1e5805a](https://github.com/xseman/openapi-generator/commit/1e5805af8d29f1510151e5cc74f1f1482cddca2d))
+* **dart-fetch:** type a union as a sealed class with a variant per member ([dec3195](https://github.com/xseman/openapi-generator/commit/dec319584fcb864b36cfc559f5d472e867f88864))
+* **dart-fetch:** type a union listed inline, keep a tagged value's own shape ([1e5222a](https://github.com/xseman/openapi-generator/commit/1e5222a914937d9e9ca18f8768ced51dbc40bde5))
+* **dart-fetch:** write parameters in their OpenAPI style ([24ec56c](https://github.com/xseman/openapi-generator/commit/24ec56cb22f81f37cb64230ec8b21fabe18b0396))
+
+
+### Bug Fixes
+
+* **dart-fetch:** build a multipart boundary dart2js can draw ([6edae22](https://github.com/xseman/openapi-generator/commit/6edae22e6ab2f9bdfed666f634fd8f2848980e96))
+* **dart-fetch:** build the client from the parser's flags, as go-fetch does ([ed2c727](https://github.com/xseman/openapi-generator/commit/ed2c727f21e3c734a014893257e3902925fd4bbc))
+* **dart-fetch:** call the inherited request and buildUri past a parameter of that name ([65279ad](https://github.com/xseman/openapi-generator/commit/65279ada9a7d5cb5199665960db18faaba7cb202))
+* **dart-fetch:** follow a redirect of any method on the VM as fetch does ([5a7f83f](https://github.com/xseman/openapi-generator/commit/5a7f83f6dccb59cce51fee007278b05eebe7c944))
+* **dart-fetch:** keep a description over several lines inside its comment ([3250f24](https://github.com/xseman/openapi-generator/commit/3250f24ca34468829a63ae20abc624aa5e7674ea))
+* **dart-fetch:** keep an operation's name beside a runtime type, pass the lints ([b190c36](https://github.com/xseman/openapi-generator/commit/b190c369ee6bb0440f519c4f772dd6181ad8727a))
+* **dart-fetch:** make a readOnly or writeOnly property optional ([63844a1](https://github.com/xseman/openapi-generator/commit/63844a1b513728c01f4155496a0af974f7865ab6))
+* **dart-fetch:** send a binary body as bytes, keep an operation's own name ([75eac3c](https://github.com/xseman/openapi-generator/commit/75eac3ceb1ed9858ea3d6ca500a752f90b1b3fd6))
+* **dart-fetch:** try each list or map member of a union in turn ([38c11e4](https://github.com/xseman/openapi-generator/commit/38c11e433b4e9a17f981ade0677475b866c6111d))
+* **dart-fetch:** try the next object member of a union when the best fit does not read ([811c8a1](https://github.com/xseman/openapi-generator/commit/811c8a1ece2a51d6894d02e7d21d1da91f86c938))
+
+
+### Documentation
+
+* **dart-fetch:** describe the generator, its types and its limits ([a596f15](https://github.com/xseman/openapi-generator/commit/a596f1595c28a94aa09a770a51e58c060080c50f))
+* **dart-fetch:** reflow the structFields comment ([9dc469a](https://github.com/xseman/openapi-generator/commit/9dc469ae077b3c9ed8eacddade2252dd27656748))
+
+
+### Automation
+
+* analyze the dart-fetch clients of the feature specs ([dd30c6f](https://github.com/xseman/openapi-generator/commit/dd30c6f9dc76b0dc6e71aaf82c8227bfaab82393))
+
+
+### Testing
+
+* **e2e:** analyze every dart-fetch client, record its gaps per case ([f2218f3](https://github.com/xseman/openapi-generator/commit/f2218f3925eb0ef27c1e264d5ccef397b8c205b4))
+* **e2e:** hold dart-fetch to every case ([188fa07](https://github.com/xseman/openapi-generator/commit/188fa07f7fb36bd958cc7e405748bb21b2615033))
+* **e2e:** send a POST to a 307 and expect its body to arrive ([3ca0c45](https://github.com/xseman/openapi-generator/commit/3ca0c451f822e29ab0c9e68c4634043b683f079c))
+
 ## [0.4.0](https://github.com/xseman/openapi-generator/compare/v0.3.0...v0.4.0) (2026-11-09)
 
 
