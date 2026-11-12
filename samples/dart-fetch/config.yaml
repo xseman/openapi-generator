@@ -8,4 +8,3 @@ additionalProperties:
     pubVersion: 1.0.0
     pubDescription: "Petstore API client (dart-fetch sample)"
     useDartIoSender: true
-    sdkConstraint: ">=3.13.0-0 <4.0.0"

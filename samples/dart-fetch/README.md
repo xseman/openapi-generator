@@ -27,7 +27,6 @@ go run ./cmd/openapi-generator generate \
     -p pubName=petstore_api \
     -p pubVersion=1.0.0 \
     -p 'pubDescription=Petstore API client (dart-fetch sample)' \
-    -p 'sdkConstraint=>=3.13.0-0 <4.0.0' \
     -p useDartIoSender=true \
     -o samples/dart-fetch/petstore-expanded
 ```

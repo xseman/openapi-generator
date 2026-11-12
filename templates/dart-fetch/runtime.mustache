@@ -2,8 +2,9 @@
 
 import 'dart:async';
 import 'dart:convert';
+{{#useDartIoSender}}
+import 'dart:io' show HttpClient;
 import 'dart:typed_data';
-{{#useDartIoSender}}import 'dart:io' show HttpClient;
 {{/useDartIoSender}}
 
 /// Default base path for this client.
@@ -36,7 +37,7 @@ class HttpRequest {
     final Uri url;
     final Map<String, String> headers;
 
-    /// Encoded request body. May be null, a String, or a List<int>.
+    /// Encoded request body. May be null, a String, or a `List<int>`.
     Object? body;
 
     HttpRequest copyWith({
@@ -64,6 +65,14 @@ class HttpResponse({
         final s = bodyString;
         if (s.isEmpty) return null;
         return jsonDecode(s);
+    }
+
+    /// The body of a text result: JSON sends it quoted, another media type
+    /// as it is.
+    String get bodyText {
+        final json = (headers['content-type'] ?? '').contains('json');
+
+        return json ? bodyJson as String : bodyString;
     }
 
     bool get isSuccessful => statusCode >= 200 && statusCode < 300;
@@ -220,30 +229,44 @@ class BaseApi(final Configuration configuration) {
         return response;
     }
 
-    /// Converts an arbitrary value into a list of query-string-safe strings.
+    /// The values a query parameter sends for [value], JSON as an API
+    /// method wrote it: one per item of a list.
     List<String> queryValues(Object? value) {
         if (value == null) return const <String>[];
-        if (value is Iterable) return value.map(_toQueryString).toList();
-        return <String>[_toQueryString(value)];
-    }
+        if (value is Iterable) return value.map(paramText).toList();
 
-    String _toQueryString(Object? value) {
-        if (value == null) return '';
-        if (value is DateTime) return value.toUtc().toIso8601String();
-        return value.toString();
+        return <String>[paramText(value)];
     }
 }
 
-/// Encodes a `Map<String, dynamic>` body as `application/x-www-form-urlencoded`.
+/// The text of [value] in a path, a query or a header.
+String paramText(Object? value) {
+    if (value == null) return '';
+    if (value is Iterable) return value.map(paramText).join(',');
+    if (value is DateTime) return value.toUtc().toIso8601String();
+
+    return value.toString();
+}
+
+/// Adds a cookie to the Cookie header of [headers].
+void addCookie(Map<String, String> headers, String name, String value) {
+    headers.update('Cookie', (cookies) => '$cookies; $name=$value', ifAbsent: () => '$name=$value');
+}
+
+/// The day of [value] as OpenAPI's `date` writes it, 2024-01-31.
+String formatDate(DateTime value) => value.toIso8601String().substring(0, 10);
+
+/// Encodes [form] as `application/x-www-form-urlencoded`: a list as its
+/// key once per item, null left out.
 String encodeFormData(Map<String, Object?> form) {
     final parts = <String>[];
+
     form.forEach((k, v) {
-        if (v != null) {
-            parts.add(
-                '${Uri.encodeQueryComponent(k)}=${Uri.encodeQueryComponent(v.toString())}',
-            );
+        for (final item in v is Iterable ? v : [?v]) {
+            parts.add('${Uri.encodeQueryComponent(k)}=${Uri.encodeQueryComponent(paramText(item))}');
         }
     });
+
     return parts.join('&');
 }
 

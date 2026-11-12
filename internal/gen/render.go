@@ -196,9 +196,6 @@ func (r *renderer) renderModels(baseData map[string]any, models []*generator.Cod
 			if r.tsGen != nil {
 				data["tsImports"] = toTsImports(model.Imports, r.tsGen)
 				data["oneOfImports"] = toTsImports(oneOfImportNames, r.tsGen)
-			} else if r.dartGen != nil {
-				data["dartImports"] = toDartImports(model.Imports, r.dartGen)
-				data["oneOfImports"] = toDartImports(oneOfImportNames, r.dartGen)
 			}
 
 			if r.tsGen != nil {

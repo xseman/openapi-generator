@@ -1,0 +1,23 @@
+
+{{#doc}}
+{{{.}}}
+{{/doc}}
+enum {{name}} {
+{{#values}}
+    {{name}}({{{literal}}}),
+{{/values}}
+    ; // mustache here has no -last: a trailing comma, then the end of the values
+
+    const {{name}}(this.value);
+
+    /// The value on the wire.
+    final {{{base}}} value;
+
+    /// Reads a {{name}} from its JSON value.
+    static {{name}} fromJson(Object? json) => values.firstWhere(
+        (v) => v.value == json,
+        orElse: () => throw ArgumentError.value(json, 'json', 'no {{name}}'),
+    );
+
+    {{{base}}} toJson() => value;
+}

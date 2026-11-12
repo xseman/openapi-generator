@@ -61,26 +61,6 @@ func applyDartAdditionalProperties(dc *config.DartFetchConfig, props map[string]
 	}
 }
 
-// toDartImports converts a list of model class names into the
-// {classname, filename} maps expected by the Dart templates.
-func toDartImports(imports []string, gen *dart.FetchGenerator) []map[string]string {
-	result := make([]map[string]string, 0, len(imports))
-	for _, imp := range imports {
-		className := gen.ToModelName(imp)
-		if className == "" || gen.IsPrimitive(className) {
-			continue
-		}
-
-		result = append(result, map[string]string{
-			"classname": className,
-			"className": className,
-			"filename":  gen.ToModelFilename(className),
-		})
-	}
-
-	return result
-}
-
 // generateDartModelIndex emits the per-folder barrel for lib/src/models.
 func generateDartModelIndex(models []*generator.CodegenModel, gen *dart.FetchGenerator) string {
 	var sb strings.Builder
@@ -124,7 +104,7 @@ func PrintDartFetchConfigHelp() {
 	fmt.Println("      Optional metadata fields for pubspec.yaml.")
 	fmt.Println()
 	fmt.Println("  sdkConstraint")
-	fmt.Println("      Dart SDK constraint. (Default: '>=3.0.0 <4.0.0')")
+	fmt.Println("      Dart SDK constraint. (Default: '^3.13.0')")
 	fmt.Println()
 	fmt.Println("  useDartIoSender")
 	fmt.Println("      Bundle a default HttpSender backed by dart:io. Set to false")

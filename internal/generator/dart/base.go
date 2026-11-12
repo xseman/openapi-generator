@@ -4,6 +4,7 @@ package dart
 import (
 	"maps"
 	"regexp"
+	"strconv"
 	"strings"
 	"unicode"
 
@@ -12,45 +13,18 @@ import (
 	"github.com/xseman/openapi-generator/internal/generator"
 )
 
-// TypeMapping maps OpenAPI types/formats to Dart types.
-//
-// The OpenAPI parser in this codebase emits TypeScript-shaped DataType strings
-// (Array<X>, { [key: string]: X; }, any). The Dart generator translates those
-// strings to Dart equivalents in a post-processing pass; see fetch.go.
+// TypeMapping maps OpenAPI types to the TypeScript-shaped DataType strings
+// the parser builds on (Array<X>, any, number): it tells a model from a
+// primitive by them. Dart types are derived from a property's flags and
+// tree instead, see DartType.
 var TypeMapping = map[string]string{
-	"Set":       "Set",
-	"set":       "Set",
-	"Array":     "List",
-	"array":     "List",
-	"List":      "List",
-	"boolean":   "bool",
-	"decimal":   "String",
-	"string":    "String",
-	"int":       "int",
-	"int32":     "int",
-	"int64":     "int",
-	"long":      "int",
-	"short":     "int",
-	"char":      "String",
-	"float":     "double",
-	"double":    "double",
-	"number":    "num",
-	"integer":   "int",
-	"object":    "Object?",
-	"Object":    "Object?",
-	"Map":       "Map<String, Object?>",
-	"map":       "Map<String, Object?>",
-	"date":      "DateTime",
-	"DateTime":  "DateTime",
-	"date-time": "DateTime",
-	"binary":    "List<int>",
-	"File":      "List<int>",
-	"file":      "List<int>",
-	"ByteArray": "String",
-	"UUID":      "String",
-	"URI":       "String",
-	"Error":     "Object",
-	"AnyType":   "Object?",
+	"array":   "Array",
+	"boolean": "boolean",
+	"integer": "number",
+	"number":  "number",
+	"object":  "any",
+	"string":  "string",
+	"AnyType": "any",
 }
 
 // ReservedWords is the set of Dart reserved words and built-in identifiers
@@ -194,27 +168,12 @@ func (g *BaseGenerator) EscapeReservedWord(name string) string {
 	return name
 }
 
-// GetSchemaType returns the Dart type for an OpenAPI schema type.
-func (g *BaseGenerator) GetSchemaType(schemaType, format string) string {
-	if format != "" {
-		key := schemaType + ":" + format
-		if mapped, ok := g.TypeMapping[key]; ok {
-			return mapped
-		}
-
-		if mapped, ok := g.TypeMapping[format]; ok {
-			return mapped
-		}
-	}
-
-	if mapped, ok := g.TypeMapping[schemaType]; ok {
-		return mapped
-	}
-
-	return schemaType
+// GetSchemaType returns the parser's DataType string for an OpenAPI type.
+func (g *BaseGenerator) GetSchemaType(schemaType, _ string) string {
+	return g.TypeMapping[schemaType]
 }
 
-// GetTypeDeclaration returns the Dart type declaration for a schema.
+// GetTypeDeclaration returns the parser's DataType string for an OpenAPI type.
 func (g *BaseGenerator) GetTypeDeclaration(schemaType, format string) string {
 	return g.GetSchemaType(schemaType, format)
 }
@@ -392,6 +351,120 @@ func (g *BaseGenerator) GetConfig() *config.GeneratorConfig { return g.Config }
 
 // SetConfig sets the generator config.
 func (g *BaseGenerator) SetConfig(cfg *config.GeneratorConfig) { g.Config = cfg }
+
+// DartType is the Dart type of a property, from its flags and its Items
+// tree. named is the class at its leaf: the model it refers to or the enum
+// declared for its inline values; "" types the leaf by its flags, an inline
+// object as a map and a union as Object?.
+func DartType(p *codegen.CodegenProperty, named string) string {
+	switch {
+	case p == nil:
+		return "Object?"
+	case p.IsArray:
+		return "List<" + itemType(p.Items, named) + ">"
+	case p.IsMap:
+		return "Map<String, " + itemType(p.Items, named) + ">"
+	case named != "":
+		return named
+	case isComposite(p.DataType) || p.ComposedSchemas != nil:
+		// ponytail: an inline union is the JSON value as decoded; the
+		// upgrade is the sealed class a union model gets.
+		return "Object?"
+	}
+
+	switch {
+	case p.IsDate, p.IsDateTime:
+		return "DateTime"
+	case p.IsString:
+		return "String"
+	case p.IsInteger, p.IsLong:
+		return "int"
+	case p.IsNumber, p.IsFloat, p.IsDouble:
+		return "double"
+	case p.IsBoolean:
+		return "bool"
+	case p.OpenApiType == "object":
+		return "Map<String, Object?>"
+	}
+
+	return "Object?"
+}
+
+// itemType is the Dart type of a list element or map value: DartType,
+// nullable when the item is.
+func itemType(p *codegen.CodegenProperty, named string) string {
+	t := DartType(p, named)
+	if p != nil && p.IsNullable {
+		return Nullable(t)
+	}
+
+	return t
+}
+
+// Nullable is t with a question mark, once: Object? takes no second one.
+func Nullable(t string) string {
+	if strings.HasSuffix(t, "?") {
+		return t
+	}
+
+	return t + "?"
+}
+
+// EnumBaseType is the Dart type an enum's values have: String when they
+// are strings (isString on the enumVars), else bool, int when every value
+// is whole, double otherwise; Object? when they are of more than one JSON
+// type, which no enum's value field holds. A null among them makes the enum
+// nullable, not mixed.
+func EnumBaseType(allowable map[string]any, isBoolean bool) string {
+	values, _ := allowable["values"].([]any)
+
+	kinds := map[string]bool{}
+
+	for _, v := range values {
+		switch v.(type) {
+		case nil:
+		case string:
+			kinds["string"] = true
+		case bool:
+			kinds["bool"] = true
+		default:
+			kinds["number"] = true
+		}
+	}
+
+	if len(kinds) > 1 {
+		return "Object?"
+	}
+
+	vars, _ := allowable["enumVars"].([]map[string]any)
+	if len(vars) > 0 && vars[0]["isString"] == true {
+		return "String"
+	}
+
+	if isBoolean {
+		return "bool"
+	}
+
+	for _, v := range values {
+		if f, ok := v.(float64); ok && f != float64(int64(f)) {
+			return "double"
+		}
+	}
+
+	return "int"
+}
+
+// isComposite reports whether the parser typed a value as a union or
+// intersection of members ("A | B", "A & B").
+func isComposite(dataType string) bool {
+	return strings.Contains(dataType, " | ") || strings.Contains(dataType, " & ")
+}
+
+// Literal is s as a Dart string literal: a spec's text may hold a quote, a
+// line break or a dollar sign, which Dart would interpolate.
+func Literal(s string) string {
+	return strings.ReplaceAll(strconv.Quote(s), "$", `\$`)
+}
 
 // Helpers
 
