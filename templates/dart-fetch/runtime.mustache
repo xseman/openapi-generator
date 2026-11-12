@@ -153,32 +153,14 @@ class ApiException(
 
 /// Base class for all generated API classes.
 class BaseApi(final Configuration configuration) {
-    /// Builds a [Uri] from [path], replacing `{name}` placeholders with
-    /// [pathParams] values and appending [queryParams] as a query string.
-    Uri buildUri(
-        String path, {
-        Map<String, String>? pathParams,
-        Map<String, List<String>>? queryParams,
-    }) {
-        var resolved = path;
-        pathParams?.forEach((k, v) {
-            resolved = resolved.replaceAll('{$k}', Uri.encodeComponent(v));
-        });
+    /// The [Uri] of [path], its parameters already written in, under the
+    /// configuration's base path, with [queryParams] as its query string.
+    Uri buildUri(String path, {Map<String, List<String>>? queryParams}) {
         final base = Uri.parse(configuration.basePath);
-        final pathSegments = <String>[
-            ...base.pathSegments,
-            ...Uri.parse(resolved).pathSegments,
-        ];
-        final mergedQuery = <String, List<String>>{
-            ...base.queryParametersAll,
-        };
-        queryParams?.forEach((k, v) {
-            if (v.isNotEmpty) mergedQuery[k] = v;
-        });
-        return base.replace(
-            pathSegments: pathSegments,
-            queryParameters: mergedQuery.isEmpty ? null : mergedQuery,
-        );
+        final basePath = base.path.endsWith('/') ? base.path.substring(0, base.path.length - 1) : base.path;
+        final query = <String, List<String>>{...base.queryParametersAll, ...?queryParams};
+
+        return base.replace(path: basePath + path, queryParameters: query.isEmpty ? null : query);
     }
 
     /// Sends [req] through configured middleware and the [HttpSender],
@@ -229,46 +211,120 @@ class BaseApi(final Configuration configuration) {
         return response;
     }
 
-    /// The values a query parameter sends for [value], JSON as an API
-    /// method wrote it: one per item of a list.
-    List<String> queryValues(Object? value) {
-        if (value == null) return const <String>[];
-        if (value is Iterable) return value.map(paramText).toList();
-
-        return <String>[paramText(value)];
-    }
 }
 
-/// The text of [value] in a path, a query or a header.
+/// The text of a scalar [value] in a parameter; a list or an object inside
+/// one stays JSON, null is empty.
 String paramText(Object? value) {
     if (value == null) return '';
-    if (value is Iterable) return value.map(paramText).join(',');
     if (value is DateTime) return value.toUtc().toIso8601String();
+    if (value is List || value is Map) return jsonEncode(value);
 
     return value.toString();
 }
 
-/// Adds a cookie to the Cookie header of [headers].
-void addCookie(Map<String, String> headers, String name, String value) {
-    headers.update('Cookie', (cookies) => '$cookies; $name=$value', ifAbsent: () => '$name=$value');
+/// Whether a parameter leaves [value] out: null, an empty list or object.
+bool _absent(Object? value) => value == null || (value is List && value.isEmpty) || (value is Map && value.isEmpty);
+
+/// The keys of [object], sorted, and the text of their values.
+List<(String, String)> _pairs(Map<dynamic, dynamic> object) =>
+    [for (final key in object.keys.map((k) => '$k').toList()..sort()) (key, paramText(object[key]))];
+
+/// Adds the parameter [name] holding [value], JSON as an API method wrote
+/// it, to [query] in the OpenAPI [style] (form, spaceDelimited,
+/// pipeDelimited, deepObject).
+void addQuery(Map<String, List<String>> query, String name, Object? value, String style, bool explode) {
+    if (_absent(value)) return;
+
+    void add(String key, String text) => query.putIfAbsent(key, () => <String>[]).add(text);
+
+    // deepObject spells nested objects and lists out a key at a time:
+    // name[a][b]=x, name[list][0]=y; a null leaves its key out.
+    void addTree(String key, Object? node) {
+        if (node is Map) {
+            for (final k in node.keys.map((k) => '$k').toList()..sort()) {
+                addTree('$key[$k]', node[k]);
+            }
+        } else if (node is List) {
+            for (var i = 0; i < node.length; i++) {
+                addTree('$key[$i]', node[i]);
+            }
+        } else if (node != null) {
+            add(key, paramText(node));
+        }
+    }
+
+    if (value is! List && value is! Map) return add(name, paramText(value));
+    if (style == 'deepObject') return addTree(name, value);
+
+    if (value is List) {
+        final items = value.map(paramText);
+        if (explode) return items.forEach((item) => add(name, item));
+
+        return add(name, items.join(switch (style) { 'spaceDelimited' => ' ', 'pipeDelimited' => '|', _ => ',' }));
+    }
+
+    final pairs = _pairs(value as Map);
+    if (explode) return pairs.forEach((pair) => add(pair.$1, pair.$2));
+
+    add(name, pairs.map((pair) => '${pair.$1},${pair.$2}').join(','));
+}
+
+/// The text of [value] for the path parameter [name] in the OpenAPI [style]
+/// (simple, label, matrix), each value escaped on its own.
+String pathParam(Object? value, String name, String style, bool explode) {
+    if (_absent(value)) return '';
+
+    const escape = Uri.encodeComponent;
+    final pairs = value is Map ? [for (final (k, v) in _pairs(value)) (escape(k), escape(v))] : null;
+    final values = value is List ? value.map((item) => escape(paramText(item))) : [escape(paramText(value))];
+
+    var (prefix, separator) = ('', ',');
+    if (style == 'label') (prefix, separator) = ('.', explode ? '.' : ',');
+    if (style == 'matrix') {
+        prefix = ';${escape(name)}=';
+        if (explode) (prefix, separator) = (pairs == null ? prefix : ';', pairs == null ? prefix : ';');
+    }
+
+    if (pairs == null) return prefix + values.join(separator);
+    if (explode) return prefix + pairs.map((pair) => '${pair.$1}=${pair.$2}').join(separator);
+
+    return prefix + pairs.map((pair) => '${pair.$1},${pair.$2}').join(',');
+}
+
+/// The text of [value] for a header or cookie parameter (simple style),
+/// null when there is nothing to send.
+String? _headerText(Object? value, bool explode) {
+    if (_absent(value)) return null;
+    if (value is List) return value.map(paramText).join(',');
+    if (value is! Map) return paramText(value);
+
+    return _pairs(value).map((pair) => '${pair.$1}${explode ? '=' : ','}${pair.$2}').join(',');
+}
+
+/// Sets the header [name] of [headers] to [value], unless it is absent.
+void setHeader(Map<String, String> headers, String name, Object? value, bool explode) {
+    if (_headerText(value, explode) case final text?) headers[name] = text;
+}
+
+/// Adds the cookie [name] to the Cookie header of [headers], unless
+/// [value] is absent.
+void addCookie(Map<String, String> headers, String name, Object? value, bool explode) {
+    final text = _headerText(value, explode);
+    if (text == null) return;
+
+    headers.update('Cookie', (cookies) => '$cookies; $name=$text', ifAbsent: () => '$name=$text');
 }
 
 /// The day of [value] as OpenAPI's `date` writes it, 2024-01-31.
 String formatDate(DateTime value) => value.toIso8601String().substring(0, 10);
 
-/// Encodes [form] as `application/x-www-form-urlencoded`: a list as its
-/// key once per item, null left out.
-String encodeFormData(Map<String, Object?> form) {
-    final parts = <String>[];
-
-    form.forEach((k, v) {
-        for (final item in v is Iterable ? v : [?v]) {
-            parts.add('${Uri.encodeQueryComponent(k)}=${Uri.encodeQueryComponent(paramText(item))}');
-        }
-    });
-
-    return parts.join('&');
-}
+/// Encodes [form], filled by [addQuery], as
+/// `application/x-www-form-urlencoded`.
+String encodeFormData(Map<String, List<String>> form) => [
+    for (final MapEntry(:key, value: values) in form.entries)
+        for (final value in values) '${Uri.encodeQueryComponent(key)}=${Uri.encodeQueryComponent(value)}',
+].join('&');
 
 /// Helpers for primitive deserialization used by generated models.
 DateTime? dateTimeFromJson(Object? json) {

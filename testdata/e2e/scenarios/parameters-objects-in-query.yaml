@@ -5,4 +5,3 @@ cases:
     args: { labels: { color: red, size: L }, extra: { a: "1" }, range: { min: 1, max: 5 } }
     request: { query: { color: red, size: L, a: "1", "range[min]": "1", "range[max]": "5" } }
     response: { status: 204 }
-    skip: { dart-fetch: "request.query.a: missing, want \"1\"" }

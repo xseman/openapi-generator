@@ -498,11 +498,10 @@ func (g *FetchGenerator) paramExtensions(op *codegen.CodegenOperation, ext map[s
 		pext["x-dart-key"] = key
 		pext["x-dart-json"] = value
 		pext["x-dart-optional"] = !p.Required
-		pext["x-dart-entry"] = key + ": " + value
-
-		if !p.Required {
-			pext["x-dart-entry"] = optionalEntry(key, p.ParamName, g.toJSON(prop, "v", enum))
-		}
+		pext["x-dart-placeholder"] = Literal("{" + p.BaseName + "}")
+		pext["x-dart-explode"] = strconv.FormatBool(p.IsExplode)
+		pext["x-dart-style"] = Literal(p.Style) + ", " + strconv.FormatBool(p.IsExplode)
+		pext["x-dart-wire"] = key + ", " + Literal(p.Style) + ", " + strconv.FormatBool(p.IsExplode)
 
 		if p.IsBodyParam {
 			pext["x-dart-content-type"], pext["x-dart-body"] = body(p, t, value)

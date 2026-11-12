@@ -5,4 +5,3 @@ cases:
     request: { query: { "filter[name]": "a b&c", "filter[minPrice]": "9.5" } }
     response: { json: [found] }
     result: [found]
-    skip: { dart-fetch: "request.query.filter[minPrice]: missing, want \"9.5\"" }

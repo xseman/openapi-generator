@@ -10,4 +10,3 @@ cases:
       query: { formExplodeTrue: [x, y], formExplodeFalse: "x,y", spaceDelimited: "1 2", pipeDelimited: "3|4" }
     response: { json: [ok] }
     result: [ok]
-    skip: { dart-fetch: "request.path: want \"/filter/a,b\", got \"/filter/[a, b]\"" }

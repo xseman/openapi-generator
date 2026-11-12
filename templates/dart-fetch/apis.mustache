@@ -24,23 +24,20 @@ class {{classname}} extends BaseApi {
     @Deprecated('This operation is deprecated.')
 {{/isDeprecated}}
     HttpRequest {{nickname}}RequestOpts({{{vendorExtensions.x-dart-signature}}}) {
-        final $path = <String, String>{
-{{#pathParams}}
-            {{{vendorExtensions.x-dart-key}}}: paramText({{{vendorExtensions.x-dart-json}}}),
-{{/pathParams}}
-        };
+        final $path = {{{vendorExtensions.x-dart-path}}}{{#pathParams}}
+            .replaceAll({{{vendorExtensions.x-dart-placeholder}}}, pathParam({{{vendorExtensions.x-dart-json}}}, {{{vendorExtensions.x-dart-wire}}})){{/pathParams}};
 
         final $query = <String, List<String>>{};
 {{#queryParams}}
-        {{#vendorExtensions.x-dart-optional}}if ({{paramName}} != null) {{/vendorExtensions.x-dart-optional}}$query[{{{vendorExtensions.x-dart-key}}}] = queryValues({{{vendorExtensions.x-dart-json}}});
+        {{#vendorExtensions.x-dart-optional}}if ({{paramName}} != null) {{/vendorExtensions.x-dart-optional}}addQuery($query, {{{vendorExtensions.x-dart-key}}}, {{{vendorExtensions.x-dart-json}}}, {{{vendorExtensions.x-dart-style}}});
 {{/queryParams}}
 
         final $headers = <String, String>{};
 {{#headerParams}}
-        {{#vendorExtensions.x-dart-optional}}if ({{paramName}} != null) {{/vendorExtensions.x-dart-optional}}$headers[{{{vendorExtensions.x-dart-key}}}] = paramText({{{vendorExtensions.x-dart-json}}});
+        {{#vendorExtensions.x-dart-optional}}if ({{paramName}} != null) {{/vendorExtensions.x-dart-optional}}setHeader($headers, {{{vendorExtensions.x-dart-key}}}, {{{vendorExtensions.x-dart-json}}}, {{vendorExtensions.x-dart-explode}});
 {{/headerParams}}
 {{#cookieParams}}
-        {{#vendorExtensions.x-dart-optional}}if ({{paramName}} != null) {{/vendorExtensions.x-dart-optional}}addCookie($headers, {{{vendorExtensions.x-dart-key}}}, paramText({{{vendorExtensions.x-dart-json}}}));
+        {{#vendorExtensions.x-dart-optional}}if ({{paramName}} != null) {{/vendorExtensions.x-dart-optional}}addCookie($headers, {{{vendorExtensions.x-dart-key}}}, {{{vendorExtensions.x-dart-json}}}, {{vendorExtensions.x-dart-explode}});
 {{/cookieParams}}
 {{#authMethods}}
 {{#isApiKey}}
@@ -53,10 +50,10 @@ class {{classname}} extends BaseApi {
                     $headers['{{keyParamName}}'] = v;
 {{/isKeyInHeader}}
 {{#isKeyInQuery}}
-                    $query['{{keyParamName}}'] = <String>[v];
+                    addQuery($query, '{{keyParamName}}', v, 'form', true);
 {{/isKeyInQuery}}
 {{#isKeyInCookie}}
-                    addCookie($headers, '{{keyParamName}}', v);
+                    addCookie($headers, '{{keyParamName}}', v, false);
 {{/isKeyInCookie}}
                 }
             }
@@ -106,20 +103,17 @@ class {{classname}} extends BaseApi {
 {{/vendorExtensions.x-dart-optional}}
 {{/bodyParam}}
 {{#hasFormParams}}
-        final $form = <String, Object?>{
+        final $form = <String, List<String>>{};
 {{#formParams}}
-            {{{vendorExtensions.x-dart-entry}}},
+        {{#vendorExtensions.x-dart-optional}}if ({{paramName}} != null) {{/vendorExtensions.x-dart-optional}}addQuery($form, {{{vendorExtensions.x-dart-key}}}, {{{vendorExtensions.x-dart-json}}}, {{{vendorExtensions.x-dart-style}}});
 {{/formParams}}
-        };
-        if ($form.isNotEmpty) {
-            $headers['Content-Type'] = 'application/x-www-form-urlencoded';
-            $body = encodeFormData($form);
-        }
+        $headers['Content-Type'] = 'application/x-www-form-urlencoded';
+        $body = encodeFormData($form);
 {{/hasFormParams}}
 
         return HttpRequest(
             method: HttpMethod.{{#lambda.lowercase}}{{httpMethod}}{{/lambda.lowercase}},
-            url: buildUri({{{vendorExtensions.x-dart-path}}}, pathParams: $path, queryParams: $query),
+            url: buildUri($path, queryParams: $query),
             headers: $headers,
             body: $body,
         );
