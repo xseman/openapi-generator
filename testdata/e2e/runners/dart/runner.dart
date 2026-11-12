@@ -108,6 +108,8 @@ Object _typedMap(TypeMirror value, Map<String, Object?> values) {
 /// toWire turns a result back into wire JSON.
 Object? toWire(Object? v) {
   if (v == null || v is String || v is num || v is bool) return v;
+  // A date is read as local midnight: the day, not the instant it shifts to.
+  if (v is DateTime && !v.isUtc && v == DateTime(v.year, v.month, v.day)) return v.toIso8601String().substring(0, 10);
   if (v is DateTime) return v.toUtc().toIso8601String();
   if (v is Uint8List) return base64Encode(v);
   if (v is List) return v.map(toWire).toList();

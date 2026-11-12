@@ -6,4 +6,3 @@ cases:
     request: { body: { requiredNotNullable: a, requiredNullable: null, optionalNullable: null, requiredNullableInt: 5, optionalNotNullable: $absent } }
     response: { json: { requiredNotNullable: a, requiredNullable: null, requiredNullableInt: null } }
     result: { requiredNotNullable: a, requiredNullable: null, requiredNullableInt: null, optionalNullable: $absent }
-    skip: { dart-fetch: "request.body.optionalNullable: missing, want null" }

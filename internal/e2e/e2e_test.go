@@ -25,10 +25,6 @@ type runner struct {
 	generator string
 	run       func(t *testing.T, suites []suite) map[string]map[int]outcome
 
-	// lenient counts its failing generated cases and skips them, until a
-	// later change fixes its known gaps.
-	lenient bool
-
 	// millis compares its date-times as instants to the millisecond: they
 	// are JavaScript Dates, or Dart DateTimes, which keep no offset.
 	millis bool
@@ -37,7 +33,7 @@ type runner struct {
 var runners = []runner{
 	{generator: "go-fetch", run: runGoFetch},
 	{generator: "typescript-fetch", run: runTypeScript, millis: true},
-	{generator: "dart-fetch", run: runDart, lenient: true, millis: true},
+	{generator: "dart-fetch", run: runDart, millis: true},
 }
 
 // forEachRunner runs fn per generator; E2E_GENERATOR=<name> picks one.
@@ -247,11 +243,6 @@ func checkCases(t *testing.T, r runner, s *scenario, outcomes map[int]outcome, m
 				c.skip++
 
 				t.Skipf("%s (%s)", reason, strings.Join(diffs, "; "))
-
-			case len(diffs) > 0 && k.Exact && r.lenient:
-				c.fail++
-
-				t.Skip("lenient until its gaps are fixed:\n" + strings.Join(diffs, "\n"))
 
 			case len(diffs) > 0:
 				c.fail++

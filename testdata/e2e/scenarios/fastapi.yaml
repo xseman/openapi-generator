@@ -79,7 +79,6 @@ cases:
     op: echoLiterals
     args: { body: { retry: 1, pin: null, order: desc, tag: null } }
     result: { retry: 1, pin: null, order: desc, tag: null, mode: auto, size: 25 }
-    skip: { dart-fetch: "result.tag: want null, got \"a\"" }
   - name: required nullables all null, optional nullables left out
     op: echoNulls
     args: { body: { note: null, due: null, color: null, dims: null, lines: null, payment: null } }
@@ -93,7 +92,6 @@ cases:
       retries: 3
       extras: null
       sent: [color, dims, due, lines, note, payment]
-    skip: { dart-fetch: "result.extras: missing, want null" }
   - name: required nullables set, falsy values, explicit null over a default
     op: echoNulls
     args:
@@ -108,7 +106,6 @@ cases:
       retries: null
       extras: null
       sent: [color, dims, due, extras, lines, note, payment, retries]
-    skip: { dart-fetch: "result.extras: missing, want null" }
   - name: naive, aware and contained times round trip
     op: echoStamps
     args:
@@ -126,7 +123,7 @@ cases:
       span: "-PT1.5S"
       days: ["2024-01-31", "2024-12-31"]
       seen: { a: "2024-03-01T10:00:00Z" }
-    skip: { typescript-fetch: "a naive date-time is read as local time and sent in UTC with Z (422 timezone_naive)", dart-fetch: "error: 422 {\"detail\":[{\"type\":\"timezone_naive\",\"loc\":[\"body\",\"naive\"],\"msg\":\"Input should not have timezone info\",\"input\":\"2024-03-01T09:00:" }
+    skip: { typescript-fetch: "a naive date-time is read as local time and sent in UTC with Z (422 timezone_naive)", dart-fetch: "a naive date-time is read as local time and sent in UTC with Z (422 timezone_naive)" }
   - name: an offset on a naive field is refused by the server
     op: echoStamps
     args: { body: { naive: "2024-03-01T10:00:00Z", aware: "2024-03-01T10:00:00Z", clock: "10:00:00", span: PT0S } }
@@ -151,7 +148,7 @@ cases:
     op: stampsQuery
     args: { days: ["2024-01-31", "2024-02-29"], since: "2024-03-01T10:00:00" }
     result: { naive: "2024-03-01T10:00:00", aware: "2024-03-01T10:00:00Z", clock: "13:45:30.250000", span: "-PT1.5S", days: ["2024-01-31", "2024-02-29"] }
-    skip: { typescript-fetch: "a naive date-time is read as local time and sent in UTC with Z (422 timezone_naive)", dart-fetch: "error: 422 {\"detail\":[{\"type\":\"timezone_naive\",\"loc\":[\"query\",\"since\"],\"msg\":\"Input should not have timezone info\",\"input\":\"2024-03-01T09:00" }
+    skip: { typescript-fetch: "a naive date-time is read as local time and sent in UTC with Z (422 timezone_naive)", dart-fetch: "a naive date-time is read as local time and sent in UTC with Z (422 timezone_naive)" }
   - name: containers, empty and null
     op: echoContainers
     args:
@@ -177,18 +174,15 @@ cases:
       by_name: { box: { widthCm: 1.5, heightCm: 2, depthCm: null } }
       maybe_list: null
       maybe_map: { k: null, v: "1" }
-    skip: { dart-fetch: "result.by_name.box.depthCm: missing, want null" }
   - name: Go keywords and odd property names
     op: echoKeywords
     args:
       body: { type: t, func: 1, range: [1, 2], map: { m: 1 }, interface: null, package: p, default: true, select: s, string: str, error: e, x-dash-name: d, dot.name: ".", UPPER: U, 1st: "1" }
     result: { type: t, func: 1, range: [1, 2], map: { m: 1 }, interface: null, package: p, default: true, select: s, string: str, error: e, x-dash-name: d, dot.name: ".", UPPER: U, 1st: "1" }
-    skip: { dart-fetch: "result.interface: missing, want null" }
   - name: extra keys both ways
     op: echoOpen
     args: { body: { kind: k, extra: 1, nested: { a: [true] } } }
     result: { kind: k, extra: 1, nested: { a: [true] } }
-    skip: { dart-fetch: "result.extra: missing, want 1" }
   - name: recursive tree
     op: echoTree
     args: { body: { name: root, children: [{ name: a, children: [{ name: a1 }] }], parent: { name: up } } }
@@ -216,7 +210,7 @@ cases:
     args: { body: { big: 100000000000000000000, u64: 18446744073709551615, f: 1e+308, tiny: 1e-7 } }
     result: { big: 100000000000000000000, u64: 18446744073709551615, f: 1e+308, tiny: 1e-7 }
     skip:
-      dart-fetch: "result.big: want 100000000000000000000, got 9223372036854775807"
+      dart-fetch: an int holds no value past int64
       go-fetch: a plain integer is an int, which holds no value past int64
       typescript-fetch: a JavaScript number loses integers past 2^53
   - name: exponent floats
@@ -274,12 +268,10 @@ cases:
     op: echoWallet
     args: { body: { primary: null } }
     result: { primary: null, by_label: {}, pets: [] }
-    skip: { dart-fetch: "result.primary: missing, want null" }
   - name: unset unions are left out
     op: echoWallet
     args: { body: {} }
     result: { primary: null, tagged: null }
-    skip: { dart-fetch: "result.primary: missing, want null" }
   - name: optional body left out
     op: echoOptional
     result: { got: false }
@@ -402,7 +394,6 @@ cases:
     op: patchItem
     args: { item_id: "${item}", if-match: 1, body: { description: null, tags: [] } }
     result: { description: null, tags: [], name: Box, version: 2, updatedAt: $any }
-    skip: { dart-fetch: "result.description: want null, got \"small\"" }
   - name: stale version is a 409 Conflict
     op: patchItem
     args: { item_id: "${item}", if-match: 1, body: { name: x } }
@@ -411,7 +402,6 @@ cases:
     op: patchItem
     args: { item_id: "${item}", if-match: 2, body: { name: null } }
     error: { status: 400, model: null, body: '{"detail":"name may not be null"}' }
-    skip: { dart-fetch: "error: want one, got result {\"attributes\":{\"material\":\"wood\"},\"color\":\"dark-blue\",\"createdAt\":\"<time>\",\"description\":\"small\",\"dimensions\":{\"" }
   - name: HEAD of an item that exists
     op: itemExists
     args: { item_id: "${item}" }
@@ -445,7 +435,6 @@ cases:
     op: submitForm
     args: { day: "2024-01-31", when: "2024-03-01T10:00:00Z", price: 5, color: red }
     result: { price: "5", tags: [], colors: [], days: [], qty: null, agree: false }
-    skip: { dart-fetch: "result.qty: missing, want null" }
   - name: a form model with files, declared url-encoded
     op: uploadModel
     args: { folder: docs, files: [{ $file: { name: a.txt, text: abc } }, { $file: { name: b.txt, text: de } }], labels: [x, y] }

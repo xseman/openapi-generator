@@ -121,9 +121,7 @@ same cases.
   HEAD) is left out; the run logs which.
 - They compare **exactly**: no other keys, and null is not absent.
 
-go-fetch and typescript-fetch must pass every case. A failing case of a
-`lenient` runner (dart-fetch, `runners` in `e2e_test.go`) counts as failed
-in the table but skips until its gaps are fixed. A Swagger
+Every generator must pass every case. A Swagger
 2.0 spec in `E2E_SPECS` is converted to OpenAPI 3 first, and of paths that
 differ only in their parameter names the first is kept.
 
