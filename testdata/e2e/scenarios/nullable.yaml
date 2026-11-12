@@ -1,5 +1,4 @@
 spec: ../../specs/feature/nullable-required.yaml
-skip: { dart-fetch: "does not compile: lib/src/models/record.dart:26: Expected an identifier." }
 cases:
   - name: required null, optional null and absent
     op: createRecord
@@ -7,3 +6,4 @@ cases:
     request: { body: { requiredNotNullable: a, requiredNullable: null, optionalNullable: null, requiredNullableInt: 5, optionalNotNullable: $absent } }
     response: { json: { requiredNotNullable: a, requiredNullable: null, requiredNullableInt: null } }
     result: { requiredNotNullable: a, requiredNullable: null, requiredNullableInt: null, optionalNullable: $absent }
+    skip: { dart-fetch: "request.body.optionalNullable: missing, want null" }

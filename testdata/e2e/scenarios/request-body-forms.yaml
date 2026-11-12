@@ -1,5 +1,4 @@
 spec: ../../specs/feature/request-body-form-encoding.yaml
-skip: { dart-fetch: "does not compile: lib/src/apis/default_api.dart:20: Expected to find '}'." }
 cases:
   - name: urlencoded fields by their encoding
     op: createCustomer
@@ -23,3 +22,4 @@ cases:
         tags: "t1,t2"
         ids: ["1", "2"]
     response: { status: 204 }
+    skip: { dart-fetch: "request.body.address[city]: missing, want \"Oslo\"" }

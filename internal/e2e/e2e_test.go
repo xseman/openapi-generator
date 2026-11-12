@@ -30,14 +30,14 @@ type runner struct {
 	lenient bool
 
 	// millis compares its date-times as instants to the millisecond: they
-	// are JavaScript Dates.
+	// are JavaScript Dates, or Dart DateTimes, which keep no offset.
 	millis bool
 }
 
 var runners = []runner{
 	{generator: "go-fetch", run: runGoFetch},
 	{generator: "typescript-fetch", run: runTypeScript, millis: true},
-	{generator: "dart-fetch", run: runDart, lenient: true},
+	{generator: "dart-fetch", run: runDart, lenient: true, millis: true},
 }
 
 // forEachRunner runs fn per generator; E2E_GENERATOR=<name> picks one.

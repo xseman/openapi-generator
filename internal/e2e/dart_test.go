@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"testing"
@@ -23,15 +24,7 @@ var dartVersion = regexp.MustCompile(`version: (\d+)\.(\d+)`)
 func runDart(t *testing.T, suites []suite) map[string]map[int]outcome {
 	t.Helper()
 
-	dart := os.Getenv("E2E_DART")
-	if dart == "" {
-		dart = "dart"
-	}
-
-	ver, err := exec.Command(dart, "--version").CombinedOutput()
-	if m := dartVersion.FindStringSubmatch(string(ver)); err != nil || m == nil || m[1] == "3" && atoi(m[2]) < 13 {
-		t.Skipf("dart-fetch clients need Dart 3.13 or later (set E2E_DART): %s %v", strings.TrimSpace(string(ver)), err)
-	}
+	dart := dartSDK(t)
 
 	dir := t.TempDir()
 
@@ -114,6 +107,64 @@ func runDart(t *testing.T, suites []suite) map[string]map[int]outcome {
 	maps.Copy(out, failed)
 
 	return out
+}
+
+// dartSDK is the dart binary, E2E_DART or the one on PATH; the test skips
+// when it is older than the 3.13 the clients need.
+func dartSDK(t *testing.T) string {
+	t.Helper()
+
+	dart := os.Getenv("E2E_DART")
+	if dart == "" {
+		dart = "dart"
+	}
+
+	ver, err := exec.Command(dart, "--version").CombinedOutput()
+	if m := dartVersion.FindStringSubmatch(string(ver)); err != nil || m == nil || m[1] == "3" && atoi(m[2]) < 13 {
+		t.Skipf("dart-fetch clients need Dart 3.13 or later (set E2E_DART): %s %v", strings.TrimSpace(string(ver)), err)
+	}
+
+	return dart
+}
+
+// TestDartAnalyze compiles the client of every feature spec: a spec no
+// scenario runs must still give a client the analyzer accepts.
+func TestDartAnalyze(t *testing.T) {
+	requireE2E(t)
+
+	if only := os.Getenv("E2E_GENERATOR"); only != "" && only != "dart-fetch" {
+		t.Skip("only " + only)
+	}
+
+	dart := dartSDK(t)
+
+	specs, err := filepath.Glob("../../testdata/specs/feature/*.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	dir := t.TempDir()
+
+	for _, spec := range specs {
+		name := strings.TrimSuffix(filepath.Base(spec), ".yaml")
+
+		err := gen.Generate(gen.Options{
+			InputSpec:            spec,
+			OutputDir:            filepath.Join(dir, name),
+			GeneratorName:        "dart-fetch",
+			TemplateDir:          "../../templates/dart-fetch",
+			AdditionalProperties: []string{"pubName=" + strings.ReplaceAll(name, "-", "_")},
+			SkipValidation:       true,
+		})
+		if err != nil {
+			t.Fatalf("generate %s: %v", spec, err)
+		}
+	}
+
+	broken := dartErrors(t, dart, dir)
+	for _, name := range slices.Sorted(maps.Keys(broken)) {
+		t.Errorf("%s: %s", name, broken[name])
+	}
 }
 
 // dartErrors analyzes the generated packages under dir and returns the

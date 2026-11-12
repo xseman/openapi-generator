@@ -1,12 +1,12 @@
 spec: ../../specs/feature/responses-mixed-2xx.yaml
-skip: { dart-fetch: "does not compile: lib/src/apis/default_api.dart:23: Expected an identifier." }
 cases:
   - { name: 201 result, op: placeOrder, response: { status: 201, json: { id: 7 } }, result: { id: 7 } }
   - name: 202 with another body is an error with its model
     op: placeOrder
     response: { status: 202, json: { title: queued, status: 202 } }
     error: { status: 202, model: { title: queued, status: 202 } }
-  - { name: ndjson as text, op: streamLines, response: { header: { Content-Type: application/x-ndjson }, text: "{\"i\":0}\n" }, result: "{\"i\":0}\n" }
+    skip: { dart-fetch: "call failed: type 'Null' is not a subtype of type 'num' in type cast" }
+  - { name: ndjson as text, op: streamLines, response: { header: { Content-Type: application/x-ndjson }, text: "{\"i\":0}\n" }, result: "{\"i\":0}\n", skip: { dart-fetch: "result: want \"{\\\"i\\\":0}\\n\", got {\"i\":0}" } }
   - { name: nullable result null, op: latestOrder, response: { json: null }, result: null }
   - { name: nullable text, op: greeting, response: { text: hello }, result: hello }
   # offSpec: the validator reads a text body as a string, not as the integer it holds

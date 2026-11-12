@@ -14,4 +14,3 @@ cases:
       query: { f32: "0.1", n: "0.30000000000000004", ok: "true", day: "2024-01-02", at: "2024-02-29T23:59:58.5+01:30" }
       header: { X-Day: "2024-12-31", X-At: "2024-01-02T03:04:05Z" }
     response: { status: 204 }
-    skip: { dart-fetch: "request: invalid for the spec: parameter \"day\" in query has an error: string doesn't match the format \"date\"" }

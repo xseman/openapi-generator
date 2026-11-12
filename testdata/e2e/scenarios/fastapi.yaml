@@ -3,7 +3,6 @@
 # parsed, so a result shows what the server received. Cases run in order and
 # share the server's state: save keeps a value for ${name} in later cases.
 backend: fastapi
-skip: { dart-fetch: "does not compile: lib/src/apis/auth_api.dart:24: Expected an identifier." }
 auth: { username: admin, password: "p@ss:w0rd", apiKey: key-1 }
 cases:
   # ------------------------------------------------------------ auth
@@ -11,6 +10,7 @@ cases:
     op: issueToken
     args: { username: alice, password: nope }
     error: { status: 400, model: null, body: '{"detail":"bad login"}' }
+    skip: { dart-fetch: "error.model: want null, got {\"detail\":\"bad login\"}" }
   - name: password form with a scope
     op: issueToken
     args: { username: bob, password: secret, scope: "items:read" }
@@ -80,6 +80,7 @@ cases:
     op: echoLiterals
     args: { body: { retry: 1, pin: null, order: desc, tag: null } }
     result: { retry: 1, pin: null, order: desc, tag: null, mode: auto, size: 25 }
+    skip: { dart-fetch: "result.tag: want null, got \"a\"" }
   - name: required nullables all null, optional nullables left out
     op: echoNulls
     args: { body: { note: null, due: null, color: null, dims: null, lines: null, payment: null } }
@@ -93,6 +94,7 @@ cases:
       retries: 3
       extras: null
       sent: [color, dims, due, lines, note, payment]
+    skip: { dart-fetch: "result.extras: missing, want null" }
   - name: required nullables set, falsy values, explicit null over a default
     op: echoNulls
     args:
@@ -107,6 +109,7 @@ cases:
       retries: null
       extras: null
       sent: [color, dims, due, extras, lines, note, payment, retries]
+    skip: { dart-fetch: "result.extras: missing, want null" }
   - name: naive, aware and contained times round trip
     op: echoStamps
     args:
@@ -124,7 +127,7 @@ cases:
       span: "-PT1.5S"
       days: ["2024-01-31", "2024-12-31"]
       seen: { a: "2024-03-01T10:00:00Z" }
-    skip: { typescript-fetch: "a naive date-time is read as local time and sent in UTC with Z (422 timezone_naive)" }
+    skip: { typescript-fetch: "a naive date-time is read as local time and sent in UTC with Z (422 timezone_naive)", dart-fetch: "error: 422 {\"detail\":[{\"type\":\"timezone_naive\",\"loc\":[\"body\",\"naive\"],\"msg\":\"Input should not have timezone info\",\"input\":\"2024-03-01T09:00:" }
   - name: an offset on a naive field is refused by the server
     op: echoStamps
     args: { body: { naive: "2024-03-01T10:00:00Z", aware: "2024-03-01T10:00:00Z", clock: "10:00:00", span: PT0S } }
@@ -149,7 +152,7 @@ cases:
     op: stampsQuery
     args: { days: ["2024-01-31", "2024-02-29"], since: "2024-03-01T10:00:00" }
     result: { naive: "2024-03-01T10:00:00", aware: "2024-03-01T10:00:00Z", clock: "13:45:30.250000", span: "-PT1.5S", days: ["2024-01-31", "2024-02-29"] }
-    skip: { typescript-fetch: "a naive date-time is read as local time and sent in UTC with Z (422 timezone_naive)" }
+    skip: { typescript-fetch: "a naive date-time is read as local time and sent in UTC with Z (422 timezone_naive)", dart-fetch: "error: 422 {\"detail\":[{\"type\":\"timezone_naive\",\"loc\":[\"query\",\"since\"],\"msg\":\"Input should not have timezone info\",\"input\":\"2024-03-01T09:00" }
   - name: containers, empty and null
     op: echoContainers
     args:
@@ -175,15 +178,18 @@ cases:
       by_name: { box: { widthCm: 1.5, heightCm: 2, depthCm: null } }
       maybe_list: null
       maybe_map: { k: null, v: "1" }
+    skip: { dart-fetch: "result.by_name.box.depthCm: missing, want null" }
   - name: Go keywords and odd property names
     op: echoKeywords
     args:
       body: { type: t, func: 1, range: [1, 2], map: { m: 1 }, interface: null, package: p, default: true, select: s, string: str, error: e, x-dash-name: d, dot.name: ".", UPPER: U, 1st: "1" }
     result: { type: t, func: 1, range: [1, 2], map: { m: 1 }, interface: null, package: p, default: true, select: s, string: str, error: e, x-dash-name: d, dot.name: ".", UPPER: U, 1st: "1" }
+    skip: { dart-fetch: "result.interface: missing, want null" }
   - name: extra keys both ways
     op: echoOpen
     args: { body: { kind: k, extra: 1, nested: { a: [true] } } }
     result: { kind: k, extra: 1, nested: { a: [true] } }
+    skip: { dart-fetch: "result.extra: missing, want 1" }
   - name: recursive tree
     op: echoTree
     args: { body: { name: root, children: [{ name: a, children: [{ name: a1 }] }], parent: { name: up } } }
@@ -211,6 +217,7 @@ cases:
     args: { body: { big: 100000000000000000000, u64: 18446744073709551615, f: 1e+308, tiny: 1e-7 } }
     result: { big: 100000000000000000000, u64: 18446744073709551615, f: 1e+308, tiny: 1e-7 }
     skip:
+      dart-fetch: "result.big: want 100000000000000000000, got 9223372036854775807"
       go-fetch: a plain integer is an int, which holds no value past int64
       typescript-fetch: a JavaScript number loses integers past 2^53
   - name: exponent floats
@@ -225,6 +232,7 @@ cases:
     op: echoRaw
     args: { body: { $bytes: { base64: AAH/ } } }
     result: /wEA
+    skip: { dart-fetch: "call failed: no method for operation echoRaw" }
   - name: union body, int
     op: echoUnion
     args: { body: 5 }
@@ -268,10 +276,12 @@ cases:
     op: echoWallet
     args: { body: { primary: null } }
     result: { primary: null, by_label: {}, pets: [] }
+    skip: { dart-fetch: "result.primary: missing, want null" }
   - name: unset unions are left out
     op: echoWallet
     args: { body: {} }
     result: { primary: null, tagged: null }
+    skip: { dart-fetch: "result.primary: missing, want null" }
   - name: optional body left out
     op: echoOptional
     result: { got: false }
@@ -329,6 +339,7 @@ cases:
     args: { x-tags: [a, b], x-ids: [1, 2], x-colors: [red, light green] }
     result: { tags: [a, b], ids: [1, 2], colors: [red, light green] }
     skip:
+      dart-fetch: "error: 422 {\"detail\":[{\"type\":\"int_parsing\",\"loc\":[\"header\",\"x-ids\",0],\"msg\":\"Input should be a valid integer, unable to parse string as an "
       go-fetch: &listHeader "a list header goes as one comma-joined line, as the spec's simple style says; FastAPI reads repeated lines only (422 on \"1,2\")"
       typescript-fetch: *listHeader
 
@@ -393,6 +404,7 @@ cases:
     op: patchItem
     args: { item_id: "${item}", if-match: 1, body: { description: null, tags: [] } }
     result: { description: null, tags: [], name: Box, version: 2, updatedAt: $any }
+    skip: { dart-fetch: "result.description: want null, got \"small\"" }
   - name: stale version is a 409 Conflict
     op: patchItem
     args: { item_id: "${item}", if-match: 1, body: { name: x } }
@@ -401,6 +413,7 @@ cases:
     op: patchItem
     args: { item_id: "${item}", if-match: 2, body: { name: null } }
     error: { status: 400, model: null, body: '{"detail":"name may not be null"}' }
+    skip: { dart-fetch: "error: want one, got result {\"attributes\":{\"material\":\"wood\"},\"color\":\"dark-blue\",\"createdAt\":\"<time>\",\"description\":\"small\",\"dimensions\":{\"" }
   - name: HEAD of an item that exists
     op: itemExists
     args: { item_id: "${item}" }
@@ -418,14 +431,17 @@ cases:
       labels: [x, y]
       meta: '{"k":1}'
     result: [{ name: docs/a b.txt, size: 5, labels: "x|y", meta: '{"k":1}' }, { name: docs/ž.bin, size: 2 }]
+    skip: { dart-fetch: "error: 422 {\"detail\":[{\"type\":\"value_error\",\"loc\":[\"body\",\"files\",0],\"msg\":\"Value error, Expected UploadFile, received: <class 'str'>\",\"inpu" }
   - name: duplicate file is a 409
     op: uploadFiles
     args: { files: [{ $file: { name: a b.txt, text: again } }], folder: docs }
     error: { status: 409 }
+    skip: { dart-fetch: "error.status: want 409, got 422" }
   - name: bool form field
     op: uploadFiles
     args: { files: [{ $file: { name: a b.txt, text: again } }], folder: docs, overwrite: true }
     result: [{ name: docs/a b.txt, size: 5 }]
+    skip: { dart-fetch: "error: 422 {\"detail\":[{\"type\":\"value_error\",\"loc\":[\"body\",\"files\",0],\"msg\":\"Value error, Expected UploadFile, received: <class 'str'>\",\"inpu" }
   - name: typed form, lists as repeated keys
     op: submitForm
     args: { day: "2024-01-31", when: "2024-03-01T10:00:00Z", price: "19.99", color: light green, tags: [a, "b,c"], colors: [red, dark-blue], days: ["2024-01-31", "2024-02-29"], qty: 0, agree: true }
@@ -434,25 +450,31 @@ cases:
     op: submitForm
     args: { day: "2024-01-31", when: "2024-03-01T10:00:00Z", price: 5, color: red }
     result: { price: "5", tags: [], colors: [], days: [], qty: null, agree: false }
+    skip: { dart-fetch: "result.qty: missing, want null" }
   - name: a form model with files, declared url-encoded
     op: uploadModel
     args: { folder: docs, files: [{ $file: { name: a.txt, text: abc } }, { $file: { name: b.txt, text: de } }], labels: [x, y] }
     result: { folder: docs, files: { a.txt: 3, b.txt: 2 }, labels: [x, y], cover: null }
+    skip: { dart-fetch: "error: 422 {\"detail\":[{\"type\":\"value_error\",\"loc\":[\"body\",\"files\",0],\"msg\":\"Value error, Expected UploadFile, received: <class 'str'>\",\"inpu" }
   - name: a form model's optional file given
     op: uploadModel
     args: { folder: docs, files: [{ $file: { name: a.txt, text: abc } }], cover: { $file: { name: c.png, text: C } } }
     result: { files: { a.txt: 3 }, cover: c.png }
+    skip: { dart-fetch: "error: 422 {\"detail\":[{\"type\":\"value_error\",\"loc\":[\"body\",\"files\",0],\"msg\":\"Value error, Expected UploadFile, received: <class 'str'>\",\"inpu" }
   - name: optional file left out
     op: uploadAvatar
     args: { image: { $file: { name: i.png, text: "12345" } } }
     result: { image: 5, thumbnail: -1 }
+    skip: { dart-fetch: "error: 422 {\"detail\":[{\"type\":\"value_error\",\"loc\":[\"body\",\"image\"],\"msg\":\"Value error, Expected UploadFile, received: <class 'str'>\",\"input\"" }
   - name: download by a path with a slash and unicode
     op: downloadFile
     args: { name: docs/ž.bin }
     result: AP8=
+    skip: { dart-fetch: "error: 404 {\"type\":\"about:blank\",\"title\":\"Not found\",\"status\":404,\"detail\":\"docs/ž.bin\"}" }
   - name: a binary response without a schema, next to JSON
     op: getLogo
     result: iVBORw0KGgoAAAANSUhEUv8=
+    skip: { dart-fetch: "call failed: FormatException: Unexpected character (at character 1)" }
   - name: text/csv response
     op: exportCsv
     result: "sku,name\nABC-0001,Box\nABC-0002,Bag\n"
@@ -484,6 +506,7 @@ cases:
         lines: [{ sku: ABC-0001, quantity: 500 }]
         payment: { method: card, last4: "4242", expires: "2030-01-01" }
     error: { status: 202, model: { title: Queued for review, status: 202 } }
+    skip: { dart-fetch: "call failed: type 'Null' is not a subtype of type 'num' in type cast" }
   - name: get the order
     op: getOrder
     args: { order_id: 1 }
@@ -524,17 +547,21 @@ cases:
     op: streamLines
     args: { n: 2 }
     result: "{\"i\":0}\n{\"i\":1}\n"
+    skip: { dart-fetch: "call failed: FormatException: Unexpected character (at line 2, character 1)" }
   - name: JSON Lines of a model
     op: streamTicks
     args: { n: 2 }
     result: [{ i: 0, label: t0 }, { i: 1, label: t1 }]
+    skip: { dart-fetch: "result: want [{\"i\":0,\"label\":\"t0\"},{\"i\":1,\"label\":\"t1\"}], got null" }
   - name: JSON Lines, none
     op: streamTicks
     args: { n: 0 }
     result: []
+    skip: { dart-fetch: "result: want [], got null" }
   - name: JSON Lines of integers
     op: streamInts
     result: [0, 1, 2]
+    skip: { dart-fetch: "result: want [0,1,2], got null" }
   - name: a bound on a stream's query is a 422
     op: streamTicks
     args: { n: 11 }
@@ -543,13 +570,16 @@ cases:
     op: streamEvents
     args: { n: 2 }
     result: [{ data: { i: 0, label: e0 } }, { data: { i: 1, label: e1 } }]
+    skip: { dart-fetch: "result: want [{\"data\":{\"i\":0,\"label\":\"e0\"}},{\"data\":{\"i\":1,\"label\":\"e1\"}}], got null" }
   - name: server-sent events over POST, a discriminated union per event
     op: chat
     args: { body: { prompt: hello world } }
     result: [{ data: { kind: delta, text: hello } }, { data: { kind: delta, text: world } }, { data: { kind: done, words: 2 } }]
+    skip: { dart-fetch: "result: want [{\"data\":{\"kind\":\"delta\",\"text\":\"hello\"}},{\"data\":{\"kind\":\"delta\",\"text\":\"world\"}},{\"data\":{\"kind\":\"done\",\"words\":2}}], got nul" }
   - name: server-sent events with names and ids, data as text
     op: streamRawEvents
     result: [{ event: tick, id: "1", data: '{"i": 1}' }, { event: end, id: "2", data: '"bye"' }]
+    skip: { dart-fetch: "result: want [{\"data\":\"{\\\"i\\\": 1}\",\"event\":\"tick\",\"id\":\"1\"},{\"data\":\"\\\"bye\\\"\",\"event\":\"end\",\"id\":\"2\"}], got null" }
   - name: float path parameter and an aliased query
     op: add
     args: { a: 2, b: 0.75, round: true }

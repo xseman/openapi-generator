@@ -7,6 +7,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'dart:mirrors';
+import 'dart:typed_data';
 
 class Auth {
   String? username, password, apiKey, bearer;
@@ -102,7 +103,7 @@ Object _typedMap(TypeMirror value, Map<String, Object?> values) {
 Object? toWire(Object? v) {
   if (v == null || v is String || v is num || v is bool) return v;
   if (v is DateTime) return v.toUtc().toIso8601String();
-  if (v is List<int> && v is! List<num>) return base64Encode(v);
+  if (v is Uint8List) return base64Encode(v);
   if (v is List) return v.map(toWire).toList();
   if (v is Map) return {for (final e in v.entries) '${e.key}': toWire(e.value)};
 
@@ -129,7 +130,11 @@ Future<Map<String, Object?>> callCase(Client client, Map<String, dynamic> suite,
 
   for (final api in client.apis(cfg)) {
     final m = reflect(api);
-    final method = m.type.instanceMembers.values.where((x) => x.isRegularMethod && norm(MirrorSystem.getName(x.simpleName)) == op);
+    // The API's own methods: an operation called request is request_, next
+    // to the request it inherits.
+    final method = m.type.declarations.values
+        .whereType<MethodMirror>()
+        .where((x) => x.isRegularMethod && norm(MirrorSystem.getName(x.simpleName)) == op);
     if (method.isEmpty) continue;
 
     final mm = method.first;

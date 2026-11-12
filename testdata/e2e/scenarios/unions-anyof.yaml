@@ -1,5 +1,4 @@
 spec: ../../specs/feature/composition-anyof.yaml
-skip: { dart-fetch: "does not compile: lib/src/models/contact_method.dart:13: Expected an identifier." }
 cases:
   - op: createContact
     args: { body: { email: a@b.c } }

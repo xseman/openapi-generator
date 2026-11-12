@@ -1,5 +1,4 @@
 spec: ../../specs/feature/composition-oneof-scalars.yaml
-skip: { dart-fetch: "does not compile: lib/src/models/day_or_count.dart:10: Target of URI doesn't exist: 'model_date_time.dart'." }
 cases:
   - name: a list alias member and a tag no member declares
     op: echoHolder
