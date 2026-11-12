@@ -124,6 +124,9 @@ class {{classname}} extends BaseApi {
             url: buildUri($path, queryParams: $query),
             headers: $headers,
             body: $body,
+{{#vendorExtensions.x-dart-return.stream}}
+            stream: true,
+{{/vendorExtensions.x-dart-return.stream}}
         );
     }
 
@@ -139,6 +142,16 @@ class {{classname}} extends BaseApi {
     @Deprecated('This operation is deprecated.')
 {{/isDeprecated}}
 {{#vendorExtensions.x-dart-return}}
+{{#stream}}
+    ///
+    /// Listen to the result to its end or cancel: until then the response stays open.
+    Stream<{{{type}}}> {{nickname}}({{{vendorExtensions.x-dart-signature}}}) async* {
+        final $res = await {{nickname}}Raw({{{vendorExtensions.x-dart-args}}});
+
+        yield* {{{decode}}};
+    }
+{{/stream}}
+{{^stream}}
     Future<{{{type}}}> {{nickname}}({{{vendorExtensions.x-dart-signature}}}) async {
 {{#void}}
         await {{nickname}}Raw({{{vendorExtensions.x-dart-args}}});
@@ -146,6 +159,13 @@ class {{classname}} extends BaseApi {
 {{^void}}
         final $res = await {{nickname}}Raw({{{vendorExtensions.x-dart-args}}});
 {{/void}}
+{{#other}}
+
+        // A body of another type than the result.
+        if (const [{{{.}}}].contains($res.statusCode)) {
+            throw ApiException($res.statusCode, 'HTTP ${$res.statusCode}', body: $res.bodyString, headers: $res.headers);
+        }
+{{/other}}
 {{#bytes}}
 
         return Uint8List.fromList($res.body);
@@ -160,6 +180,7 @@ class {{classname}} extends BaseApi {
         return {{{decode}}};
 {{/json}}
     }
+{{/stream}}
 {{/vendorExtensions.x-dart-return}}
 {{/operation}}
 {{/operations}}

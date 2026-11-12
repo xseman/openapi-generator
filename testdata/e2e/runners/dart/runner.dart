@@ -114,6 +114,14 @@ Object? toWire(Object? v) {
   if (v is Map) return {for (final e in v.entries) '${e.key}': toWire(e.value)};
 
   final m = reflect(v);
+  // An event is { data, event, id, retry }, without the fields it lacks.
+  if (MirrorSystem.getName(m.type.simpleName) == 'ServerSentEvent') {
+    return {
+      for (final field in [#data, #event, #id, #retry])
+        if (m.getField(field).reflectee case final x?) MirrorSystem.getName(field): toWire(x),
+    };
+  }
+
   if (m.type.instanceMembers.containsKey(#toJson)) return toWire(m.invoke(#toJson, []).reflectee);
 
   return v.toString();
@@ -170,7 +178,9 @@ Future<Map<String, Object?>> callCase(Client client, Map<String, dynamic> suite,
     }
 
     try {
-      final result = await (m.invoke(mm.simpleName, [], named).reflectee as Future);
+      // A stream is the list of its items.
+      final called = m.invoke(mm.simpleName, [], named).reflectee;
+      final result = called is Stream ? await called.toList() : await (called as Future);
       final wire = toWire(result);
       save(wire, c['save'] as Map<String, dynamic>?, vars);
       return {'result': wire};
@@ -178,9 +188,12 @@ Future<Map<String, Object?>> callCase(Client client, Map<String, dynamic> suite,
       final em = reflect(e);
       if (em.type.instanceMembers.containsKey(#statusCode) && em.type.instanceMembers.containsKey(#body)) {
         final body = (em.getField(#body).reflectee as String?) ?? '';
+        // The body as JSON, where the spec declares one for the status.
+        final status = '${em.getField(#statusCode).reflectee}';
+        final declared = (c['bodies'] as List? ?? []).any((k) => k == status || k == '${status[0]}XX' || k == 'default');
         Object? model;
         try {
-          model = jsonDecode(body);
+          if (declared) model = jsonDecode(body);
         } catch (_) {}
         return {
           'error': {'status': em.getField(#statusCode).reflectee, 'body': body, if (model != null) 'model': model},

@@ -6,4 +6,3 @@ cases:
     # offSpec: the validator reads no text/event-stream
     response: { header: { Content-Type: text/event-stream }, text: "event: tick\r\nid: 1\r\ndata: a\r\n\r\ndata: b\r\n\r\n", offSpec: true }
     result: [{ event: tick, id: "1", data: a }, { id: "1", data: b, event: $absent }]
-    skip: { dart-fetch: "result: want [{\"data\":\"a\",\"event\":\"tick\",\"id\":\"1\"},{\"data\":\"b\",\"event\":\"$absent\",\"id\":\"1\"}], got null" }

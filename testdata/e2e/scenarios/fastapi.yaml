@@ -10,7 +10,6 @@ cases:
     op: issueToken
     args: { username: alice, password: nope }
     error: { status: 400, model: null, body: '{"detail":"bad login"}' }
-    skip: { dart-fetch: "error.model: want null, got {\"detail\":\"bad login\"}" }
   - name: password form with a scope
     op: issueToken
     args: { username: bob, password: secret, scope: "items:read" }
@@ -499,7 +498,6 @@ cases:
         lines: [{ sku: ABC-0001, quantity: 500 }]
         payment: { method: card, last4: "4242", expires: "2030-01-01" }
     error: { status: 202, model: { title: Queued for review, status: 202 } }
-    skip: { dart-fetch: "call failed: type 'Null' is not a subtype of type 'num' in type cast" }
   - name: get the order
     op: getOrder
     args: { order_id: 1 }
@@ -540,21 +538,17 @@ cases:
     op: streamLines
     args: { n: 2 }
     result: "{\"i\":0}\n{\"i\":1}\n"
-    skip: { dart-fetch: "call failed: FormatException: Unexpected character (at line 2, character 1)" }
   - name: JSON Lines of a model
     op: streamTicks
     args: { n: 2 }
     result: [{ i: 0, label: t0 }, { i: 1, label: t1 }]
-    skip: { dart-fetch: "result: want [{\"i\":0,\"label\":\"t0\"},{\"i\":1,\"label\":\"t1\"}], got null" }
   - name: JSON Lines, none
     op: streamTicks
     args: { n: 0 }
     result: []
-    skip: { dart-fetch: "result: want [], got null" }
   - name: JSON Lines of integers
     op: streamInts
     result: [0, 1, 2]
-    skip: { dart-fetch: "result: want [0,1,2], got null" }
   - name: a bound on a stream's query is a 422
     op: streamTicks
     args: { n: 11 }
@@ -563,16 +557,13 @@ cases:
     op: streamEvents
     args: { n: 2 }
     result: [{ data: { i: 0, label: e0 } }, { data: { i: 1, label: e1 } }]
-    skip: { dart-fetch: "result: want [{\"data\":{\"i\":0,\"label\":\"e0\"}},{\"data\":{\"i\":1,\"label\":\"e1\"}}], got null" }
   - name: server-sent events over POST, a discriminated union per event
     op: chat
     args: { body: { prompt: hello world } }
     result: [{ data: { kind: delta, text: hello } }, { data: { kind: delta, text: world } }, { data: { kind: done, words: 2 } }]
-    skip: { dart-fetch: "result: want [{\"data\":{\"kind\":\"delta\",\"text\":\"hello\"}},{\"data\":{\"kind\":\"delta\",\"text\":\"world\"}},{\"data\":{\"kind\":\"done\",\"words\":2}}], got nul" }
   - name: server-sent events with names and ids, data as text
     op: streamRawEvents
     result: [{ event: tick, id: "1", data: '{"i": 1}' }, { event: end, id: "2", data: '"bye"' }]
-    skip: { dart-fetch: "result: want [{\"data\":\"{\\\"i\\\": 1}\",\"event\":\"tick\",\"id\":\"1\"},{\"data\":\"\\\"bye\\\"\",\"event\":\"end\",\"id\":\"2\"}], got null" }
   - name: float path parameter and an aliased query
     op: add
     args: { a: 2, b: 0.75, round: true }

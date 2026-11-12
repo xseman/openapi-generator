@@ -594,6 +594,10 @@ func (g *FetchGenerator) resultExtensions(op *codegen.CodegenOperation, ext map[
 	result := map[string]any{"type": "void"}
 	ext["x-dart-return"] = result
 
+	if g.streamResult(op, result) {
+		return
+	}
+
 	switch {
 	case op.IsResponseBinary:
 		result["type"] = "Uint8List"
@@ -634,6 +638,81 @@ func (g *FetchGenerator) resultExtensions(op *codegen.CodegenOperation, ext map[
 
 	result["json"] = true
 	result["decode"] = decode
+
+	if other := other2xx(op); t != "Object?" && other != "" {
+		result["other"] = other
+	}
+}
+
+// streamResult types an operation whose 2xx response streams its items
+// (x-stream, see the parser's streamItem) and reports whether it does: JSON
+// Lines as a Stream of the item type, server-sent events as one of
+// ServerSentEvent of it. Another streamed media type has only its Raw
+// method's bytes.
+func (g *FetchGenerator) streamResult(op *codegen.CodegenOperation, result map[string]any) bool {
+	for _, r := range op.Responses {
+		item, _ := r.VendorExtensions["x-stream-item"].(*codegen.CodegenProperty)
+		mediaType, _ := r.VendorExtensions["x-stream"].(string)
+		mediaType, _, _ = strings.Cut(mediaType, ";")
+
+		if !r.Is2xx || item == nil {
+			continue
+		}
+
+		t := g.typeOf(item, "")
+		if item.IsNullable {
+			t = Nullable(t)
+		}
+
+		switch mediaType {
+		case "application/jsonl", "application/x-ndjson":
+			result["type"] = t
+			result["decode"] = "decodeLines($res, ($json) => " + g.itemFromJSON(item, "$json", "") + ")"
+
+		case "text/event-stream":
+			result["type"] = "ServerSentEvent<" + t + ">"
+			result["decode"] = "decodeEvents($res, ($data) => " + g.itemFromJSON(item, "jsonDecode($data)", "") + ")"
+
+			if t == "String" {
+				result["decode"] = "decodeEvents($res, ($data) => $data)"
+			}
+
+		default:
+			continue
+		}
+
+		result["stream"] = true
+
+		return true
+	}
+
+	return false
+}
+
+// other2xx lists the 2xx statuses whose body is of another type than the
+// result (a 201 Order next to a 202 Problem), comma-separated: the typed
+// method throws them as an ApiException holding that body, which the result
+// cannot.
+func other2xx(op *codegen.CodegenOperation) string {
+	var result string
+
+	codes := []string{}
+
+	for _, r := range op.Responses {
+		if _, err := strconv.Atoi(r.Code); err != nil || !r.Is2xx || r.DataType == "" {
+			continue
+		}
+
+		if result == "" {
+			result = r.DataType
+		}
+
+		if r.DataType != result {
+			codes = append(codes, r.Code)
+		}
+	}
+
+	return strings.Join(codes, ", ")
 }
 
 // apiMembers are the members of BaseApi and Object, which an operation's
@@ -669,7 +748,7 @@ func (g *FetchGenerator) addExtraReservedWords() {
 		"HttpRequest", "HttpResponse", "HttpSender", "HttpMethod",
 		"JsonApiResponse", "VoidApiResponse", "TextApiResponse", "BlobApiResponse",
 		"Middleware", "RequestContext", "ResponseContext",
-		"defaultHttpSender", "encodeFormData", "encodeQueryParam", "UploadFile", "Multipart",
+		"defaultHttpSender", "encodeFormData", "encodeQueryParam", "UploadFile", "Multipart", "ServerSentEvent",
 		// Members every class has, or a model declares: a property of the
 		// same name would override them.
 		"toJson", "fromJson", "hashCode", "runtimeType", "toString", "noSuchMethod",

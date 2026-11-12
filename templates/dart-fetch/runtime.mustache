@@ -32,6 +32,7 @@ class HttpRequest {
         required this.url,
         Map<String, String>? headers,
         this.body,
+        this.stream = false,
     }) : headers = Map<String, String>.from(headers ?? const <String, String>{});
 
     final HttpMethod method;
@@ -40,6 +41,10 @@ class HttpRequest {
 
     /// Encoded request body. May be null, a String, or a `List<int>`.
     Object? body;
+
+    /// Whether a 2xx response is handed over unread, as [HttpResponse.stream]:
+    /// the operation reads its items as they arrive.
+    final bool stream;
 
     HttpRequest copyWith({
         HttpMethod? method,
@@ -51,6 +56,7 @@ class HttpRequest {
         url: url ?? this.url,
         headers: headers ?? this.headers,
         body: body ?? this.body,
+        stream: stream,
     );
 }
 
@@ -59,22 +65,37 @@ class HttpResponse({
     required final int statusCode,
     required final Map<String, String> headers,
     required final List<int> body,
+    /// The body as it arrives, in place of [body], for a request that asked
+    /// to [HttpRequest.stream].
+    final Stream<List<int>>? stream,
 }) {
     String get bodyString => utf8.decode(body, allowMalformed: true);
 
+    /// The media type of the body, without its parameters; JSON when the
+    /// server names none.
+    String get mediaType => (headers['content-type'] ?? 'application/json').split(';').first.trim().toLowerCase();
+
+    bool get _isJson => mediaType == 'application/json' || mediaType.endsWith('+json');
+
+    /// The body as a JSON value, null when empty. Plain text is read as the
+    /// JSON it holds, a number say, else as text; another media type is its
+    /// text.
     Object? get bodyJson {
-        final s = bodyString;
-        if (s.isEmpty) return null;
-        return jsonDecode(s);
+        final text = bodyString;
+        if (text.isEmpty) return null;
+        if (_isJson) return jsonDecode(text);
+        if (mediaType != 'text/plain') return text;
+
+        try {
+            return jsonDecode(text);
+        } on FormatException {
+            return text;
+        }
     }
 
     /// The body of a text result: JSON sends it quoted, another media type
     /// as it is.
-    String get bodyText {
-        final json = (headers['content-type'] ?? '').contains('json');
-
-        return json ? bodyJson as String : bodyString;
-    }
+    String get bodyText => _isJson ? bodyJson as String : bodyString;
 
     bool get isSuccessful => statusCode >= 200 && statusCode < 300;
 }
@@ -141,7 +162,8 @@ class Configuration {
     final List<Middleware> middleware;
 }
 
-/// Thrown when the server returns a non-2xx status.
+/// Thrown when the server returns a non-2xx status, or a 2xx one whose body
+/// is of another type than the operation's result.
 class ApiException(
     final int statusCode,
     final String message, {
@@ -317,6 +339,55 @@ void addCookie(Map<String, String> headers, String name, Object? value, bool exp
     headers.update('Cookie', (cookies) => '$cookies; $name=$text', ifAbsent: () => '$name=$text');
 }
 
+/// The items of a JSON Lines response, each read by [item] from its JSON.
+Stream<T> decodeLines<T>(HttpResponse response, T Function(Object? json) item) => (response.stream ?? Stream.value(response.body))
+    .transform(utf8.decoder)
+    .transform(const LineSplitter())
+    .where((line) => line.trim().isNotEmpty)
+    .map((line) => item(jsonDecode(line)));
+
+/// A server-sent event: its data, and the fields the server sent with it.
+class ServerSentEvent<T>({final T? data, final String? event, final String? id, final int? retry});
+
+/// The events of a text/event-stream response, the data of each read by
+/// [data] from its text. An id stays for the events after it, as a browser
+/// keeps it.
+Stream<ServerSentEvent<T>> decodeEvents<T>(HttpResponse response, T Function(String text) data) async* {
+    final lines = (response.stream ?? Stream.value(response.body)).transform(utf8.decoder).transform(const LineSplitter());
+    final text = <String>[];
+    String? event, id;
+    int? retry;
+
+    await for (final line in lines) {
+        if (line.isEmpty) {
+            if (text.isNotEmpty) yield ServerSentEvent(data: data(text.join('\n')), event: event, id: id, retry: retry);
+
+            text.clear();
+            (event, retry) = (null, null);
+
+            continue;
+        }
+
+        final colon = line.indexOf(':');
+        if (colon == 0) continue; // a comment
+
+        final field = colon < 0 ? line : line.substring(0, colon);
+        var value = colon < 0 ? '' : line.substring(colon + 1);
+        if (value.startsWith(' ')) value = value.substring(1);
+
+        switch (field) {
+            case 'data':
+                text.add(value);
+            case 'event':
+                event = value;
+            case 'id':
+                id = value;
+            case 'retry':
+                retry = int.tryParse(value);
+        }
+    }
+}
+
 /// A file in a multipart request.
 class UploadFile(final List<int> bytes, {final String? filename});
 
@@ -410,13 +481,16 @@ Future<HttpResponse> defaultHttpSender(HttpRequest req) async {
         }
 
         final dartRes = await dartReq.close();
-        final bytes = await _collectBytes(dartRes);
         final headers = <String, String>{};
         dartRes.headers.forEach((name, values) => headers[name] = values.join(', '));
+
+        final streamed = req.stream && dartRes.statusCode >= 200 && dartRes.statusCode < 300;
+
         return HttpResponse(
             statusCode: dartRes.statusCode,
             headers: headers,
-            body: bytes,
+            body: streamed ? const <int>[] : await _collectBytes(dartRes),
+            stream: streamed ? dartRes : null,
         );
     } finally {
         client.close(force: false);
