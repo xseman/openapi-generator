@@ -78,7 +78,10 @@ stream is read to its end or cancelled.
 
 A union's variants are named after their member, `PetCat(Cat value)` or
 `PetString(String value)` for a union `Pet`, so a `switch` over one is
-exhaustive:
+exhaustive. A union listed inline is named after where it is: `ItemPrice`
+for the property `price` of `Item`, `FindPetsResult` for a result. A number
+in a union is a `num`, the int or the double it came as. A switch over the
+union `Pet`:
 
 ```dart
 final text = switch (pet) {
@@ -92,7 +95,8 @@ final text = switch (pet) {
 property every member pins to a value of its own; else by the JSON type of
 the value, and among objects the member it fits best: one whose required
 keys it has, declaring the most of its keys. A value that is none of them is
-the `Other` variant, kept as decoded.
+the `Other` variant, kept as decoded; so is one whose tag names a member
+but that lacks a key the member requires.
 
 A property that is optional and nullable is an `Opt<T>?`: null when its key
 is absent, `Opt(null)` when the key holds null, `Opt(value)` otherwise, so a
@@ -117,7 +121,6 @@ hooks around it.
 
 ## Limits
 
-- A union inline in a property, not a schema of its own, is an `Object?`.
 - A discriminator on an `allOf` parent reads the parent only; the
   children's own properties are dropped.
 - A date-time without an offset is read as local time and sent in UTC.

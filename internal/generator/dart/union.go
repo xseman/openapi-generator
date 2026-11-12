@@ -19,13 +19,52 @@ type variant struct {
 	model *codegen.CodegenModel
 }
 
-// unionExtensions declares a oneOf/anyOf model's variants, a class per
-// member that wraps its value, and writes the lines of the fromJson that
-// tells which one a JSON value is: by its discriminator, by its JSON type,
-// then the struct it fits best (bestFit in the runtime); a value that is
-// none of them is the Other variant, kept as decoded.
-func (g *FetchGenerator) unionExtensions(m *codegen.CodegenModel, ext map[string]any, byClass map[string]*codegen.CodegenModel) {
-	variants := g.variants(m, byClass)
+// members is the members of a union model as properties, in order: its
+// models, lists of models, primitives, then the anyOf models.
+func (g *FetchGenerator) members(m *codegen.CodegenModel) []*codegen.CodegenProperty {
+	var props []*codegen.CodegenProperty
+
+	for _, class := range m.OneOfModels {
+		props = append(props, &codegen.CodegenProperty{IsModel: true, DataType: class})
+	}
+
+	for _, class := range m.OneOfArrays {
+		props = append(props, &codegen.CodegenProperty{IsArray: true, Items: &codegen.CodegenProperty{IsModel: true, DataType: class}})
+	}
+
+	props = append(props, m.OneOfPrimitives...)
+
+	for _, schema := range m.AnyOf {
+		props = append(props, &codegen.CodegenProperty{IsModel: true, DataType: g.refs[schema]})
+	}
+
+	return props
+}
+
+// inlineUnion is the members of the oneOf/anyOf p lists inline, nil when
+// it lists none.
+func inlineUnion(p *codegen.CodegenProperty) []*codegen.CodegenProperty {
+	if p == nil || p.ComposedSchemas == nil {
+		return nil
+	}
+
+	return slices.Concat(p.ComposedSchemas.OneOf, p.ComposedSchemas.AnyOf)
+}
+
+// unionDecl declares the union name of members, a sealed class with a
+// variant class per member that wraps its value, and writes the lines of
+// the fromJson that tells which one a JSON value is: by the discriminator
+// d, by its JSON type, then the struct it fits best (bestFit in the
+// runtime); a value that is none of them is the Other variant, kept as
+// decoded. It is nil when no member has a type of its own, or the only one
+// is a map.
+func (g *FetchGenerator) unionDecl(name, description string, members []*codegen.CodegenProperty, d *codegen.CodegenDiscriminator) map[string]any {
+	// Inline objects alone are one map variant, which tells nothing apart.
+	variants := g.variants(name, members)
+	if len(variants) == 0 || len(variants) == 1 && strings.HasPrefix(variants[0].typ, "Map<") {
+		return nil
+	}
+
 	// Each read follows a test that promotes json to the type: no cast.
 	promoted := strings.NewReplacer(
 		"json as Map<String, Object?>", "json", "(json as List<Object?>)", "json",
@@ -54,7 +93,7 @@ func (g *FetchGenerator) unionExtensions(m *codegen.CodegenModel, ext map[string
 		case t == "int":
 			tests[0] = append(tests[0], "if (json is int) "+read(v))
 		case t == "double":
-			tests[1] = append(tests[1], "if (json is num) "+read(v))
+			tests[1] = append(tests[1], "if (json is num) return "+v.name+"(json);")
 		case t == "String", t == "bool":
 			tests[1] = append(tests[1], "if (json is "+t+") "+read(v))
 		case strings.HasPrefix(t, "List<"):
@@ -66,10 +105,15 @@ func (g *FetchGenerator) unionExtensions(m *codegen.CodegenModel, ext map[string
 
 	lines := []string{}
 
-	if cases := g.discriminatorCases(m, structs, read); len(cases) > 0 {
+	// The tag alone decides a value that has one: with a tag no case took,
+	// it is none of the variants.
+	untagged := ""
+
+	if key, cases := g.discriminatorCases(d, structs, read); len(cases) > 0 {
 		lines = append(lines, "if (json is Map<String, Object?>) {")
 		lines = append(lines, cases...)
 		lines = append(lines, "}", "")
+		untagged = " && !json.containsKey(" + Literal(key) + ")"
 	}
 
 	lines = append(lines, slices.Concat(tests[0], tests[1], tests[2])...)
@@ -80,7 +124,7 @@ func (g *FetchGenerator) unionExtensions(m *codegen.CodegenModel, ext map[string
 			fits = append(fits, "(["+keys(v.model, true)+"], ["+keys(v.model, false)+"])")
 		}
 
-		lines = append(lines, "", "if (json is Map<String, Object?>) {", "    switch (bestFit(json, const ["+strings.Join(fits, ", ")+"])) {")
+		lines = append(lines, "", "if (json is Map<String, Object?>"+untagged+") {", "    switch (bestFit(json, const ["+strings.Join(fits, ", ")+"])) {")
 
 		for i, v := range structs {
 			lines = append(lines, "        case "+strconv.Itoa(i)+":", "            "+read(v))
@@ -95,7 +139,7 @@ func (g *FetchGenerator) unionExtensions(m *codegen.CodegenModel, ext map[string
 
 	for _, v := range variants {
 		to := g.toJSON(v.prop, "value", "")
-		if tag := g.tag(m, v); tag != "" {
+		if tag := g.tag(d, v); tag != "" {
 			to = "{" + tag + ", ..." + to + "}"
 		}
 
@@ -116,50 +160,42 @@ func (g *FetchGenerator) unionExtensions(m *codegen.CodegenModel, ext map[string
 		}
 	}
 
-	if doc := docLines(m.Description); len(doc) > 0 {
-		ext["x-dart-doc"] = append(doc, "///")
+	doc := docLines(description)
+	if len(doc) > 0 {
+		doc = append(doc, "///")
 	}
 
-	ext["x-dart-variants"] = decls
-	ext["x-dart-read"] = indented
-	ext["x-dart-other"] = uniqueName(g.types, m.Classname+"Other")
+	return map[string]any{
+		"name": name, "union": name, "doc": doc, "read": indented, "variants": decls,
+		"other": uniqueName(g.types, name+"Other"),
+	}
 }
 
-// variants lists a union's members in order, one per type: its models,
-// lists of models, primitives, then the anyOf models. A member of any type
-// has no variant of its own: the Other variant holds it.
-func (g *FetchGenerator) variants(m *codegen.CodegenModel, byClass map[string]*codegen.CodegenModel) []variant {
-	var props []*codegen.CodegenProperty
-
-	for _, class := range m.OneOfModels {
-		props = append(props, &codegen.CodegenProperty{IsModel: true, DataType: class})
-	}
-
-	for _, class := range m.OneOfArrays {
-		props = append(props, &codegen.CodegenProperty{IsArray: true, Items: &codegen.CodegenProperty{IsModel: true, DataType: class}})
-	}
-
-	props = append(props, m.OneOfPrimitives...)
-
-	for _, schema := range m.AnyOf {
-		props = append(props, &codegen.CodegenProperty{IsModel: true, DataType: g.refs[schema]})
-	}
-
+// variants lists the variants of the union name, one per type of its
+// members. A member of any type has no variant of its own: the Other
+// variant holds it.
+func (g *FetchGenerator) variants(name string, props []*codegen.CodegenProperty) []variant {
 	var variants []variant
 
 	seen := map[string]bool{}
 
 	for _, p := range props {
 		t := g.typeOf(p, "")
-		if t == "Object?" || seen[t] || p.IsModel && g.kinds[p.DataType] == "" || t == m.Classname {
+		if t == "Object?" || seen[t] || t == "double" && seen["num"] || p.IsModel && g.kinds[p.DataType] == "" || t == name {
 			continue
 		}
 
+		// A number keeps the int or the double it came as: 5 is not 5.0
+		// to a server that reads a decimal.
+		if t == "double" {
+			t = "num"
+		}
+
 		seen[t] = true
-		v := variant{name: uniqueName(g.types, m.Classname+variantName(t)), typ: t, prop: p}
+		v := variant{name: uniqueName(g.types, name+variantName(t)), typ: t, prop: p}
 
 		if g.kinds[g.modelOf(p)] == "struct" {
-			v.model = byClass[g.modelOf(p)]
+			v.model = g.models[g.modelOf(p)]
 		}
 
 		variants = append(variants, v)
@@ -215,28 +251,38 @@ func keys(m *codegen.CodegenModel, required bool) string {
 // discriminatorCases writes the switch that reads a union's value by its
 // discriminator: the one the spec declares, with its mapping or the
 // members' schema names, else a property every struct member pins to
-// values of its own (a pydantic Literal, an OpenAPI 3.1 const). No lines
-// without either.
-func (g *FetchGenerator) discriminatorCases(m *codegen.CodegenModel, structs []variant, read func(variant) string) []string {
+// values of its own (a pydantic Literal, an OpenAPI 3.1 const); it returns
+// the property with them. No lines without either.
+func (g *FetchGenerator) discriminatorCases(d *codegen.CodegenDiscriminator, structs []variant, read func(variant) string) (key string, lines []string) {
 	byModel := map[string]variant{}
 	for _, v := range structs {
 		byModel[v.model.Classname] = v
 	}
 
 	// A mapping's values are text, whatever the property holds (a const 1).
-	var key, scrutinee string
+	var scrutinee string
 
 	cases := []string{}
 	taken := map[string]bool{}
 
+	// A value that names a member but lacks a key it requires is none of
+	// the variants: it stays as decoded, for the server to refuse.
 	add := func(pattern string, v variant) {
-		if !taken[pattern] {
-			taken[pattern] = true
-			cases = append(cases, "        case "+pattern+":", "            "+read(v))
+		if taken[pattern] {
+			return
 		}
+
+		taken[pattern] = true
+
+		guard := ""
+		if required := keys(v.model, true); required != "" {
+			guard = " when const [" + required + "].every(json.containsKey)"
+		}
+
+		cases = append(cases, "        case "+pattern+guard+":", "            "+read(v))
 	}
 
-	if d := m.Discriminator; d != nil {
+	if d != nil {
 		key = d.PropertyBaseName
 		scrutinee = "'${json[" + Literal(key) + "]}'"
 
@@ -261,17 +307,16 @@ func (g *FetchGenerator) discriminatorCases(m *codegen.CodegenModel, structs []v
 	}
 
 	if len(cases) == 0 {
-		return nil
+		return "", nil
 	}
 
-	return slices.Concat([]string{"    switch (" + scrutinee + ") {"}, cases, []string{"    }"})
+	return key, slices.Concat([]string{"    switch (" + scrutinee + ") {"}, cases, []string{"    }"})
 }
 
 // tag is the map entry of the discriminator for a struct member that does
 // not declare the property itself, so its JSON still says which member it
 // is; "" for a member that declares it, or without a discriminator.
-func (g *FetchGenerator) tag(m *codegen.CodegenModel, v variant) string {
-	d := m.Discriminator
+func (g *FetchGenerator) tag(d *codegen.CodegenDiscriminator, v variant) string {
 	if d == nil || v.model == nil || slices.ContainsFunc(v.model.AllVars, func(p *codegen.CodegenProperty) bool { return p.BaseName == d.PropertyBaseName }) {
 		return ""
 	}

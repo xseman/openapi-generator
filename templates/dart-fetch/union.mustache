@@ -1,0 +1,34 @@
+
+{{#doc}}
+{{{.}}}
+{{/doc}}
+/// One of its variants, each a class holding its `value`; switch on it to
+/// tell them apart.
+sealed class {{name}} {
+    const {{name}}();
+
+    /// Reads [json] as the variant it is; one that is none of them is a
+    /// [{{other}}].
+    factory {{name}}.fromJson(Object? json) {
+{{#read}}
+{{{.}}}
+{{/read}}
+
+        return {{other}}(json);
+    }
+
+    Object? toJson();
+}
+{{#variants}}
+
+class {{name}}(final {{{type}}} value) extends {{union}} {
+    @override
+    Object? toJson() => {{{toJson}}};
+}
+{{/variants}}
+
+/// A value that is none of the variants of [{{name}}], as decoded.
+class {{other}}(final Object? value) extends {{name}} {
+    @override
+    Object? toJson() => value;
+}

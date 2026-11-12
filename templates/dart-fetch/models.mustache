@@ -38,42 +38,9 @@ class {{classname}}({{#vendorExtensions.x-dart-has-fields}}{
 {{/vendorExtensions.x-dart-doc}}
 typedef {{classname}} = {{{vendorExtensions.x-dart-alias-type}}};
 {{/vendorExtensions.x-dart-alias}}
-{{#vendorExtensions.x-dart-union}}
-
-{{#vendorExtensions.x-dart-doc}}
-{{{.}}}
-{{/vendorExtensions.x-dart-doc}}
-/// One of its variants, each a class holding its `value`; switch on it to
-/// tell them apart.
-sealed class {{classname}} {
-    const {{classname}}();
-
-    /// Reads [json] as the variant it is; one that is none of them is a
-    /// [{{vendorExtensions.x-dart-other}}].
-    factory {{classname}}.fromJson(Object? json) {
-{{#vendorExtensions.x-dart-read}}
-{{{.}}}
-{{/vendorExtensions.x-dart-read}}
-
-        return {{vendorExtensions.x-dart-other}}(json);
-    }
-
-    Object? toJson();
-}
-{{#vendorExtensions.x-dart-variants}}
-
-class {{name}}(final {{{type}}} value) extends {{classname}} {
-    @override
-    Object? toJson() => {{{toJson}}};
-}
-{{/vendorExtensions.x-dart-variants}}
-
-/// A value that is none of the variants of [{{classname}}], as decoded.
-class {{vendorExtensions.x-dart-other}}(final Object? value) extends {{classname}} {
-    @override
-    Object? toJson() => value;
-}
-{{/vendorExtensions.x-dart-union}}
+{{#vendorExtensions.x-dart-unions}}
+{{>union}}
+{{/vendorExtensions.x-dart-unions}}
 {{#vendorExtensions.x-dart-enums}}
 {{>enum}}
 {{/vendorExtensions.x-dart-enums}}

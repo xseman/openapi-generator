@@ -24,8 +24,8 @@ func (g *FetchGenerator) modelOf(p *codegen.CodegenProperty) string {
 	return ""
 }
 
-// typeOf is the Dart type of p; enum is the enum declared for the values
-// its leaf lists inline, "" for none.
+// typeOf is the Dart type of p; enum is the enum or the union declared for
+// what its leaf lists inline (see inline), "" for none.
 func (g *FetchGenerator) typeOf(p *codegen.CodegenProperty, enum string) string {
 	if model := g.modelOf(leaf(p)); model != "" {
 		return DartType(p, model)
@@ -56,7 +56,7 @@ func (g *FetchGenerator) fromJSON(p *codegen.CodegenProperty, x, enum string) st
 		return model + ".fromJson(" + x + " as Map<String, Object?>)"
 	case model != "":
 		return model + ".fromJson(" + x + ")"
-	case enum != "" && p.IsEnum:
+	case enum != "" && (p.IsEnum || len(inlineUnion(p)) > 0):
 		return enum + ".fromJson(" + x + ")"
 	}
 
@@ -111,7 +111,7 @@ func (g *FetchGenerator) toJSON(p *codegen.CodegenProperty, x, enum string) stri
 	switch {
 	case g.kinds[model] == "alias":
 		return g.toJSON(g.aliases[model], x, "")
-	case model != "", enum != "" && p.IsEnum:
+	case model != "", enum != "" && (p.IsEnum || len(inlineUnion(p)) > 0):
 		return x + ".toJson()"
 	case p.IsDate:
 		return "formatDate(" + x + ")"
