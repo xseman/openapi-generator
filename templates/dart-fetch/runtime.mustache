@@ -355,6 +355,26 @@ void addCookie(Map<String, String> headers, String name, Object? value, bool exp
 /// when the key is absent.
 class Opt<T extends Object>(final T? value);
 
+/// The index of the model [json] fits best, for a union: of [models], each
+/// its required keys and all its keys, one whose required keys the value
+/// has, declaring the most of its keys and the fewest it does not; null when
+/// it fits none.
+int? bestFit(Map<String, Object?> json, List<(List<String>, List<String>)> models) {
+    int? best;
+    var bestScore = 0;
+
+    for (final (index, (required, known)) in models.indexed) {
+        if (!required.every(json.containsKey)) continue;
+
+        final score = json.keys.fold(0, (score, key) => score + (known.contains(key) ? 1 : -1));
+        if (best != null && score <= bestScore) continue;
+
+        (best, bestScore) = (index, score);
+    }
+
+    return best;
+}
+
 /// The items of a JSON Lines response, each read by [item] from its JSON.
 Stream<T> decodeLines<T>(HttpResponse response, T Function(Object? json) item) => (response.stream ?? Stream.value(response.body))
     .transform(utf8.decoder)

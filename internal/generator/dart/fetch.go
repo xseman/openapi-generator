@@ -136,7 +136,11 @@ func (g *FetchGenerator) PostProcessModels(models []*codegen.CodegenModel) []*co
 		bySchema[m.SchemaName] = m
 	}
 
+	byClass := make(map[string]*codegen.CodegenModel, len(models))
+
 	for _, m := range models {
+		byClass[m.Classname] = m
+
 		if len(m.AllOf) > 0 {
 			flattenAllOf(m, bySchema)
 		}
@@ -173,6 +177,8 @@ func (g *FetchGenerator) PostProcessModels(models []*codegen.CodegenModel) []*co
 
 		case "alias":
 			ext["x-dart-alias-type"] = g.typeOf(g.aliases[m.Classname], "")
+		case "union":
+			g.unionExtensions(m, ext, byClass)
 		}
 
 		m.VendorExtensions = ext
@@ -181,11 +187,9 @@ func (g *FetchGenerator) PostProcessModels(models []*codegen.CodegenModel) []*co
 	return models
 }
 
-// modelKind is how a model is declared: union (oneOf/anyOf), enum, struct
-// (properties or allOf) or alias, a typedef of a list, map or scalar type.
-//
-// ponytail: a union is a wrapper of the decoded JSON value; the upgrade is
-// a sealed class with a variant per member.
+// modelKind is how a model is declared: union (oneOf/anyOf, a sealed class
+// with a variant per member), enum, struct (properties or allOf) or alias, a
+// typedef of a list, map or scalar type.
 func modelKind(m *codegen.CodegenModel) string {
 	vars, _ := m.AllowableValues["enumVars"].([]map[string]any)
 

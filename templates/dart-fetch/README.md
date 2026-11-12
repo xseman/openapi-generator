@@ -73,8 +73,26 @@ stream is read to its end or cancelled.
 | object with properties, `allOf`      | a class, the ancestors' properties included        |
 | enum                                 | an `enum` with a `value`; of mixed types `Object?` |
 | array, map or scalar schema          | a `typedef`                                        |
-| `oneOf`, `anyOf`                     | a class holding the decoded JSON `value`           |
+| `oneOf`, `anyOf`                     | a `sealed class`, a variant class per member       |
 | `additionalProperties` by properties | a `Map` field `additionalProperties`               |
+
+A union's variants are named after their member, `PetCat(Cat value)` or
+`PetString(String value)` for a union `Pet`, so a `switch` over one is
+exhaustive:
+
+```dart
+final text = switch (pet) {
+  PetCat(:final value) => value.name,
+  PetDog(:final value) => value.name,
+  PetOther(:final value) => '$value',
+};
+```
+
+`fromJson` picks the variant by the discriminator, declared or implied by a
+property every member pins to a value of its own; else by the JSON type of
+the value, and among objects the member it fits best: one whose required
+keys it has, declaring the most of its keys. A value that is none of them is
+the `Other` variant, kept as decoded.
 
 A property that is optional and nullable is an `Opt<T>?`: null when its key
 is absent, `Opt(null)` when the key holds null, `Opt(value)` otherwise, so a
@@ -95,7 +113,7 @@ goes as multipart whatever the spec declares.
 
 ## Limits
 
-- A `oneOf`/`anyOf` is not told apart: its `value` is the JSON as decoded.
+- A union inline in a property, not a schema of its own, is an `Object?`.
 - A discriminator on an `allOf` parent reads the parent only; the
   children's own properties are dropped.
 - A date-time without an offset is read as local time and sent in UTC.
