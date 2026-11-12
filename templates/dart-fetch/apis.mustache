@@ -18,8 +18,10 @@ class {{classname}} extends BaseApi {
     /// Build the [HttpRequest] for `{{nickname}}` without sending it.
 {{#summary}}
     ///
-    /// {{{summary}}}
 {{/summary}}
+{{#vendorExtensions.x-dart-summary}}
+    {{{.}}}
+{{/vendorExtensions.x-dart-summary}}
 {{#isDeprecated}}
     @Deprecated('This operation is deprecated.')
 {{/isDeprecated}}
@@ -138,7 +140,12 @@ class {{classname}} extends BaseApi {
     Future<HttpResponse> {{nickname}}Raw({{{vendorExtensions.x-dart-signature}}}) =>
         super.request({{nickname}}RequestOpts({{{vendorExtensions.x-dart-args}}}));
 
-    /// {{#summary}}{{{summary}}}{{/summary}}{{^summary}}Invoke `{{nickname}}`.{{/summary}}
+{{#vendorExtensions.x-dart-summary}}
+    {{{.}}}
+{{/vendorExtensions.x-dart-summary}}
+{{^vendorExtensions.x-dart-summary}}
+    /// Invoke `{{nickname}}`.
+{{/vendorExtensions.x-dart-summary}}
 {{#isDeprecated}}
     @Deprecated('This operation is deprecated.')
 {{/isDeprecated}}

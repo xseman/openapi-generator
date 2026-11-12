@@ -2,10 +2,16 @@ openapi: "3.0.0"
 info:
   title: JSDoc Comment Terminator in Description Feature
   version: 1.0.0
+  description: |
+    Descriptions that would end a comment early, and ones over more lines
+    than the first, which a line comment covers only one at a time.
 paths:
   /widgets/{id}/scale:
     get:
       operationId: scaleWidget
+      summary: |
+        Scale a widget,
+        over two lines.
       description: |
         Scales the widget. See the '*/scale' subresource for details.
         Also handles /* inline comment markers */ inside descriptions.

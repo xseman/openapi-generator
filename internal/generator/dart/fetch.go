@@ -568,6 +568,7 @@ func (g *FetchGenerator) PostProcessOperations(ops []*codegen.CodegenOperation) 
 
 		ext := clone(op.VendorExtensions)
 		ext["x-dart-path"] = Literal(op.Path)
+		ext["x-dart-summary"] = docLines(op.Summary)
 		inline := newInlineTypes()
 		g.paramExtensions(op, ext, inline)
 		g.resultExtensions(op, ext, inline)
