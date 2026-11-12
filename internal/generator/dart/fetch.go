@@ -299,13 +299,12 @@ func (g *FetchGenerator) structDecl(name, description string, m *codegen.Codegen
 	return map[string]any{"name": name, "doc": docLines(description), "fields": fields, "hasFields": len(fields) > 0}
 }
 
-// structFields types the properties of a struct model, writes the lines
-// that read and write each in JSON, and declares in inline the types they
-// list inline, named after the class name. A
-// property that is optional and nullable is an Opt: null when its key is
-// absent, an Opt of null when the key holds null. A model that takes
-// additionalProperties next to its properties gets a map field for the keys
-// it does not declare.
+// structFields types the properties of m for the class class, writes the
+// lines that read and write each in JSON, and declares in inline the types
+// they list inline, named after the class. A property that is optional and
+// nullable is an Opt: null when its key is absent, an Opt of null when the
+// key holds null. A model that takes additionalProperties next to its
+// properties gets a map field for the keys it does not declare.
 func (g *FetchGenerator) structFields(class string, m *codegen.CodegenModel, inline *inlineTypes) []map[string]any {
 	taken := make(map[string]int)
 	fields := []map[string]any{}
