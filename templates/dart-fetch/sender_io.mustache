@@ -14,35 +14,45 @@ class PlatformSender {
     final HttpClient _client = HttpClient();
 
     Future<HttpResponse> call(HttpRequest request) async {
-        final sent = await _client.openUrl(request.method.value, request.url);
-        request.headers.forEach(sent.headers.add);
-
-        // shortcut: the trigger cuts a connection once open, not while it
-        // opens; a sender of your own with a connectionTimeout covers a host
-        // that never accepts.
-        void abort([_]) => sent.abort(RequestAbortedException(request.url));
-        request.abortTrigger?.then(abort, onError: abort);
-
-        final bytes = switch (request.body) {
+        var (method, url, headers) = (request.method.value, request.url, request.headers);
+        var bytes = switch (request.body) {
             final String text => utf8.encode(text),
             final List<int> bytes => bytes,
             _ => null,
         };
 
-        // With its length a body goes whole, not chunked, which not every
-        // server reads.
-        if (bytes != null) {
-            sent.contentLength = bytes.length;
-            sent.add(bytes);
+        var response = await _send(method, url, headers, bytes, request.abortTrigger);
+
+        // Redirects as fetch and Go's http.Client follow them, which dart:io
+        // does for GET and HEAD only: a 307 or 308 sends the request again,
+        // a 303 (and a 301 or 302 of a POST) a GET without its body. Another
+        // origin gets no credentials.
+        for (var hops = 0; hops < 20 && _redirects.contains(response.statusCode); hops++) {
+            final location = response.headers.value('location');
+            if (location == null) break;
+
+            await response.drain<void>();
+
+            final next = url.resolve(location);
+            if (response.statusCode == 303 && method != 'HEAD' || response.statusCode < 303 && method == 'POST') {
+                (method, bytes) = ('GET', null);
+                headers = {...headers}..removeWhere((name, _) => name.toLowerCase() == 'content-type');
+            }
+
+            if (next.origin != url.origin) {
+                headers = {...headers}..removeWhere((name, _) => ['authorization', 'cookie'].contains(name.toLowerCase()));
+            }
+
+            url = next;
+            response = await _send(method, url, headers, bytes, request.abortTrigger);
         }
 
-        final response = await sent.close();
-        final headers = <String, String>{};
-        response.headers.forEach((name, values) => headers[name] = values.join(', '));
+        final responseHeaders = <String, String>{};
+        response.headers.forEach((name, values) => responseHeaders[name] = values.join(', '));
 
         final streamed = request.stream && response.statusCode >= 200 && response.statusCode < 300;
         final stream = switch (request.abortTrigger) {
-            final trigger? => _abortable(response, trigger, request.url),
+            final trigger? => _abortable(response, trigger, url),
             null => response,
         };
         final body = BytesBuilder(copy: false);
@@ -51,10 +61,35 @@ class PlatformSender {
 
         return HttpResponse(
             statusCode: response.statusCode,
-            headers: headers,
+            headers: responseHeaders,
             body: body.takeBytes(),
             stream: streamed ? stream : null,
         );
+    }
+
+    static const _redirects = [301, 302, 303, 307, 308];
+
+    /// Sends one request, which [trigger] aborts, and returns its response
+    /// unread.
+    Future<HttpClientResponse> _send(String method, Uri url, Map<String, String> headers, List<int>? bytes, Future<void>? trigger) async {
+        final sent = await _client.openUrl(method, url);
+        sent.followRedirects = false;
+        headers.forEach(sent.headers.add);
+
+        // shortcut: the trigger cuts a connection once open, not while it
+        // opens; a sender of your own with a connectionTimeout covers a host
+        // that never accepts.
+        void abort([_]) => sent.abort(RequestAbortedException(url));
+        trigger?.then(abort, onError: abort);
+
+        // With its length a body goes whole, not chunked, which not every
+        // server reads.
+        if (bytes != null) {
+            sent.contentLength = bytes.length;
+            sent.add(bytes);
+        }
+
+        return sent.close();
     }
 
     /// The body of [response], which fails with a [RequestAbortedException]

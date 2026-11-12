@@ -130,11 +130,14 @@ goes as multipart whatever the spec declares.
 
 A `Configuration` sends through the platform's own sender, picked by a
 conditional import: one `dart:io` `HttpClient` on the VM and Flutter, whose
-connections stay open between requests, `fetch` in a browser. Call `close()`
-on the configuration when done, or the program waits for the connections to
-idle out. `Configuration(httpSender: ...)` replaces the transport, which
-then honours `HttpRequest.abortTrigger` itself, and
-`Configuration.middleware` runs `pre`, `post` and `onError` hooks around it.
+connections stay open between requests, `fetch` in a browser. Both follow
+redirects as fetch does, up to 20: a 307 or 308 sends the request again,
+body and all, a 303 sends a GET, and another origin gets no `Authorization`
+or `Cookie`. Call `close()` on the configuration when done, or the program
+waits for the connections to idle out. `Configuration(httpSender: ...)`
+replaces the transport, which then honours `HttpRequest.abortTrigger`
+itself, and `Configuration.middleware` runs `pre`, `post` and `onError`
+hooks around it.
 
 ## Limits
 
