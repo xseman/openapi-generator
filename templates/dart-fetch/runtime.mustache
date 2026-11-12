@@ -345,6 +345,11 @@ void addCookie(Map<String, String> headers, String name, Object? value, bool exp
     headers.update('Cookie', (cookies) => '$cookies; $name=$text', ifAbsent: () => '$name=$text');
 }
 
+/// The value of a property that is optional and nullable, when its key is
+/// present: [value] is null for a JSON null. The property itself is null
+/// when the key is absent.
+class Opt<T extends Object>(final T? value);
+
 /// The items of a JSON Lines response, each read by [item] from its JSON.
 Stream<T> decodeLines<T>(HttpResponse response, T Function(Object? json) item) => (response.stream ?? Stream.value(response.body))
     .transform(utf8.decoder)

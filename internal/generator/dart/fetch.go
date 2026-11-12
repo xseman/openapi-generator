@@ -267,16 +267,15 @@ func allVars(m *codegen.CodegenModel, bySchema map[string]*codegen.CodegenModel,
 }
 
 // structFields types the properties of a struct model, writes the lines
-// that read and write each in JSON, and declares its inline enums.
-//
-// ponytail: an optional nullable property sent as null and one left out
-// both read as null, and null is left out on the way back; the upgrade is a
-// wrapper type as go-fetch's Opt. Keys the schema does not declare
-// (additionalProperties next to properties) are dropped; the upgrade is a
-// map field for them.
+// that read and write each in JSON, and declares its inline enums. A
+// property that is optional and nullable is an Opt: null when its key is
+// absent, an Opt of null when the key holds null. A model that takes
+// additionalProperties next to its properties gets a map field for the keys
+// it does not declare.
 func (g *FetchGenerator) structFields(m *codegen.CodegenModel) (fields, enums []map[string]any) {
 	taken := make(map[string]int)
 	fields, enums = []map[string]any{}, []map[string]any{}
+	declared := make([]string, 0, len(m.AllVars))
 
 	for _, v := range m.AllVars {
 		name := uniqueName(taken, v.Name)
@@ -291,6 +290,7 @@ func (g *FetchGenerator) structFields(m *codegen.CodegenModel) (fields, enums []
 		from := g.fromJSON(v, "json["+key+"]", enum)
 		to := g.toJSON(v, name, enum)
 
+		declared = append(declared, key)
 		field := map[string]any{"doc": docLines(v.Description)}
 
 		switch {
@@ -304,6 +304,11 @@ func (g *FetchGenerator) structFields(m *codegen.CodegenModel) (fields, enums []
 			field["fromJson"] = name + ": " + orNull("json["+key+"]", from)
 			field["toJson"] = key + ": " + orNull(name, g.toJSON(v, name+"!", enum))
 
+		case v.IsNullable:
+			field["decl"] = "final Opt<" + strings.TrimSuffix(t, "?") + ">? " + name
+			field["fromJson"] = name + ": json.containsKey(" + key + ") ? Opt(" + orNull("json["+key+"]", from) + ") : null"
+			field["toJson"] = "if (" + name + " case Opt(:final value)) " + key + ": " + orNull("value", g.toJSON(v, "value", enum))
+
 		default:
 			field["decl"] = "final " + Nullable(t) + " " + name
 			field["fromJson"] = name + ": " + orNull("json["+key+"]", from)
@@ -312,6 +317,26 @@ func (g *FetchGenerator) structFields(m *codegen.CodegenModel) (fields, enums []
 
 		fields = append(fields, field)
 	}
+
+	if !m.IsAdditionalPropertiesTrue && m.AdditionalProperties == nil {
+		return fields, enums
+	}
+
+	name := uniqueName(taken, "additionalProperties")
+	value := itemType(m.AdditionalProperties, g.modelOf(leaf(m.AdditionalProperties)))
+	from := g.itemFromJSON(m.AdditionalProperties, "e.value", "")
+	spread := "..." + name
+
+	if to := g.itemToJSON(m.AdditionalProperties, "v", ""); to != "v" {
+		spread += ".map((k, v) => MapEntry(k, " + to + "))"
+	}
+
+	fields = append(fields, map[string]any{
+		"doc":      []string{"/// The keys the schema does not declare."},
+		"decl":     "final Map<String, " + value + "> " + name + " = const {}",
+		"fromJson": name + ": {for (final e in json.entries) if (!const {" + strings.Join(declared, ", ") + "}.contains(e.key)) e.key: " + from + "}",
+		"toJson":   spread,
+	})
 
 	return fields, enums
 }
@@ -753,7 +778,7 @@ func (g *FetchGenerator) addExtraReservedWords() {
 		"HttpRequest", "HttpResponse", "HttpSender", "HttpMethod",
 		"JsonApiResponse", "VoidApiResponse", "TextApiResponse", "BlobApiResponse",
 		"Middleware", "RequestContext", "ResponseContext",
-		"defaultHttpSender", "encodeFormData", "encodeQueryParam", "UploadFile", "Multipart", "ServerSentEvent",
+		"defaultHttpSender", "encodeFormData", "encodeQueryParam", "UploadFile", "Multipart", "ServerSentEvent", "Opt",
 		// Members every class has, or a model declares: a property of the
 		// same name would override them.
 		"toJson", "fromJson", "hashCode", "runtimeType", "toString", "noSuchMethod",

@@ -64,7 +64,9 @@ func TestConvert(t *testing.T) {
 }
 
 // An optional property reads null for a missing key and is left out of the
-// JSON when null; a required nullable one is written as null.
+// JSON when null; a required nullable one is written as null; an optional
+// nullable one is an Opt, which tells the two apart; undeclared keys have a
+// map of their own.
 func TestStructFields(t *testing.T) {
 	g := NewFetchGenerator()
 	models := g.PostProcessModels([]*codegen.CodegenModel{{
@@ -73,7 +75,9 @@ func TestStructFields(t *testing.T) {
 			{Name: "id", BaseName: "id", IsInteger: true, Required: true},
 			{Name: "bornOn", BaseName: "born_on", IsString: true, IsDate: true},
 			{Name: "owner", BaseName: "owner", IsString: true, Required: true, IsNullable: true},
+			{Name: "tag", BaseName: "tag", IsString: true, IsNullable: true},
 		},
+		AdditionalProperties: &codegen.CodegenProperty{IsInteger: true},
 	}})
 
 	fields, _ := models[0].VendorExtensions["x-dart-fields"].([]map[string]any)
@@ -81,6 +85,12 @@ func TestStructFields(t *testing.T) {
 		{"required final int id", `id: (json["id"] as num).toInt()`, `"id": id`},
 		{"final DateTime? bornOn", `bornOn: json["born_on"] == null ? null : DateTime.parse(json["born_on"] as String)`, `if (bornOn case final v?) "born_on": formatDate(v)`},
 		{"required final String? owner", `owner: json["owner"] == null ? null : json["owner"] as String`, `"owner": owner`},
+		{"final Opt<String>? tag", `tag: json.containsKey("tag") ? Opt(json["tag"] == null ? null : json["tag"] as String) : null`, `if (tag case Opt(:final value)) "tag": value`},
+		{
+			"final Map<String, int> additionalProperties = const {}",
+			`additionalProperties: {for (final e in json.entries) if (!const {"id", "born_on", "owner", "tag"}.contains(e.key)) e.key: (e.value as num).toInt()}`,
+			"...additionalProperties",
+		},
 	}
 
 	if len(fields) != len(want) {
