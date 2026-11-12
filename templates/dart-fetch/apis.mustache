@@ -124,6 +124,7 @@ class {{classname}} extends BaseApi {
             url: buildUri($path, queryParams: $query),
             headers: $headers,
             body: $body,
+            abortTrigger: abortTrigger,
 {{#vendorExtensions.x-dart-return.stream}}
             stream: true,
 {{/vendorExtensions.x-dart-return.stream}}

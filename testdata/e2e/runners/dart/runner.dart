@@ -179,6 +179,9 @@ Future<Map<String, Object?>> _call(Client client, Object cfg, Map<String, dynami
 
     for (final p in mm.parameters) {
       final field = MirrorSystem.getName(p.simpleName);
+      // Every method's own, no parameter of the spec.
+      if (field == 'abortTrigger') continue;
+
       final name = byNorm[norm(field)] ?? 'body';
       if (!args.containsKey(name)) continue;
       if (!used.add(name)) return {'fail': 'arg $name: fits fields $field and another'};

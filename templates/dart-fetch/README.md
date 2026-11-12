@@ -51,7 +51,11 @@ try {
 | `xxxRaw`         | sends; returns the `HttpResponse` of a 2xx status                                           |
 | `xxxRequestOpts` | builds the `HttpRequest` without sending it                                                 |
 
-Parameters are named arguments, `required` where the spec says so. A result
+Parameters are named arguments, `required` where the spec says so. Each
+method also takes `abortTrigger`, a `Future` that aborts the call when it
+completes, as in `package:http`: the call fails with a
+`RequestAbortedException` and its connection is closed. A deadline is
+`abortTrigger: Future.delayed(const Duration(seconds: 10))`. A result
 is nullable when it is nullable in the spec or a 2xx status has no body next
 to one that has. A status outside 2xx is an `ApiException` with the body as
 text, and so is a 2xx status whose body is of another type than the result
@@ -116,7 +120,7 @@ conditional import: one `dart:io` `HttpClient` on the VM and Flutter, whose
 connections stay open between requests, `fetch` in a browser. Call
 `close()` on the configuration when done, or the program waits for the
 connections to idle out. `Configuration(httpSender: ...)` replaces the
-transport, and `Configuration.middleware` runs `pre`, `post` and `onError`
+transport, which then honours `HttpRequest.abortTrigger` itself, and `Configuration.middleware` runs `pre`, `post` and `onError`
 hooks around it.
 
 ## Limits

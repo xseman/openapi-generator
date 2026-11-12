@@ -1,7 +1,8 @@
 {{>licenseInfo}}
 
+import 'dart:async';
 import 'dart:convert';
-import 'dart:io' show HttpClient;
+import 'dart:io' show HttpClient, HttpClientResponse;
 import 'dart:typed_data';
 
 import 'runtime.dart';
@@ -15,6 +16,12 @@ class PlatformSender {
     Future<HttpResponse> call(HttpRequest request) async {
         final sent = await _client.openUrl(request.method.value, request.url);
         request.headers.forEach(sent.headers.add);
+
+        // shortcut: the trigger cuts a connection once open, not while it
+        // opens; a sender of your own with a connectionTimeout covers a host
+        // that never accepts.
+        void abort([_]) => sent.abort(RequestAbortedException(request.url));
+        request.abortTrigger?.then(abort, onError: abort);
 
         final bytes = switch (request.body) {
             final String text => utf8.encode(text),
@@ -34,16 +41,46 @@ class PlatformSender {
         response.headers.forEach((name, values) => headers[name] = values.join(', '));
 
         final streamed = request.stream && response.statusCode >= 200 && response.statusCode < 300;
+        final stream = switch (request.abortTrigger) {
+            final trigger? => _abortable(response, trigger, request.url),
+            null => response,
+        };
         final body = BytesBuilder(copy: false);
 
-        if (!streamed) await response.forEach(body.add);
+        if (!streamed) await stream.forEach(body.add);
 
         return HttpResponse(
             statusCode: response.statusCode,
             headers: headers,
             body: body.takeBytes(),
-            stream: streamed ? response : null,
+            stream: streamed ? stream : null,
         );
+    }
+
+    /// The body of [response], which fails with a [RequestAbortedException]
+    /// and closes its connection when [trigger] completes: aborting the
+    /// request no longer reaches a response already under way.
+    Stream<List<int>> _abortable(HttpClientResponse response, Future<void> trigger, Uri url) {
+        StreamSubscription<List<int>>? body;
+        late final StreamController<List<int>> controller;
+        controller = StreamController<List<int>>(
+            onListen: () => body = response.listen(controller.add, onError: controller.addError, onDone: controller.close),
+            onPause: () => body?.pause(),
+            onResume: () => body?.resume(),
+            onCancel: () => body?.cancel(),
+        );
+
+        void abort([_]) {
+            if (controller.isClosed) return;
+
+            controller.addError(RequestAbortedException(url));
+            unawaited(controller.close());
+            unawaited((body ?? response.listen(null)).cancel());
+        }
+
+        trigger.then(abort, onError: abort);
+
+        return controller.stream;
     }
 
     void close() => _client.close();

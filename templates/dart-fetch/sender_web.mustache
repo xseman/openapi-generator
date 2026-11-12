@@ -9,7 +9,14 @@ import 'runtime.dart';
 external JSPromise<_Response> _fetch(JSString url, _Init init);
 
 extension type _Init._(JSObject _) implements JSObject {
-    external factory _Init({JSString method, JSAny headers, JSAny? body});
+    external factory _Init({JSString method, JSAny headers, JSAny? body, JSObject signal});
+}
+
+@JS('AbortController')
+extension type _AbortController._(JSObject _) implements JSObject {
+    external factory _AbortController();
+    external JSObject get signal;
+    external void abort();
 }
 
 extension type _Response._(JSObject _) implements JSObject {
@@ -45,8 +52,24 @@ class PlatformSender {
             _ => null,
         };
 
-        final init = _Init(method: request.method.value.toJS, headers: request.headers.jsify()!, body: body);
-        final response = await _fetch(request.url.toString().toJS, init).toDart;
+        final controller = _AbortController();
+        var aborted = false;
+        void abort([_]) {
+            aborted = true;
+            controller.abort();
+        }
+
+        request.abortTrigger?.then(abort, onError: abort);
+
+        // fetch fails with an AbortError, reading the body too: the same
+        // exception as on the VM.
+        Future<T> unlessAborted<T>(Future<T> future) => future.catchError(
+            (Object _) => throw RequestAbortedException(request.url),
+            test: (_) => aborted,
+        );
+
+        final init = _Init(method: request.method.value.toJS, headers: request.headers.jsify()!, body: body, signal: controller.signal);
+        final response = await unlessAborted(_fetch(request.url.toString().toJS, init).toDart);
 
         final headers = <String, String>{};
         response.headers.forEach(((JSString value, JSString name) {
@@ -58,14 +81,14 @@ class PlatformSender {
         return HttpResponse(
             statusCode: response.status,
             headers: headers,
-            body: streamed ? const <int>[] : (await response.arrayBuffer().toDart).toDart.asUint8List(),
-            stream: streamed ? _chunks(response.body!.getReader()) : null,
+            body: streamed ? const <int>[] : (await unlessAborted(response.arrayBuffer().toDart)).toDart.asUint8List(),
+            stream: streamed ? _chunks(response.body!.getReader(), unlessAborted) : null,
         );
     }
 
-    Stream<List<int>> _chunks(_Reader reader) async* {
+    Stream<List<int>> _chunks(_Reader reader, Future<_Chunk> Function(Future<_Chunk>) unlessAborted) async* {
         while (true) {
-            final chunk = await reader.read().toDart;
+            final chunk = await unlessAborted(reader.read().toDart);
             if (chunk.done) return;
 
             yield chunk.value!.toDart;

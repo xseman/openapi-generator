@@ -550,6 +550,11 @@ func (g *FetchGenerator) paramExtensions(op *codegen.CodegenOperation, ext map[s
 	var signature, args []string
 
 	for _, p := range op.AllParams {
+		// The name every method takes for itself.
+		if p.ParamName == "abortTrigger" {
+			p.ParamName += "_"
+		}
+
 		prop := asProperty(p)
 
 		enum := g.inline(inline, prop, Camelize(op.Nickname, false)+Camelize(p.ParamName, false))
@@ -609,12 +614,11 @@ func (g *FetchGenerator) paramExtensions(op *codegen.CodegenOperation, ext map[s
 	multipart := len(op.FormParams) > 0 && (op.IsMultipart || files)
 	ext["x-dart-multipart"] = multipart
 	ext["x-dart-form"] = len(op.FormParams) > 0 && !multipart
-	ext["x-dart-args"] = strings.Join(args, ", ")
-	ext["x-dart-signature"] = ""
 
-	if len(signature) > 0 {
-		ext["x-dart-signature"] = "{\n" + strings.Join(signature, "") + "    }"
-	}
+	signature = append(signature, "        Future<void>? abortTrigger,\n")
+	args = append(args, "abortTrigger: abortTrigger")
+	ext["x-dart-args"] = strings.Join(args, ", ")
+	ext["x-dart-signature"] = "{\n" + strings.Join(signature, "") + "    }"
 }
 
 // body is the Content-Type a body parameter goes out with and the
