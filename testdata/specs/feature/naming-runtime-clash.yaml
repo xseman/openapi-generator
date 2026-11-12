@@ -2,7 +2,7 @@ openapi: "3.0.0"
 info:
   title: Runtime Name Clash Feature
   version: 1.0.0
-  description: Models and operations named like the client runtime's own types and methods.
+  description: Models, operations and parameters named like the client runtime's own types and methods.
 paths:
   /responses:
     post:
@@ -23,6 +23,9 @@ paths:
   /apis:
     get:
       operationId: fetchApi
+      parameters:
+        - { name: request, in: query, schema: { type: string } }
+        - { name: buildUri, in: query, schema: { type: string } }
       responses:
         "200":
           description: ok
