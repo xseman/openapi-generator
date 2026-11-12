@@ -105,3 +105,31 @@ func TestInlineUnion(t *testing.T) {
 		t.Errorf("fromJson reads:\n%s", body)
 	}
 }
+
+// Two list members both take a JSON list: each reads it in a try, so a list
+// of the second member's items is not a cast error in the first.
+func TestUnionLists(t *testing.T) {
+	g := NewFetchGenerator()
+	models := g.PostProcessModels([]*codegen.CodegenModel{{
+		Classname: "Item", SchemaName: "Item",
+		AllVars: []*codegen.CodegenProperty{{
+			Name: "ids", BaseName: "ids", DataType: "Array<string> | Array<number>", Required: true,
+			ComposedSchemas: &codegen.CodegenComposedSchemas{OneOf: []*codegen.CodegenProperty{
+				{IsArray: true, Items: &codegen.CodegenProperty{IsString: true}},
+				{IsArray: true, Items: &codegen.CodegenProperty{IsInteger: true}},
+			}},
+		}},
+	}})
+
+	unions, _ := models[0].VendorExtensions["x-dart-unions"].([]map[string]any)
+	if len(unions) != 1 {
+		t.Fatalf("unions = %v, want one", unions)
+	}
+
+	read, _ := unions[0]["read"].([]string)
+	body := strings.Join(read, "\n")
+
+	if strings.Count(body, "try {") != 2 || !strings.Contains(body, "return ItemIdsIntList(json.map((e) => (e as num).toInt()).toList());") {
+		t.Errorf("fromJson does not try each list member:\n%s", body)
+	}
+}

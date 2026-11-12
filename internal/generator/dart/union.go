@@ -74,6 +74,20 @@ func (g *FetchGenerator) unionDecl(name, description string, members []*codegen.
 		return "return " + v.name + "(" + promoted.Replace(g.fromJSON(v.prop, "json", "")) + ");"
 	}
 
+	// A list or a map is a member's only when its contents read as the
+	// member's: else the next member of that kind, the Other variant last.
+	attempt := func(test string, v variant) []string {
+		return []string{
+			"if (" + test + ") {",
+			"    try {",
+			"        " + read(v),
+			"    } catch (_) {",
+			"        // Another member's.",
+			"    }",
+			"}",
+		}
+	}
+
 	var structs []variant
 
 	// Scalars by how much their test tells: a date before a string, an int
@@ -97,9 +111,9 @@ func (g *FetchGenerator) unionDecl(name, description string, members []*codegen.
 		case t == "String", t == "bool":
 			tests[1] = append(tests[1], "if (json is "+t+") "+read(v))
 		case strings.HasPrefix(t, "List<"):
-			tests[2] = append(tests[2], "if (json is List) "+read(v))
+			tests[2] = append(tests[2], attempt("json is List", v)...)
 		case strings.HasPrefix(t, "Map<"):
-			tests[3] = append(tests[3], "if (json is Map<String, Object?>) "+read(v))
+			tests[3] = append(tests[3], attempt("json is Map<String, Object?>", v)...)
 		}
 	}
 
