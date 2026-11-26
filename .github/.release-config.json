@@ -3,6 +3,8 @@
     "packages": {
         ".": {
             "release-type": "go",
+            "draft": true,
+            "force-tag-creation": true,
             "include-v-in-tag": true,
             "include-component-in-tag": false,
             "package-name": "openapi-generator",
